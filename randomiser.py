@@ -4,8 +4,8 @@
 #WriteMemory("int",0,0x6A9EC0,0x82C, 0x28) sets money to 0
 
 from tkinter import *
-from pvz import *
-from pvz.extra import *
+#from pvz import *
+#from pvz.extra import *
 import random
 
 window=Tk() #Creates a window object from the Tk class
@@ -107,8 +107,6 @@ def randomiseLevels():
             elif firstLevels[i]==39 and 40 not in firstLevels and 40 not in levels: #after 4-10, if you have not played 5-1, can play 5-1
                 if not challengeMode:
                     levels=addToLevelsList(levels, [40])
-                else:
-                    levels=addToLevelsList(levels, [40, 41, 42, 43, 45, 46, 47, 48])
             elif challengeMode and firstLevels[i]==40 and 41 not in levels and 41 not in firstLevels:
                 levels=addToLevelsList(levels, [41, 42, 43, 45, 46, 47, 48])
             if firstLevels[i]==29 or firstLevels[i]==19: 
@@ -241,7 +239,7 @@ def showAverage(): #balancing purposes
 
 #showAverage()
 levels = randomiseLevels()
-#print(levels)
+print(levels)
 
 #Seed packet rendering on the seed select screen
 
