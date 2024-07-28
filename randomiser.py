@@ -127,7 +127,7 @@ def randomiseLevels():
                 else:
                     levels=addToLevelsList(levels, [30, 31, 32, 35, 36, 37])
                 fogCheck = -9999
-            if firstLevels[i] in [2, 6, 7, 17, 20, 24, 35, 37, 39, 42, 47]: #cherry bomb, chomper, repeater, doom, squash, jalapeno, starfruit, magnet, coffee bean, melon pult
+            if firstLevels[i] in [2, 6, 7, 17, 20, 24, 35, 37, 42, 47]: #cherry bomb, chomper, repeater, doom, squash, jalapeno, starfruit, magnet, coffee bean, melon pult
                 toughLevelCheck += 1
             if not challengeMode:
                 if toughLevelCheck >= 3:
@@ -430,8 +430,7 @@ for i in range(50):
     if(i == 0):
         while(ReadMemory("int",0x6A9EC0,0x82C, 0x24) != 1): # current level
             Sleep(0.1)
-    if shopless:
-        WriteMemory("int",0,0x6A9EC0,0x82C, 0x28)
+    WriteMemory("int",0,0x6A9EC0,0x82C, 0x28)
     WriteMemory("int",newlevel,0x6A9EC0,0x82C, 0x24)
     if not shopless:
         WriteMemory("bool",True,0x6A9EC0,0x82C,0x21C)
