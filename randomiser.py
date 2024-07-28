@@ -4,8 +4,8 @@
 #WriteMemory("int",0,0x6A9EC0,0x82C, 0x28) sets money to 0
 
 from tkinter import *
-#from pvz import *
-#from pvz.extra import *
+from pvz import *
+from pvz.extra import *
 import random
 
 window=Tk() #Creates a window object from the Tk class
