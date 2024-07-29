@@ -86,7 +86,7 @@ def randomiseLevels():
     if noRestrictions:
         for i in range(1, 50):
             levels.append(i)
-    toughCheck=[False, False, False, False, False, False, False, False, False, False] #fog 3, fog 5, pool 3, pool 5, roof 3 no pot, roof 5 pot, night 3, roof 3 pot, balloon fog 3, balloon fog 5
+    toughCheck=[False, False, False, False, False, False, False, False, False, False, False, False] #fog 3, fog 5, pool 3, pool 5, roof 3 no pot, roof 5 pot, night 3, roof 3 pot, balloon fog 3, balloon fog 5, fog no lily, fog lily
     for i in range(0,50):
         levels, firstLevels = addLevel(levels, firstLevels)
         if not noRestrictions:
@@ -120,29 +120,35 @@ def randomiseLevels():
             if balloonCheck>=2:
                 balloonCheck = -9999
             if fogCheck>=4: # last three lines: if puff shroom and either sea shroom/lilypad are obtained, unlock 4-1, 4-3, 4-6, and 4-8
-                if not challengeMode:
+                fogCheck=-9999
+            if fogCheck<0:
+                if not toughCheck[11]:
+                    toughCheck[11]=True
                     levels=addToLevelsList(levels, [30, 32, 35, 37])
-                else:
-                    levels=addToLevelsList(levels, [30, 31, 32, 35, 36, 37])
-                fogCheck = -9999
+                if challengeMode:
+                    if not toughCheck[10] and 19 in firstLevels:
+                        toughCheck[10]=True
+                        levels=addToLevelsList(levels, [31, 36])
             if firstLevels[i] in [2, 6, 7, 17, 20, 24, 35, 37, 42, 47]: #cherry bomb, chomper, repeater, doom, squash, jalapeno, starfruit, magnet, coffee bean, melon pult
                 toughLevelCheck += 1
             if not challengeMode:
                 if toughLevelCheck >= 3:
                     if fogCheck<0:
-                        if toughCheck[0]==False:
-                            toughCheck[0]=True
-                            levels=addToLevelsList(levels, [31])
-                        if balloonCheck<0 and toughCheck[8]==False:
-                            toughCheck[8]=True
-                            levels=addToLevelsList(levels, [33])
+                        if 19 in firstLevels:
+                            if toughCheck[0]==False:
+                                toughCheck[0]=True
+                                levels=addToLevelsList(levels, [31])
+                            if balloonCheck<0 and toughCheck[8]==False:
+                                toughCheck[8]=True
+                                levels=addToLevelsList(levels, [33])
                     if fogCheck<0 and toughLevelCheck>=5:
-                        if toughCheck[1]==False:
-                            toughCheck[1]=True
-                            levels=addToLevelsList(levels, [36])
-                        if balloonCheck<0 and toughCheck[9]==False:
-                            toughCheck[9]=True
-                            levels=addToLevelsList(levels, [38])
+                        if 19 in firstLevels:
+                            if toughCheck[1]==False:
+                                toughCheck[1]=True
+                                levels=addToLevelsList(levels, [36])
+                            if balloonCheck<0 and toughCheck[9]==False:
+                                toughCheck[9]=True
+                                levels=addToLevelsList(levels, [38])
                     if 19 in firstLevels:
                         if toughCheck[2]==False:
                             toughCheck[2]=True
@@ -165,7 +171,7 @@ def randomiseLevels():
                         levels=addToLevelsList(levels, [11, 13, 16, 18])
             else:
                 if fogCheck<0:
-                        if balloonCheck<0 and toughCheck[0]==False:
+                        if balloonCheck<0 and toughCheck[0]==False and 19 in firstLevels:
                             toughCheck[0]=True
                             levels=addToLevelsList(levels, [33, 38])
     for i in range(0, len(firstLevels)):
@@ -178,20 +184,12 @@ def addLevel(levels, firstLevels):
     count=0
     countTarget=(len(firstLevels)//5)+1
     if not noRestrictions:
-        if 9 in levels or 19 in levels or 29 in levels or 39 in levels or 40 in levels:
+        if 9 in levels or 19 in levels or 29 in levels or 39 in levels or 40 in levels: #add in or 19 again
             while count<2 and newLevel not in [9, 19, 29, 39, 40]:
                 count=count+1
-                try:
-                    newLevel = random.choice(levels)
-                except:
-                    print(levels, firstLevels)
-                    print("yo")
-        else:
-            try:
                 newLevel = random.choice(levels)
-            except:
-                print(levels, firstLevels)
-                print("hi")
+        else:
+            newLevel = random.choice(levels)
     else:
         if len(firstLevels)==0:
             newLevel=0
@@ -239,7 +237,7 @@ def showAverage(): #balancing purposes
 
 #showAverage()
 levels = randomiseLevels()
-print(levels)
+#print(levels)
 
 #Seed packet rendering on the seed select screen
 
