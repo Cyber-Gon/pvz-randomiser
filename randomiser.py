@@ -13,56 +13,73 @@ window.title("Randomiser settings")
 challengeMode=False
 shopless=False
 noRestrictions=False
+noAutoSlots=False
 seed=str(random.randint(1,999999999999))
 
 def challengeButtonClick():
-    global noRestrictions, challengeMode, shopless
+    global noRestrictions, challengeMode
     if not noRestrictions:
         challengeMode=not challengeMode
     buttonClick()
 def shoplessButtonClick():
-    global noRestrictions, challengeMode, shopless
+    global shopless, noAutoSlots
     shopless=not shopless
+    if shopless:
+        noAutoSlots=True
     buttonClick()
 
 def noRestrictionsButtonClick():
-    global noRestrictions, challengeMode, shopless
+    global noRestrictions, challengeMode
     noRestrictions=not noRestrictions
     if noRestrictions:
         challengeMode=True
     buttonClick()
 
+def autoSlotsButtonClick():
+    global noAutoSlots, shopless
+    if not shopless:
+        noAutoSlots=not noAutoSlots
+    buttonClick()
+    
 def closeButtonClick():
     getSeed()
     window.destroy()
 
 def buttonClick():
-    global noRestrictions, challengeMode, shopless
+    global noRestrictions, challengeMode, shopless, noAutoSlots
     outputText.delete(0.0, END) #this clears the contents of the text box widget
     if not noRestrictions:
-        manipulatedText="Challenge Mode: " + str(challengeMode) + "           Shopless: " + str(shopless) + "                  No restrictions (not recommended): " +str(noRestrictions)#Concatenation
+        if not shopless:
+            manipulatedText="Challenge Mode: " + str(challengeMode) + "           Shopless: " + str(shopless) + "                  No restrictions (not recommended): " +str(noRestrictions) + "                  Manual Money: " +str(noAutoSlots) #Concatenation
+        else:
+            manipulatedText="Challenge Mode: " + str(challengeMode) + "           Shopless: " + str(shopless) + "                  No restrictions (not recommended): " +str(noRestrictions) + "                  Manual Money (locked): " +str(noAutoSlots)#Concatenation
     else:
-        manipulatedText="Challenge Mode (locked): " + str(challengeMode) + "           Shopless: " + str(shopless) + "                  No restrictions (not recommended): " +str(noRestrictions)#Concatenation
+        if not shopless:
+            manipulatedText="Challenge Mode (locked): " + str(challengeMode) + "           Shopless: " + str(shopless) + "                  No restrictions (not recommended): " +str(noRestrictions)+ "                  Manual Money: " +str(noAutoSlots)#Concatenation
+        else:
+            manipulatedText="Challenge Mode (locked): " + str(challengeMode) + "           Shopless: " + str(shopless) + "                  No restrictions (not recommended): " +str(noRestrictions)+ "                  Manual Money (locked): " +str(noAutoSlots)#Concatenation
     outputText.insert(END, manipulatedText) #this inserts the manipulatedText variable into the text box
 def getSeed():
     global seed
     seed=entry.get()
     if seed=="":
         seed=str(random.randint(1,999999999999))
-        
+
 #Create a label widget and assign it to a variable
 label=Label(window, text="Enter seed: ")
 label.grid(row=0, column=0, sticky=W) #Poistioning this widget (now in a variable) on the screen
 
 #create a button widget
-challengeButton=Button(window, text="CHALLENGE MODE", width=15, command=challengeButtonClick)
+challengeButton=Button(window, text="CHALLENGE", width=15, command=challengeButtonClick)
 challengeButton.grid(row=1, column=0, sticky=W)
-shoplessButton=Button(window, text="SHOPLESS MODE", width=15, command=shoplessButtonClick)
+shoplessButton=Button(window, text="SHOPLESS", width=15, command=shoplessButtonClick)
 shoplessButton.grid(row=1, column=1, sticky=W)
-noRestrictionsButton=Button(window, text="NO RESTRICTIONS MODE", width=20, command=noRestrictionsButtonClick)
+noRestrictionsButton=Button(window, text="NO RESTRICTIONS", width=15, command=noRestrictionsButtonClick)
 noRestrictionsButton.grid(row=1, column=2, sticky=W)
+noRestrictionsButton=Button(window, text="MANUAL MONEY", width=15, command=autoSlotsButtonClick)
+noRestrictionsButton.grid(row=1, column=3, sticky=W)
 closeButton=Button(window, text="SUBMIT SETTINGS", width=15, command=closeButtonClick)
-closeButton.grid(row=1, column=3, sticky=W)
+closeButton.grid(row=1, column=4, sticky=W)
 
 #creates an entry widget, assigning it to a variable
 entry=Entry(window, width=20, bg="light green")
@@ -71,6 +88,7 @@ entry.grid(row=0, column=1, sticky=W) #positioning this widget on the screen
 #create a text box widget
 outputText=Text(window, width=30, height=10, wrap=WORD, background="yellow")
 outputText.grid(row=3, column=0, columnspan=2, sticky=W)
+outputText.insert(END, "Challenge Mode: " + str(challengeMode) + "           Shopless: " + str(shopless) + "                  No restrictions (not recommended): " +str(noRestrictions) + "                  Manual Money: " +str(noAutoSlots)) #this inserts the manipulatedText variable into the text box
 
 window.mainloop() #Run the event loop
 print(seed)
@@ -237,7 +255,7 @@ def showAverage(): #balancing purposes
 
 #showAverage()
 levels = randomiseLevels()
-#print(levels)
+print(levels)
 
 #Seed packet rendering on the seed select screen
 
@@ -426,7 +444,8 @@ for i in range(50):
     if(i == 0):
         while(ReadMemory("int",0x6A9EC0,0x82C, 0x24) != 1): # current level
             Sleep(0.1)
-    WriteMemory("int",0,0x6A9EC0,0x82C, 0x28)
+    if not noAutoSlots or shopless:
+        WriteMemory("int",0,0x6A9EC0,0x82C, 0x28)
     WriteMemory("int",newlevel,0x6A9EC0,0x82C, 0x24)
     if not shopless:
         WriteMemory("bool",True,0x6A9EC0,0x82C,0x21C)
@@ -439,14 +458,16 @@ for i in range(50):
         #WriteMemory("bool",True,0x6A9EC0,0x82C,0x1C8)
     #else:
         #WriteMemory("bool",False,0x6A9EC0,0x82C,0x1C8)
-    if(i >= 24 and plants_unlocked > 7 and not shopless): # slots
+    if(i >= 24 and plants_unlocked > 7 and not (shopless or noAutoSlots)): # slots
         WriteMemory("int",2,0x6A9EC0,0x82C,0x214)
-    elif(i >= 14 and plants_unlocked > 6 and not shopless):
+    elif(i >= 14 and plants_unlocked > 6 and not (shopless or noAutoSlots)):
         WriteMemory("int",1,0x6A9EC0,0x82C,0x214)
     if(i == 0):
         while(game_ui() != 3):
             Sleep(0.1)
     Sleep(1000)
+    if not noAutoSlots or shopless:
+        WriteMemory("int",0,0x6A9EC0,0x82C, 0x28)
     while(game_ui() != 3 or ReadMemory("bool",0x6A9EC0,0x768, 0x5603)):
         Sleep(0.1)
 
