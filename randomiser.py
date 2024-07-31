@@ -255,7 +255,7 @@ def showAverage(): #balancing purposes
 
 #showAverage()
 levels = randomiseLevels()
-print(levels)
+#print(levels)
 
 #Seed packet rendering on the seed select screen
 
@@ -465,7 +465,10 @@ for i in range(50):
     if(i == 0):
         while(game_ui() != 3):
             Sleep(0.1)
-    Sleep(1000)
+    Sleep(500)
+    if not noAutoSlots or shopless:
+        WriteMemory("int",0,0x6A9EC0,0x82C, 0x28)
+    Sleep(500)
     if not noAutoSlots or shopless:
         WriteMemory("int",0,0x6A9EC0,0x82C, 0x28)
     while(game_ui() != 3 or ReadMemory("bool",0x6A9EC0,0x768, 0x5603)):
