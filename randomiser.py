@@ -437,6 +437,18 @@ WriteMemory("int", 0x467bfb - 0x4864e2, 0x4864de) #call 0x467bfb
 
 
 
+#Credits
+
+WriteMemory("unsigned char", [
+levels[-1],
+0x74 #je
+], 0x452551)
+WriteMemory("unsigned char", [
+levels[-1]
+], 0x452561)
+
+
+
 #shovel
 
 WriteMemory("unsigned char", 1, 0x530028)
