@@ -45,19 +45,24 @@ def closeButtonClick():
     getSeed()
     window.destroy()
 
+def informationButtonClick():
+    outputText.delete(0.0, END)
+    manipulatedText="Challenge Mode gets rid of the tough level restriction. With this disabled, you will not be able to play certain levels (like 5-2) without having 3 good plants. Other levels (like 5-9) will need 5 good plants to play. With this enabled, as soon as you unlock flower pot, you can play both 5-2 and 5-9 (for instance). Shopless mode forces you to play with 6 slots and no automatic pool cleaners / roof cleaners. No restrictions mode means that there is no logic as to what levels can be played next - the majority of no restrictions runs are impossible. With manual money enabled, you do not get automatic slot upgrades, but your money does not reset to 0 after every level, and so you can purchase the slots yourself - this also means you can buy rakes and upgrade plants!"
+    outputText.insert(END, manipulatedText)
+
 def buttonClick():
     global noRestrictions, challengeMode, shopless, noAutoSlots
     outputText.delete(0.0, END) #this clears the contents of the text box widget
     if not noRestrictions:
         if not shopless:
-            manipulatedText="Challenge Mode: " + str(challengeMode) + "           Shopless: " + str(shopless) + "                  No restrictions (not recommended): " +str(noRestrictions) + "                  Manual Money: " +str(noAutoSlots) #Concatenation
+            manipulatedText="Challenge Mode: " + str(challengeMode) + " | Shopless: " + str(shopless) + " | No restrictions: " +str(noRestrictions) + " | Manual Money: " +str(noAutoSlots) #Concatenation
         else:
-            manipulatedText="Challenge Mode: " + str(challengeMode) + "           Shopless: " + str(shopless) + "                  No restrictions (not recommended): " +str(noRestrictions) + "                  Manual Money (locked): " +str(noAutoSlots)#Concatenation
+            manipulatedText="Challenge Mode: " + str(challengeMode) + " | Shopless: " + str(shopless) + " | No restrictions: " +str(noRestrictions) + " | Manual Money (locked): " +str(noAutoSlots)#Concatenation
     else:
         if not shopless:
-            manipulatedText="Challenge Mode (locked): " + str(challengeMode) + "           Shopless: " + str(shopless) + "                  No restrictions (not recommended): " +str(noRestrictions)+ "                  Manual Money: " +str(noAutoSlots)#Concatenation
+            manipulatedText="Challenge Mode (locked): " + str(challengeMode) + " | Shopless: " + str(shopless) + " | No restrictions: " +str(noRestrictions)+ " | Manual Money: " +str(noAutoSlots)#Concatenation
         else:
-            manipulatedText="Challenge Mode (locked): " + str(challengeMode) + "           Shopless: " + str(shopless) + "                  No restrictions (not recommended): " +str(noRestrictions)+ "                  Manual Money (locked): " +str(noAutoSlots)#Concatenation
+            manipulatedText="Challenge Mode (locked): " + str(challengeMode) + " | Shopless: " + str(shopless) + " | No restrictions: " +str(noRestrictions)+ " | Manual Money (locked): " +str(noAutoSlots)#Concatenation
     outputText.insert(END, manipulatedText) #this inserts the manipulatedText variable into the text box
 def getSeed():
     global seed
@@ -78,6 +83,8 @@ noRestrictionsButton=Button(window, text="NO RESTRICTIONS", width=15, command=no
 noRestrictionsButton.grid(row=1, column=2, sticky=W)
 noRestrictionsButton=Button(window, text="MANUAL MONEY", width=15, command=autoSlotsButtonClick)
 noRestrictionsButton.grid(row=1, column=3, sticky=W)
+informationButton=Button(window, text="INFORMATION", width=15, command=informationButtonClick)
+informationButton.grid(row=1, column=5, sticky=W)
 closeButton=Button(window, text="SUBMIT SETTINGS", width=15, command=closeButtonClick)
 closeButton.grid(row=1, column=4, sticky=W)
 
@@ -86,9 +93,9 @@ entry=Entry(window, width=20, bg="light green")
 entry.grid(row=0, column=1, sticky=W) #positioning this widget on the screen
 
 #create a text box widget
-outputText=Text(window, width=30, height=10, wrap=WORD, background="yellow")
-outputText.grid(row=3, column=0, columnspan=2, sticky=W)
-outputText.insert(END, "Challenge Mode: " + str(challengeMode) + "           Shopless: " + str(shopless) + "                  No restrictions (not recommended): " +str(noRestrictions) + "                  Manual Money: " +str(noAutoSlots)) #this inserts the manipulatedText variable into the text box
+outputText=Text(window, width=100, height=10, wrap=WORD, background="yellow")
+outputText.grid(row=3, column=0, columnspan=10, sticky=W)
+outputText.insert(END, "Challenge Mode: " + str(challengeMode) + " | Shopless: " + str(shopless) + " | No restrictions: " +str(noRestrictions) + " | Manual Money: " +str(noAutoSlots))
 
 window.mainloop() #Run the event loop
 print(seed)
@@ -202,12 +209,27 @@ def addLevel(levels, firstLevels):
     count=0
     countTarget=(len(firstLevels)//5)+1
     if not noRestrictions:
-        if 9 in levels or 19 in levels or 29 in levels or 39 in levels or 40 in levels: #add in or 19 again
-            while count<2 and newLevel not in [9, 19, 29, 39, 40]:
+        if 9 in levels or 19 in levels or 29 in levels or 39 in levels or 40 in levels:
+            while count<countTarget and newLevel not in [9, 19, 29, 39, 40]:
                 count=count+1
                 newLevel = random.choice(levels)
         else:
             newLevel = random.choice(levels)
+        if 10 in levels and newLevel in [11, 12, 13, 15, 16, 17, 18, 30, 31, 32, 33, 35, 36, 37, 38]: #if 2-1 hasn't been played and the next level is a night/fog level with seed select
+            nightTimeLevels=[]
+            count=0
+            nightCount=0
+            for i in range(0, len(levels)):
+                if levels[i] in [11, 12, 13, 15, 16, 17, 18, 30, 31, 32, 33, 35, 36, 37, 38]:
+                    nightTimeLevels.append(levels[i])
+            for j in range(0, len(firstLevels)):
+                if firstLevels[j] in [11, 12, 13, 15, 16, 17, 18, 30, 31, 32, 33, 35, 36, 37, 38]:
+                    nightCount+=1
+            countTarget=nightCount//3
+            nightTimeLevels.append(10)
+            while count<countTarget and newLevel!=10:
+                newLevel = random.choice(nightTimeLevels)
+                count+=1
     else:
         if len(firstLevels)==0:
             newLevel=0
@@ -235,7 +257,7 @@ def showAverage(): #balancing purposes
         fogCount=0
         roofCount=0
         levels = randomiseLevels()
-        for j in range(40, 50):
+        for j in range(30, 50):
             if levels[j]>30 and levels[j]<40 and levels[j]!=35:
                 fogCount+=1
             elif levels[j]>40 and levels[j]!=50 and levels[j]!=45:
@@ -253,7 +275,25 @@ def showAverage(): #balancing purposes
         roofAverage+=roofCount
     print(dayAverage/50000, nightAverage/50000, poolAverage/50000, fogAverage/50000, roofAverage/50000)
 
+def nightAverage():
+
+    nightAverage=0
+    lastTotal=0
+    for i in range(0, 100000):
+        nightLevels=0
+        levels=randomiseLevels()
+        for i in range(0, len(levels)):
+            if levels[i] in [12, 13, 14, 16, 17, 18, 19, 31, 32, 33, 34, 36, 37, 38, 39]:
+                nightLevels+=1
+            elif levels[i]==11:
+                if nightLevels==15:
+                    lastTotal+=1
+                break
+        nightAverage+=nightLevels
+    print(nightAverage/100000, lastTotal)
+
 #showAverage()
+#nightAverage()
 levels = randomiseLevels()
 #print(levels)
 
@@ -375,6 +415,28 @@ WriteMemory("unsigned char", [
 
 
 
+#Seed select plant descriptions
+
+WriteMemory("unsigned char", [
+0x8b, 0x44, 0x24, 0x04,                   #movl 0x4(%esp),         %eax
+0x8b, 0x04, 0x85, 0x98, 0x10, 0x65, 0x00, #movl 0x651098(,%eax,4), %eax
+0x89, 0x44, 0x24, 0x04,                   #movl %eax,         0x4(%esp)
+0xe9, 0xc0, 0x5d, 0xe1, 0xff              #jmp  0x467db0
+], 0x651fdc)
+WriteMemory("unsigned char", [
+0x8b, 0x44, 0x24, 0x0c,                   #movl 0xc(%esp),         %eax
+0x8b, 0x04, 0x85, 0x98, 0x10, 0x65, 0x00, #movl 0x651098(,%eax,4), %eax
+0x89, 0x44, 0x24, 0x0c,                   #movl %eax,         0xc(%esp)
+0xc3                                      #retl
+], 0x651ff0)
+WriteMemory("unsigned char", [
+0xe8, 0xf0, 0xa3, 0x1e, 0x00 #call 0x651ff0
+], 0x467bfb)
+WriteMemory("int", 0x651fdc - 0x486515, 0x486511) #call 0x651fdc
+WriteMemory("int", 0x467bfb - 0x4864e2, 0x4864de) #call 0x467bfb
+
+
+
 #shovel
 
 WriteMemory("unsigned char", 1, 0x530028)
@@ -473,5 +535,3 @@ for i in range(50):
         WriteMemory("int",0,0x6A9EC0,0x82C, 0x28)
     while(game_ui() != 3 or ReadMemory("bool",0x6A9EC0,0x768, 0x5603)):
         Sleep(0.1)
-
-        
