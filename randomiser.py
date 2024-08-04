@@ -417,7 +417,7 @@ def nightAverage():
 #showAverage()
 #nightAverage()
 levels = randomiseLevels()
-print(levels)
+#print(levels)
 
 #Seed packet rendering on the seed select screen
 
