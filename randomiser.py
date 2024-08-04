@@ -212,7 +212,7 @@ def randomiseLevels():
                         else:
                             levels=addToLevelsList(levels, j)
                 elif j==28:
-                    if has_lily:
+                    if has_lily or ((22 in firstLevels or 36 in firstLevels) and 30 in firstLevels):
                         levels=addToLevelsList(levels, j)
                 elif j==29:
                     if has_lily or ((22 in firstLevels or 36 in firstLevels) and 30 in firstLevels): #if you have lilypad, OR if you have sea shroom + threepeater or starfruit
