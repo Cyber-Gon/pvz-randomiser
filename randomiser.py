@@ -4,8 +4,8 @@
 #WriteMemory("int",0,0x6A9EC0,0x82C, 0x28) sets money to 0
 
 from tkinter import *
-from pvz import *
-from pvz.extra import *
+#from pvz import *
+#from pvz.extra import *
 import random
 
 window=Tk() #Creates a window object from the Tk class
@@ -295,8 +295,8 @@ def randomiseLevels():
             if has_pot and toughLevelCheck>=5:
                 levels.add(49)
             
-            for j in firstLevels:
-                levels.remove(j)
+            for j in range(len(firstLevels)):
+                levels.remove(firstLevels[j])
         else:
             levels = {1} #you have to have an element in here otherwise python thinks this is a dictionary. very cool python lovely language
             for i in range(2, 50):
@@ -395,7 +395,7 @@ def nightAverage():
         nightAverage+=nightLevels
     print(nightAverage/100000, lastTotal)
 
-showAverage()
+#showAverage()
 #nightAverage()
 levels = randomiseLevels()
 print(levels)
