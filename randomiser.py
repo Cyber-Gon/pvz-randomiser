@@ -1,11 +1,11 @@
 #modifiers to add: challenge mode (no tough level restrictions), shopless, randomised plants
 #automatically add slots versus purchase slots
-# NO RESTRICTIONS (not recommended)
+#NO RESTRICTIONS (not recommended)
 #WriteMemory("int",0,0x6A9EC0,0x82C, 0x28) sets money to 0
 
 from tkinter import *
-from pvz import *
-from pvz.extra import *
+#from pvz import *
+#from pvz.extra import *
 import random
 
 window=Tk() #Creates a window object from the Tk class
@@ -101,7 +101,7 @@ window.mainloop() #Run the event loop
 print(seed)
 random.seed(seed)
 
-def randomiseLevels():
+def randomiseLevels2():
     global noRestrictions, challengeMode
     firstLevels=[]
     levels=[0]
@@ -203,36 +203,246 @@ def randomiseLevels():
         firstLevels[i] +=1
     return firstLevels
 
+def randomiseLevels():
+    global noRestrictions, challengeMode
+    firstLevels=[]
+    levels=[1]
+    toughLevelCheck=0
+    balloonCheck=0
+    if noRestrictions:
+        for i in range(1, 50):
+            levels.append(i)
+    for i in range(0,50):
+        levels, firstLevels = addLevel(levels, firstLevels)
+        if i==0: #after 1-1, can play any day stage or any x-5 / x-10
+            levels=addToLevelsList(levels, [2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20, 25, 30, 35, 40, 45, 50])
+        if firstLevels[i] in [2, 7, 8, 18, 21, 25, 36, 38, 43, 48]: #cherry bomb, chomper, repeater, doom, squash, jalapeno, starfruit, magnet, coffee bean, melon pult
+                toughLevelCheck += 1
+        if firstLevels[i] in [2, 18, 25]:
+            balloonCheck+=1
+        elif firstLevels[i] in [32, 33]:
+            balloonCheck+=2
+        for j in range(1, 51):
+            if j not in levels and j not in firstLevels:
+                if j==11:
+                    if 10 in firstLevels:
+                        levels=addToLevelsList(levels, j)
+                elif j==12:
+                    if 10 in firstLevels:
+                        if not challengeMode:
+                            if toughLevelCheck>=3:
+                                levels=addToLevelsList(levels, j)
+                        else:
+                            levels=addToLevelsList(levels, j)
+                elif j==13:
+                    if 10 in firstLevels:
+                        levels=addToLevelsList(levels, j)
+                elif j==14:
+                    if 10 in firstLevels:
+                        if not challengeMode:
+                            if toughLevelCheck>=3:
+                                levels=addToLevelsList(levels, j)
+                        else:
+                            levels=addToLevelsList(levels, j)
+                elif j==16:
+                    if 10 in firstLevels:
+                        levels=addToLevelsList(levels, j)
+                elif j==17:
+                    if 10 in firstLevels:   
+                        if not challengeMode:
+                            if toughLevelCheck>=3:
+                                levels=addToLevelsList(levels, j)
+                        else:
+                            levels=addToLevelsList(levels, j)
+                elif j==18:
+                    if 10 in firstLevels:
+                        levels=addToLevelsList(levels, j)
+                elif j==19:
+                    if 10 in firstLevels:
+                        if not challengeMode:
+                            if toughLevelCheck>=3:
+                                levels=addToLevelsList(levels, j)
+                        else:
+                            levels=addToLevelsList(levels, j)
+                elif j==21:
+                    if 20 in firstLevels:
+                        levels=addToLevelsList(levels, j)
+                elif j==22:
+                    if 20 in firstLevels:
+                        if not challengeMode:
+                            if toughLevelCheck>=3:
+                                levels=addToLevelsList(levels, j)
+                        else:
+                            levels=addToLevelsList(levels, j)
+                elif j==23:
+                    if 20 in firstLevels:
+                        levels=addToLevelsList(levels, j)
+                elif j==24:
+                    if 20 in firstLevels:
+                        if not challengeMode:
+                            if toughLevelCheck>=5:
+                                levels=addToLevelsList(levels, j)
+                        else:
+                            levels=addToLevelsList(levels, j)
+                elif j==26:
+                    if 20 in firstLevels:
+                        if not challengeMode:
+                            if toughLevelCheck>=3:
+                                levels=addToLevelsList(levels, j)
+                        else:
+                            levels=addToLevelsList(levels, j)
+                elif j==27:
+                    if 20 in firstLevels:
+                        if not challengeMode:
+                            if toughLevelCheck>=5:
+                                levels=addToLevelsList(levels, j)
+                        else:
+                            levels=addToLevelsList(levels, j)
+                elif j==28:
+                    if 20 in firstLevels:
+                        levels=addToLevelsList(levels, j)
+                elif j==29:
+                    if 20 in firstLevels:
+                        if not challengeMode:
+                            if toughLevelCheck>=5:
+                                levels=addToLevelsList(levels, j)
+                        else:
+                            levels=addToLevelsList(levels, j)
+                elif j==31:
+                    if 10 in firstLevels:
+                        if 20 in firstLevels or 30 in firstLevels:
+                            levels=addToLevelsList(levels, j)
+                elif j==32:
+                    if 10 in firstLevels:
+                        if 20 in firstLevels:
+                            if not challengeMode:
+                                if toughLevelCheck>=3:
+                                    levels=addToLevelsList(levels, j)
+                            else:
+                                levels=addToLevelsList(levels, j)
+                elif j==33:
+                    if 10 in firstLevels:
+                        if 20 in firstLevels or 30 in firstLevels:
+                            levels=addToLevelsList(levels, j)
+                elif j==34:
+                    if 10 in firstLevels:
+                        if 20 in firstLevels:
+                            if balloonCheck>=2:
+                                if not challengeMode:
+                                    if toughLevelCheck>=3:
+                                        levels=addToLevelsList(levels, j)
+                                else:
+                                    levels=addToLevelsList(levels, j)
+                elif j==36:
+                    if 10 in firstLevels:
+                        if 20 in firstLevels or 30 in firstLevels:
+                            levels=addToLevelsList(levels, j)
+                elif j==37:
+                    if 10 in firstLevels:
+                        if 20 in firstLevels:
+                            if not challengeMode:
+                                if toughLevelCheck>=5:
+                                    levels=addToLevelsList(levels, j)
+                            else:
+                                levels=addToLevelsList(levels, j)
+                elif j==38:
+                    if 10 in firstLevels:
+                        if 20 in firstLevels or 30 in firstLevels:
+                            levels=addToLevelsList(levels, j)
+                elif j==39:
+                    if 10 in firstLevels:
+                        if 20 in firstLevels:
+                            if balloonCheck>=2:
+                                if not challengeMode:
+                                    if toughLevelCheck>=5:
+                                        levels=addToLevelsList(levels, j)
+                                else:
+                                    levels=addToLevelsList(levels, j)
+                elif j==41:
+                    if i>=10 or 40 in firstLevels:
+                        levels=addToLevelsList(levels, j)
+                elif j==42:
+                    if 41 in firstLevels:
+                        if not challengeMode:
+                            if toughLevelCheck>=3:
+                                levels=addToLevelsList(levels, j)
+                        else:
+                            levels=addToLevelsList(levels, j)
+                elif j==43:
+                    if 40 in firstLevels or 41 in firstLevels:
+                        if not challengeMode:
+                            if toughLevelCheck>=3:
+                                levels=addToLevelsList(levels, j)
+                        else:
+                            levels=addToLevelsList(levels, j)
+                elif j==44:
+                    if 41 in firstLevels:
+                        if not challengeMode:
+                            if toughLevelCheck>=5:
+                                levels=addToLevelsList(levels, j)
+                        else:
+                            levels=addToLevelsList(levels, j)
+                elif j==46:
+                    if 40 in firstLevels or 41 in firstLevels:
+                        if not challengeMode:
+                            if toughLevelCheck>=3:
+                                levels=addToLevelsList(levels, j)
+                        else:
+                            levels=addToLevelsList(levels, j)
+                elif j==47:
+                    if 41 in firstLevels:
+                        if not challengeMode:
+                            if toughLevelCheck>=5:
+                                levels=addToLevelsList(levels, j)
+                        else:
+                            levels=addToLevelsList(levels, j)
+                elif j==48:
+                    if 41 in firstLevels:
+                        if not challengeMode:
+                            if toughLevelCheck>=3:
+                                levels=addToLevelsList(levels, j)
+                        else:
+                            levels=addToLevelsList(levels, j)
+                elif j==49:
+                    if 41 in firstLevels:
+                        if not challengeMode:
+                            if toughLevelCheck>=5:
+                                levels=addToLevelsList(levels, j)
+                        else:
+                            levels=addToLevelsList(levels, j)
+    return firstLevels
+
+
 def addLevel(levels, firstLevels):
     global noRestrictions
-    newLevel=0
+    newLevel=1
     count=0
     countTarget=(len(firstLevels)//5)+1
     if not noRestrictions:
-        if 9 in levels or 19 in levels or 29 in levels or 39 in levels or 40 in levels:
-            while count<countTarget and newLevel not in [9, 19, 29, 39, 40]:
+        if 10 in levels or 20 in levels or 30 in levels or 40 in levels or 41 in levels:
+            while count<countTarget and newLevel not in [10, 20, 30, 40, 41]:
                 count=count+1
                 newLevel = random.choice(levels)
         else:
             newLevel = random.choice(levels)
-        if 10 in levels and newLevel in [11, 12, 13, 15, 16, 17, 18, 30, 31, 32, 33, 35, 36, 37, 38]: #if 2-1 hasn't been played and the next level is a night/fog level with seed select
+        if 11 in levels and newLevel in [12, 13, 14, 16, 17, 18, 19, 31, 32, 33, 34, 36, 37, 38, 39]: #if 2-1 hasn't been played and the next level is a night/fog level with seed select
             nightTimeLevels=[]
             count=0
             nightCount=0
             for i in range(0, len(levels)):
-                if levels[i] in [11, 12, 13, 15, 16, 17, 18, 30, 31, 32, 33, 35, 36, 37, 38]:
+                if levels[i] in [12, 13, 14, 16, 17, 18, 19, 31, 32, 33, 34, 36, 37, 38, 39]:
                     nightTimeLevels.append(levels[i])
             for j in range(0, len(firstLevels)):
-                if firstLevels[j] in [11, 12, 13, 15, 16, 17, 18, 30, 31, 32, 33, 35, 36, 37, 38]:
+                if firstLevels[j] in [12, 13, 14, 16, 17, 18, 19, 31, 32, 33, 34, 36, 37, 38, 39]:
                     nightCount+=1
             countTarget=nightCount//3
-            nightTimeLevels.append(10)
-            while count<countTarget and newLevel!=10:
+            nightTimeLevels.append(11)
+            while count<countTarget and newLevel!=11:
                 newLevel = random.choice(nightTimeLevels)
                 count+=1
     else:
         if len(firstLevels)==0:
-            newLevel=0
+            newLevel=1
         else:
             newLevel = random.choice(levels)
     firstLevels.append(newLevel)
@@ -240,6 +450,8 @@ def addLevel(levels, firstLevels):
     return levels, firstLevels
 
 def addToLevelsList(levels, numberList):
+    if type(numberList)==int:
+        numberList=[numberList]
     for i in range(0, len(numberList)):
         levels.append(numberList[i])
     return levels
@@ -250,7 +462,8 @@ def showAverage(): #balancing purposes
     poolAverage=0
     fogAverage=0
     roofAverage=0
-    for i in range(0, 50000):
+    averageTarget=10000
+    for i in range(0, averageTarget):
         dayCount=0
         nightCount=0
         poolCount=0
@@ -273,7 +486,7 @@ def showAverage(): #balancing purposes
         poolAverage+=poolCount
         fogAverage+=fogCount
         roofAverage+=roofCount
-    print(dayAverage/50000, nightAverage/50000, poolAverage/50000, fogAverage/50000, roofAverage/50000)
+    print(dayAverage/averageTarget, nightAverage/averageTarget, poolAverage/averageTarget, fogAverage/averageTarget, roofAverage/averageTarget)
 
 def nightAverage():
 
@@ -292,10 +505,10 @@ def nightAverage():
         nightAverage+=nightLevels
     print(nightAverage/100000, lastTotal)
 
-#showAverage()
+showAverage()
 #nightAverage()
 levels = randomiseLevels()
-#print(levels)
+print(levels)
 
 #Seed packet rendering on the seed select screen
 
