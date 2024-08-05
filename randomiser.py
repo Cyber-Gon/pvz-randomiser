@@ -42,10 +42,10 @@ def autoSlotsButtonClick():
         noAutoSlots=not noAutoSlots
     buttonClick()
 
-##def imitaterButtonClick():
-##    global imitater
-##    imitater=not imitater
-##    buttonClick()
+def imitaterButtonClick():
+    global imitater
+    imitater=not imitater
+    buttonClick()
     
 def closeButtonClick():
     getSeed()
@@ -61,14 +61,14 @@ def buttonClick():
     outputText.delete(0.0, END) #this clears the contents of the text box widget
     if not noRestrictions:
         if not shopless:
-            manipulatedText="Challenge Mode: " + str(challengeMode) + (" " * spaces) + "Shopless: " + str(shopless) + (" " * spaces) + "No restrictions: " +str(noRestrictions) + (" " * spaces) + "Manual Money: " +str(noAutoSlots)#Concatenation
+            manipulatedText="Challenge Mode: " + str(challengeMode) + (" " * spaces) + "Shopless: " + str(shopless) + (" " * spaces) + "No restrictions: " + str(noRestrictions) + (" " * spaces) + "Manual Money: " + str(noAutoSlots) + (" " * spaces) + "Instant Imitater: " + str(imitater)#Concatenation
         else:
-            manipulatedText="Challenge Mode: " + str(challengeMode) + (" " * spaces) + "Shopless: " + str(shopless) + (" " * spaces) + "No restrictions: " +str(noRestrictions) + (" " * spaces) + "Manual Money (locked): " +str(noAutoSlots)#Concatenation
+            manipulatedText="Challenge Mode: " + str(challengeMode) + (" " * spaces) + "Shopless: " + str(shopless) + (" " * spaces) + "No restrictions: " + str(noRestrictions) + (" " * spaces) + "Manual Money (locked): " + str(noAutoSlots) + (" " * spaces) + "Instant Imitater: " + str(imitater)#Concatenation
     else:
         if not shopless:
-            manipulatedText="Challenge Mode (locked): " + str(challengeMode) + (" " * spaces) + "Shopless: " + str(shopless) + (" " * spaces) + "No restrictions: " +str(noRestrictions) + (" " * spaces) + "Manual Money: " +str(noAutoSlots)#Concatenation
+            manipulatedText="Challenge Mode (locked): " + str(challengeMode) + (" " * spaces) + "Shopless: " + str(shopless) + (" " * spaces) + "No restrictions: " + str(noRestrictions) + (" " * spaces) + "Manual Money: " + str(noAutoSlots) + (" " * spaces) + "Instant Imitater: " + str(imitater)#Concatenation
         else:
-            manipulatedText="Challenge Mode (locked): " + str(challengeMode) + (" " * spaces) + "Shopless: " + str(shopless) + (" " * spaces) + "No restrictions: " +str(noRestrictions) + (" " * spaces) + "Manual Money (locked): " +str(noAutoSlots)#Concatenation
+            manipulatedText="Challenge Mode (locked): " + str(challengeMode) + (" " * spaces) + "Shopless: " + str(shopless) + (" " * spaces) + "No restrictions: " + str(noRestrictions) + (" " * spaces) + "Manual Money (locked): " + str(noAutoSlots) + (" " * spaces) + "Instant Imitater: " + str(imitater)#Concatenation
     outputText.insert(END, manipulatedText) #this inserts the manipulatedText variable into the text box
 def getSeed():
     global seed
@@ -91,12 +91,12 @@ noRestrictionsButton=Button(window, text="NO RESTRICTIONS", width=15, command=no
 noRestrictionsButton.grid(row=1, column=2, sticky=W)
 noRestrictionsButton=Button(window, text="MANUAL MONEY", width=15, command=autoSlotsButtonClick)
 noRestrictionsButton.grid(row=1, column=3, sticky=W)
-##imitaterButton=Button(window, text="INSTANT IMITATER", width=15, command=imitaterButtonClick)
-##imitaterButton.grid(row=1, column=4, sticky=W)
+imitaterButton=Button(window, text="INSTANT IMITATER", width=15, command=imitaterButtonClick)
+imitaterButton.grid(row=1, column=4, sticky=W)
 closeButton=Button(window, text="SUBMIT SETTINGS", width=15, command=closeButtonClick)
-closeButton.grid(row=1, column=4, sticky=W)
+closeButton.grid(row=1, column=5, sticky=W)
 informationButton=Button(window, text="INFORMATION", width=15, command=informationButtonClick)
-informationButton.grid(row=1, column=5, sticky=W)
+informationButton.grid(row=1, column=6, sticky=W)
 
 #creates an entry widget, assigning it to a variable
 entry=Entry(window, width=20, bg="light green")
@@ -105,7 +105,7 @@ entry.grid(row=0, column=1, sticky=W) #positioning this widget on the screen
 #create a text box widget
 outputText=Text(window, width=100, height=10, wrap=WORD, background="yellow")
 outputText.grid(row=3, column=0, columnspan=10, sticky=W)
-outputText.insert(END, "Challenge Mode: " + str(challengeMode) + (" " * spaces) + "Shopless: " + str(shopless) + (" " * spaces) + "No restrictions: " +str(noRestrictions) + (" " * spaces) + "Manual Money: " +str(noAutoSlots))
+outputText.insert(END, "Challenge Mode: " + str(challengeMode) + (" " * spaces) + "Shopless: " + str(shopless) + (" " * spaces) + "No restrictions: " + str(noRestrictions) + (" " * spaces) + "Manual Money: "  + str(noAutoSlots) + (" " * spaces) + "Instant Imitater: " + str(imitater))
 
 window.mainloop() #Run the event loop
 print(seed)
@@ -557,6 +557,19 @@ WriteMemory("unsigned char", [
 WriteMemory("int", 0x651fdc - 0x486515, 0x486511) #call 0x651fdc
 WriteMemory("int", 0x467bfb - 0x4864e2, 0x4864de) #call 0x467bfb
 
+
+
+#Imitater
+
+WriteMemory("unsigned char",[
+0xb8, 0x01, 0x00, 0x00, 0x00 #movl $0x1, %eax
+], 0x482d5d)
+WriteMemory("unsigned char",[
+0xb8, 0x01, 0x00, 0x00, 0x00 #movl $0x1, %eax
+], 0x482f05)
+
+
+
 #Credits  (bugged right now)
 
 ##WriteMemory("unsigned char", [
@@ -566,6 +579,8 @@ WriteMemory("int", 0x467bfb - 0x4864e2, 0x4864de) #call 0x467bfb
 ##WriteMemory("unsigned char", [
 ##levels[-1]
 ##], 0x452561)
+
+
 
 #shovel
 
@@ -624,7 +639,7 @@ plants_array = [-1,0]
 for i in levels:
     if LEVEL_PLANTS[i] != -1:
         plants_array.append(LEVEL_PLANTS[i])
-for i in [40,41,42,43,44,45,46,47]:
+for i in [40,41,42,43,44,45,46,47,48]:
     plants_array.append(i)
 
 plants_unlocked = 1
@@ -638,8 +653,8 @@ for i in range(50):
             Sleep(0.1)
     if not noAutoSlots or shopless:
         WriteMemory("int",0,0x6A9EC0,0x82C, 0x28)
-    #if imitater:
-        #WriteMemory("bool",True,0x6A9EC0,0x82C,0x1E0)
+    if imitater:
+        WriteMemory("bool",True,0x6A9EC0,0x82C,0x1E0)
     WriteMemory("int",newlevel,0x6A9EC0,0x82C, 0x24)
     if not shopless:
         WriteMemory("bool",True,0x6A9EC0,0x82C,0x21C)
