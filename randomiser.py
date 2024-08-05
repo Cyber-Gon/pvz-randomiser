@@ -537,6 +537,33 @@ WriteMemory("unsigned char", [
 
 
 
+#Get number of seeds unlocked function
+
+if imitater:
+    WriteMemory("unsigned char", [
+    0xa1, 0x90, 0x10, 0x65, 0x00,             #movl  0x651090,    %eax
+    0x81, 0x3c, 0x24, 0x1e, 0x3c, 0x45, 0x00, #cmpl  $0x453c1e, (%esp)
+    0x0f, 0x95, 0xc1,                         #setne %cl
+    0x81, 0x3c, 0x24, 0xef, 0xbf, 0x41, 0x00, #cmpl  $0x41bfef, (%esp)
+    0x74, 0x02,                               #jne   0x453af2
+    0x00, 0xc8,                               #addb  %cl,          %al
+    0x83, 0xf8, 0x31,                         #cmpl  $0x31,       %eax
+    0x7e, 0x05,                               #jle   0x453afc
+    0xb8, 0x31, 0x00, 0x00, 0x00,             #movl  $0x31,       %eax
+    0xc3,                                     #retl
+    0x90,                                     #nop
+    ], 0x453ad8)
+else:
+    WriteMemory("unsigned char", [
+    0xa1, 0x90, 0x10, 0x65, 0x00, #movl 0x651090, %eax
+    0x83, 0xf8, 0x31,             #cmpl $0x31,    %eax
+    0x7e, 0x05,                   #jle  0x453ae7
+    0xb8, 0x31, 0x00, 0x00, 0x00, #movl $0x31,    %eax
+    0xc3,                         #retl
+    ], 0x453ad8)
+
+
+
 #Seed select plant descriptions
 
 WriteMemory("unsigned char", [
@@ -592,16 +619,6 @@ WriteMemory("unsigned char", 1, 0x43c1d1)
 #I haven't been bothered to label these yet
 
 WriteMemory("unsigned char", [
-0x8b, 0x04, 0x25, 0x90, 0x10, 0x65, 0x00, #movl 0x651090, %eax
-0x83, 0xf8, 0x31,                         #cmpl $0x31,    %eax
-0x7e, 0x05,                               #jle  0x453ae9
-0xb8, 0x31, 0x00, 0x00, 0x00,             #movl $0x31,    %eax
-0xc3,                                     #retl
-0x90,                                     #nop
-0x90                                      #nop
-], 0x453ad8)
-
-WriteMemory("unsigned char", [
 0xeb, 0x6f, #jmp  0x484471
 0x90        #nop
 ], 0x484400)
@@ -653,8 +670,9 @@ for i in range(50):
             Sleep(0.1)
     if not noAutoSlots or shopless:
         WriteMemory("int",0,0x6A9EC0,0x82C, 0x28)
-    if imitater:
+    if imitater and i != 0:
         WriteMemory("bool",True,0x6A9EC0,0x82C,0x1E0)
+        WriteMemory("int", 0, 0x453aea)
     WriteMemory("int",newlevel,0x6A9EC0,0x82C, 0x24)
     if not shopless:
         WriteMemory("bool",True,0x6A9EC0,0x82C,0x21C)
