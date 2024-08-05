@@ -53,7 +53,7 @@ def closeButtonClick():
 
 def informationButtonClick():
     outputText.delete(0.0, END)
-    manipulatedText="Challenge Mode gets rid of the tough level restriction. With this disabled, you will not be able to play certain levels (like 5-2) without having 3 good plants. Other levels (like 5-9) will need 5 good plants to play. With this enabled, as soon as you unlock flower pot, you can play both 5-2 and 5-9 (for instance). Shopless mode forces you to play with 6 slots and no automatic pool cleaners / roof cleaners. No restrictions mode means that there is no logic as to what levels can be played next - the majority of no restrictions runs are impossible. With manual money enabled, you do not get automatic slot upgrades, but your money does not reset to 0 after every level, and so you can purchase the slots yourself - this also means you can buy rakes and upgrade plants!"
+    manipulatedText="Challenge Mode gets rid of the tough level restriction. With this disabled, you will not be able to play certain levels (like 5-2) without having 3 good plants. Other levels (like 5-9) will need 5 good plants to play. With this enabled, as soon as you unlock flower pot, you can play both 5-2 and 5-9 (for instance). Shopless mode forces you to play with 6 slots and no automatic pool cleaners / roof cleaners. No restrictions mode means that there is no logic as to what levels can be played next - the majority of no restrictions runs are impossible. With manual money enabled, you do not get automatic slot upgrades, but your money does not reset to 0 after every level, and so you can purchase the slots yourself - this also means you can buy rakes and upgrade plants! Instant imitater mode gives you access to an imitater immediately, which allows you to choose one of any plant to bring to the stage, even if you haven't unlocked it! This works especially well with no restrictions."
     outputText.insert(END, manipulatedText)
 
 def buttonClick():
@@ -118,207 +118,208 @@ def randomiseLevels():
     toughLevelCheck=0
     balloonCheck=0
     if noRestrictions:
-        for i in range(1, 50):
+        for i in range(2, 51):
             levels.append(i)
     for i in range(0,50):
         levels, firstLevels = addLevel(levels, firstLevels)
-        if i==0: #after 1-1, can play any day stage or any x-5 / x-10
-            levels=addToLevelsList(levels, [2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20, 25, 30, 35, 40, 45, 50])
-        if firstLevels[i] in [2, 7, 8, 18, 21, 25, 36, 38, 43, 48]: #cherry bomb, chomper, repeater, doom, squash, jalapeno, starfruit, magnet, coffee bean, melon pult
-                toughLevelCheck += 1
-        if firstLevels[i] in [2, 18, 25]:
-            balloonCheck+=1
-        elif firstLevels[i] in [32, 33]:
-            balloonCheck+=2
-        has_puff              = 10 in firstLevels
-        has_lily              = 20 in firstLevels
-        has_fog_plants        = has_puff and (has_lily or 30 in firstLevels)
-        has_pot               = 41 in firstLevels
-        has_roof_plant        = 40 in firstLevels or has_pot
-        for j in range(1, 51):
-            if j not in levels and j not in firstLevels:
-                if j==11:
-                    if has_puff:
-                        levels=addToLevelsList(levels, j)
-                elif j==12:
-                    if has_puff:
-                        if not challengeMode:
-                            if toughLevelCheck>=3:
-                                levels=addToLevelsList(levels, j)
-                        else:
+        if not noRestrictions:
+            if i==0: #after 1-1, can play any day stage or any x-5 / x-10
+                levels=addToLevelsList(levels, [2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20, 25, 30, 35, 40, 45, 50])
+            if firstLevels[i] in [2, 7, 8, 18, 21, 25, 36, 38, 43, 48]: #cherry bomb, chomper, repeater, doom, squash, jalapeno, starfruit, magnet, coffee bean, melon pult
+                    toughLevelCheck += 1
+            if firstLevels[i] in [2, 18, 25]:
+                balloonCheck+=1
+            elif firstLevels[i] in [32, 33]:
+                balloonCheck+=2
+            has_puff              = 10 in firstLevels
+            has_lily              = 20 in firstLevels
+            has_fog_plants        = has_puff and (has_lily or 30 in firstLevels)
+            has_pot               = 41 in firstLevels
+            has_roof_plant        = 40 in firstLevels or has_pot
+            for j in range(1, 51):
+                if j not in levels and j not in firstLevels:
+                    if j==11:
+                        if has_puff:
                             levels=addToLevelsList(levels, j)
-                elif j==13:
-                    if has_puff:
-                        levels=addToLevelsList(levels, j)
-                elif j==14:
-                    if has_puff:
-                        if not challengeMode:
-                            if toughLevelCheck>=3:
-                                levels=addToLevelsList(levels, j)
-                        else:
-                            levels=addToLevelsList(levels, j)
-                elif j==16:
-                    if has_puff:
-                        levels=addToLevelsList(levels, j)
-                elif j==17:
-                    if has_puff:   
-                        if not challengeMode:
-                            if toughLevelCheck>=3:
-                                levels=addToLevelsList(levels, j)
-                        else:
-                            levels=addToLevelsList(levels, j)
-                elif j==18:
-                    if has_puff:
-                        levels=addToLevelsList(levels, j)
-                elif j==19:
-                    if has_puff:
-                        if not challengeMode:
-                            if toughLevelCheck>=3:
-                                levels=addToLevelsList(levels, j)
-                        else:
-                            levels=addToLevelsList(levels, j)
-                elif j==21:
-                    if has_lily or 36 in firstLevels:
-                        levels=addToLevelsList(levels, j)
-                elif j==22:
-                    if has_lily or 36 in firstLevels:
-                        if not challengeMode:
-                            if toughLevelCheck>=3:
-                                levels=addToLevelsList(levels, j)
-                        else:
-                            levels=addToLevelsList(levels, j)
-                elif j==23:
-                    if has_lily:
-                        levels=addToLevelsList(levels, j)
-                elif j==24:
-                    if has_lily:
-                        if not challengeMode:
-                            if toughLevelCheck>=5:
-                                levels=addToLevelsList(levels, j)
-                        else:
-                            levels=addToLevelsList(levels, j)
-                elif j==26:
-                    if has_lily or 36 in firstLevels:
-                        if not challengeMode:
-                            if toughLevelCheck>=3:
-                                levels=addToLevelsList(levels, j)
-                        else:
-                            levels=addToLevelsList(levels, j)
-                elif j==27:
-                    if has_lily:
-                        if not challengeMode:
-                            if toughLevelCheck>=5:
-                                levels=addToLevelsList(levels, j)
-                        else:
-                            levels=addToLevelsList(levels, j)
-                elif j==28:
-                    if has_lily or ((22 in firstLevels or 36 in firstLevels) and 30 in firstLevels):
-                        levels=addToLevelsList(levels, j)
-                elif j==29:
-                    if has_lily or ((22 in firstLevels or 36 in firstLevels) and 30 in firstLevels): #if you have lilypad, OR if you have sea shroom + threepeater or starfruit
-                        if not challengeMode:
-                            if toughLevelCheck>=5:
-                                levels=addToLevelsList(levels, j)
-                        else:
-                            levels=addToLevelsList(levels, j)
-                elif j==31:
-                    if has_fog_plants:
-                        levels=addToLevelsList(levels, j)
-                elif j==32:
-                    if has_puff:
-                        if has_lily or (30 in firstLevels and (22 in firstLevels or 36 in firstLevels)): #if you have lilypad, OR if you have sea shroom + threepeater or starfruit
+                    elif j==12:
+                        if has_puff:
                             if not challengeMode:
                                 if toughLevelCheck>=3:
                                     levels=addToLevelsList(levels, j)
                             else:
                                 levels=addToLevelsList(levels, j)
-                elif j==33:
-                    if has_fog_plants:
-                        levels=addToLevelsList(levels, j)
-                elif j==34:
-                    if has_puff:
-                        if has_lily:
-                            if balloonCheck>=2:
-                                if not challengeMode:
-                                    if toughLevelCheck>=3:
-                                        levels=addToLevelsList(levels, j)
-                                else:
+                    elif j==13:
+                        if has_puff:
+                            levels=addToLevelsList(levels, j)
+                    elif j==14:
+                        if has_puff:
+                            if not challengeMode:
+                                if toughLevelCheck>=3:
                                     levels=addToLevelsList(levels, j)
-                elif j==36:
-                    if has_fog_plants:
-                        levels=addToLevelsList(levels, j)
-                elif j==37:
-                    if has_puff:
-                        if has_lily or (30 in firstLevels and (22 in firstLevels or 36 in firstLevels)): #if you have lilypad, OR if you have sea shroom + threepeater or starfruit
+                            else:
+                                levels=addToLevelsList(levels, j)
+                    elif j==16:
+                        if has_puff:
+                            levels=addToLevelsList(levels, j)
+                    elif j==17:
+                        if has_puff:   
+                            if not challengeMode:
+                                if toughLevelCheck>=3:
+                                    levels=addToLevelsList(levels, j)
+                            else:
+                                levels=addToLevelsList(levels, j)
+                    elif j==18:
+                        if has_puff:
+                            levels=addToLevelsList(levels, j)
+                    elif j==19:
+                        if has_puff:
+                            if not challengeMode:
+                                if toughLevelCheck>=3:
+                                    levels=addToLevelsList(levels, j)
+                            else:
+                                levels=addToLevelsList(levels, j)
+                    elif j==21:
+                        if has_lily or 36 in firstLevels:
+                            levels=addToLevelsList(levels, j)
+                    elif j==22:
+                        if has_lily or 36 in firstLevels:
+                            if not challengeMode:
+                                if toughLevelCheck>=3:
+                                    levels=addToLevelsList(levels, j)
+                            else:
+                                levels=addToLevelsList(levels, j)
+                    elif j==23:
+                        if has_lily:
+                            levels=addToLevelsList(levels, j)
+                    elif j==24:
+                        if has_lily:
                             if not challengeMode:
                                 if toughLevelCheck>=5:
                                     levels=addToLevelsList(levels, j)
                             else:
                                 levels=addToLevelsList(levels, j)
-                elif j==38:
-                    if has_fog_plants:
-                            levels=addToLevelsList(levels, j)
-                elif j==39:
-                    if has_puff:
+                    elif j==26:
+                        if has_lily or 36 in firstLevels:
+                            if not challengeMode:
+                                if toughLevelCheck>=3:
+                                    levels=addToLevelsList(levels, j)
+                            else:
+                                levels=addToLevelsList(levels, j)
+                    elif j==27:
                         if has_lily:
-                            if balloonCheck>=2:
+                            if not challengeMode:
+                                if toughLevelCheck>=5:
+                                    levels=addToLevelsList(levels, j)
+                            else:
+                                levels=addToLevelsList(levels, j)
+                    elif j==28:
+                        if has_lily or ((22 in firstLevels or 36 in firstLevels) and 30 in firstLevels):
+                            levels=addToLevelsList(levels, j)
+                    elif j==29:
+                        if has_lily or ((22 in firstLevels or 36 in firstLevels) and 30 in firstLevels): #if you have lilypad, OR if you have sea shroom + threepeater or starfruit
+                            if not challengeMode:
+                                if toughLevelCheck>=5:
+                                    levels=addToLevelsList(levels, j)
+                            else:
+                                levels=addToLevelsList(levels, j)
+                    elif j==31:
+                        if has_fog_plants:
+                            levels=addToLevelsList(levels, j)
+                    elif j==32:
+                        if has_puff:
+                            if has_lily or (30 in firstLevels and (22 in firstLevels or 36 in firstLevels)): #if you have lilypad, OR if you have sea shroom + threepeater or starfruit
+                                if not challengeMode:
+                                    if toughLevelCheck>=3:
+                                        levels=addToLevelsList(levels, j)
+                                else:
+                                    levels=addToLevelsList(levels, j)
+                    elif j==33:
+                        if has_fog_plants:
+                            levels=addToLevelsList(levels, j)
+                    elif j==34:
+                        if has_puff:
+                            if has_lily:
+                                if balloonCheck>=2:
+                                    if not challengeMode:
+                                        if toughLevelCheck>=3:
+                                            levels=addToLevelsList(levels, j)
+                                    else:
+                                        levels=addToLevelsList(levels, j)
+                    elif j==36:
+                        if has_fog_plants:
+                            levels=addToLevelsList(levels, j)
+                    elif j==37:
+                        if has_puff:
+                            if has_lily or (30 in firstLevels and (22 in firstLevels or 36 in firstLevels)): #if you have lilypad, OR if you have sea shroom + threepeater or starfruit
                                 if not challengeMode:
                                     if toughLevelCheck>=5:
                                         levels=addToLevelsList(levels, j)
                                 else:
                                     levels=addToLevelsList(levels, j)
-                elif j==41:
-                    if i>=10 or 40 in firstLevels:
-                        levels=addToLevelsList(levels, j)
-                elif j==42:
-                    if has_pot:
-                        if not challengeMode:
-                            if toughLevelCheck>=3:
+                    elif j==38:
+                        if has_fog_plants:
                                 levels=addToLevelsList(levels, j)
-                        else:
+                    elif j==39:
+                        if has_puff:
+                            if has_lily:
+                                if balloonCheck>=2:
+                                    if not challengeMode:
+                                        if toughLevelCheck>=5:
+                                            levels=addToLevelsList(levels, j)
+                                    else:
+                                        levels=addToLevelsList(levels, j)
+                    elif j==41:
+                        if i>=10 or 40 in firstLevels:
                             levels=addToLevelsList(levels, j)
-                elif j==43:
-                    if has_roof_plant:
-                        if not challengeMode:
-                            if toughLevelCheck>=3:
+                    elif j==42:
+                        if has_pot:
+                            if not challengeMode:
+                                if toughLevelCheck>=3:
+                                    levels=addToLevelsList(levels, j)
+                            else:
                                 levels=addToLevelsList(levels, j)
-                        else:
-                            levels=addToLevelsList(levels, j)
-                elif j==44:
-                    if has_pot:
-                        if not challengeMode:
-                            if toughLevelCheck>=5:
+                    elif j==43:
+                        if has_roof_plant:
+                            if not challengeMode:
+                                if toughLevelCheck>=3:
+                                    levels=addToLevelsList(levels, j)
+                            else:
                                 levels=addToLevelsList(levels, j)
-                        else:
-                            levels=addToLevelsList(levels, j)
-                elif j==46:
-                    if has_roof_plant:
-                        if not challengeMode:
-                            if toughLevelCheck>=3:
+                    elif j==44:
+                        if has_pot:
+                            if not challengeMode:
+                                if toughLevelCheck>=5:
+                                    levels=addToLevelsList(levels, j)
+                            else:
                                 levels=addToLevelsList(levels, j)
-                        else:
-                            levels=addToLevelsList(levels, j)
-                elif j==47:
-                    if has_pot:
-                        if not challengeMode:
-                            if toughLevelCheck>=5:
+                    elif j==46:
+                        if has_roof_plant:
+                            if not challengeMode:
+                                if toughLevelCheck>=3:
+                                    levels=addToLevelsList(levels, j)
+                            else:
                                 levels=addToLevelsList(levels, j)
-                        else:
-                            levels=addToLevelsList(levels, j)
-                elif j==48:
-                    if has_pot:
-                        if not challengeMode:
-                            if toughLevelCheck>=3:
+                    elif j==47:
+                        if has_pot:
+                            if not challengeMode:
+                                if toughLevelCheck>=5:
+                                    levels=addToLevelsList(levels, j)
+                            else:
                                 levels=addToLevelsList(levels, j)
-                        else:
-                            levels=addToLevelsList(levels, j)
-                elif j==49:
-                    if has_pot:
-                        if not challengeMode:
-                            if toughLevelCheck>=5:
+                    elif j==48:
+                        if has_pot:
+                            if not challengeMode:
+                                if toughLevelCheck>=3:
+                                    levels=addToLevelsList(levels, j)
+                            else:
                                 levels=addToLevelsList(levels, j)
-                        else:
-                            levels=addToLevelsList(levels, j)
+                    elif j==49:
+                        if has_pot:
+                            if not challengeMode:
+                                if toughLevelCheck>=5:
+                                    levels=addToLevelsList(levels, j)
+                            else:
+                                levels=addToLevelsList(levels, j)
     return firstLevels
 
 
