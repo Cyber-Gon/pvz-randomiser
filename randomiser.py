@@ -1,11 +1,9 @@
-#modifiers to add: challenge mode (no tough level restrictions), shopless, randomised plants
-#automatically add slots versus purchase slots
-#NO RESTRICTIONS (not recommended)
-#WriteMemory("int",0,0x6A9EC0,0x82C, 0x28) sets money to 0
-
 from tkinter import *
-from pvz import *
-from pvz.extra import *
+try:
+    from pvz import *
+    from pvz.extra import *
+except:
+    print("pvz not found!")
 import random
 
 window=Tk() #Creates a window object from the Tk class
@@ -15,6 +13,7 @@ shopless=False
 noRestrictions=False
 noAutoSlots=False
 imitater=False
+randomisePlants=False
 seed=str(random.randint(1,999999999999))
 
 def challengeButtonClick():
@@ -23,10 +22,8 @@ def challengeButtonClick():
         challengeMode=not challengeMode
     buttonClick()
 def shoplessButtonClick():
-    global shopless, noAutoSlots
+    global shopless
     shopless=not shopless
-    if shopless:
-        noAutoSlots=True
     buttonClick()
 
 def noRestrictionsButtonClick():
@@ -46,6 +43,11 @@ def imitaterButtonClick():
     global imitater
     imitater=not imitater
     buttonClick()
+
+def randPlantsButtonClick():
+    global randomisePlants
+    randomisePlants=not randomisePlants
+    buttonClick()
     
 def closeButtonClick():
     getSeed()
@@ -53,22 +55,16 @@ def closeButtonClick():
 
 def informationButtonClick():
     outputText.delete(0.0, END)
-    manipulatedText="Challenge Mode gets rid of the tough level restriction. With this disabled, you will not be able to play certain levels (like 5-2) without having 3 good plants. Other levels (like 5-9) will need 5 good plants to play. With this enabled, as soon as you unlock flower pot, you can play both 5-2 and 5-9 (for instance). Shopless mode forces you to play with 6 slots and no automatic pool cleaners / roof cleaners. No restrictions mode means that there is no logic as to what levels can be played next - the majority of no restrictions runs are impossible. With manual money enabled, you do not get automatic slot upgrades, but your money does not reset to 0 after every level, and so you can purchase the slots yourself - this also means you can buy rakes and upgrade plants! Instant imitater mode gives you access to an imitater immediately, which allows you to choose one of any plant to bring to the stage, even if you haven't unlocked it! This works especially well with no restrictions."
+    manipulatedText="Challenge Mode gets rid of the tough level restriction. With this disabled, you will not be able to play certain levels (like 5-2) without having 3 good plants. Other levels (like 5-9) will need 5 good plants to play. With this enabled, as soon as you unlock flower pot, you can play both 5-2 and 5-9 (for instance). Shopless mode forces you to play with 6 slots and no automatic pool cleaners / roof cleaners. No restrictions mode means that there is no logic as to what levels can be played next - the majority of no restrictions runs are impossible. With manual money enabled, you do not get automatic slot upgrades, but your money does not reset to 0 after every level, and so you can purchase the slots yourself - this also means you can buy rakes and upgrade plants! Instant imitater mode gives you access to an imitater immediately, which allows you to choose one of any plant to bring to the stage, even if you haven't unlocked it! This works especially well with no restrictions. Random plants means that the plant you get at the end of each level is RANDOMISED, in a similar way to the levels! Instead of unlocking the plant you usually unlock for beating that stage, you get a random one!"
     outputText.insert(END, manipulatedText)
 
 def buttonClick():
-    global noRestrictions, challengeMode, shopless, noAutoSlots, imitater, spaces
+    global noRestrictions, challengeMode, shopless, noAutoSlots, imitater, randomisePlants, spaces
     outputText.delete(0.0, END) #this clears the contents of the text box widget
     if not noRestrictions:
-        if not shopless:
-            manipulatedText="Challenge Mode: " + str(challengeMode) + (" " * spaces) + "Shopless: " + str(shopless) + (" " * spaces) + "No restrictions: " + str(noRestrictions) + (" " * spaces) + "Manual Money: " + str(noAutoSlots) + (" " * spaces) + "Instant Imitater: " + str(imitater)#Concatenation
-        else:
-            manipulatedText="Challenge Mode: " + str(challengeMode) + (" " * spaces) + "Shopless: " + str(shopless) + (" " * spaces) + "No restrictions: " + str(noRestrictions) + (" " * spaces) + "Manual Money (locked): " + str(noAutoSlots) + (" " * spaces) + "Instant Imitater: " + str(imitater)#Concatenation
+        manipulatedText="Challenge Mode: " + str(challengeMode) + (" " * spaces) + "Shopless: " + str(shopless) + (" " * spaces) + "No restrictions: " + str(noRestrictions) + (" " * spaces) + "Manual Money: " + str(noAutoSlots) + (" " * spaces) + "Instant Imitater: " + str(imitater) + (" " * spaces) + "Random Plants: " + str(randomisePlants)#Concatenation
     else:
-        if not shopless:
-            manipulatedText="Challenge Mode (locked): " + str(challengeMode) + (" " * spaces) + "Shopless: " + str(shopless) + (" " * spaces) + "No restrictions: " + str(noRestrictions) + (" " * spaces) + "Manual Money: " + str(noAutoSlots) + (" " * spaces) + "Instant Imitater: " + str(imitater)#Concatenation
-        else:
-            manipulatedText="Challenge Mode (locked): " + str(challengeMode) + (" " * spaces) + "Shopless: " + str(shopless) + (" " * spaces) + "No restrictions: " + str(noRestrictions) + (" " * spaces) + "Manual Money (locked): " + str(noAutoSlots) + (" " * spaces) + "Instant Imitater: " + str(imitater)#Concatenation
+        manipulatedText="Challenge Mode (locked): " + str(challengeMode) + (" " * spaces) + "Shopless: " + str(shopless) + (" " * spaces) + "No restrictions: " + str(noRestrictions) + (" " * spaces) + "Manual Money: " + str(noAutoSlots) + (" " * spaces) + "Instant Imitater: " + str(imitater) + (" " * spaces) + "Random Plants: " + str(randomisePlants)#Concatenation
     outputText.insert(END, manipulatedText) #this inserts the manipulatedText variable into the text box
 def getSeed():
     global seed
@@ -80,7 +76,7 @@ def getSeed():
 label=Label(window, text="Enter seed: ")
 label.grid(row=0, column=0, sticky=W) #Poistioning this widget (now in a variable) on the screen
 
-spaces=100
+spaces=150
 
 #create a button widget
 challengeButton=Button(window, text="CHALLENGE", width=15, command=challengeButtonClick)
@@ -93,26 +89,38 @@ noRestrictionsButton=Button(window, text="MANUAL MONEY", width=15, command=autoS
 noRestrictionsButton.grid(row=1, column=3, sticky=W)
 imitaterButton=Button(window, text="INSTANT IMITATER", width=15, command=imitaterButtonClick)
 imitaterButton.grid(row=1, column=4, sticky=W)
+randPlantsButton=Button(window, text="RANDOM PLANTS", width=15, command=randPlantsButtonClick)
+randPlantsButton.grid(row=1, column=5, sticky=W)
 closeButton=Button(window, text="SUBMIT SETTINGS", width=15, command=closeButtonClick)
-closeButton.grid(row=1, column=5, sticky=W)
+closeButton.grid(row=1, column=6, sticky=W)
 informationButton=Button(window, text="INFORMATION", width=15, command=informationButtonClick)
-informationButton.grid(row=1, column=6, sticky=W)
+informationButton.grid(row=1, column=7, sticky=W)
 
 #creates an entry widget, assigning it to a variable
 entry=Entry(window, width=20, bg="light green")
 entry.grid(row=0, column=1, sticky=W) #positioning this widget on the screen
 
 #create a text box widget
-outputText=Text(window, width=100, height=10, wrap=WORD, background="yellow")
+outputText=Text(window, width=120, height=8, wrap=WORD, background="yellow")
 outputText.grid(row=3, column=0, columnspan=10, sticky=W)
-outputText.insert(END, "Challenge Mode: " + str(challengeMode) + (" " * spaces) + "Shopless: " + str(shopless) + (" " * spaces) + "No restrictions: " + str(noRestrictions) + (" " * spaces) + "Manual Money: "  + str(noAutoSlots) + (" " * spaces) + "Instant Imitater: " + str(imitater))
+outputText.insert(END, "Challenge Mode: " + str(challengeMode) + (" " * spaces) + "Shopless: " + str(shopless) + (" " * spaces) + "No restrictions: " + str(noRestrictions) + (" " * spaces) + "Manual Money: "  + str(noAutoSlots) + (" " * spaces) + "Instant Imitater: " + str(imitater)+ (" " * spaces) + "Random Plants: " + str(randomisePlants))
 
 window.mainloop() #Run the event loop
 print(seed)
-random.seed(seed)
+#random.seed(seed)
 
-def randomiseLevels():
+LEVEL_PLANTS = [
+0,
+1,  2,  3,  -1, 4,  5,  6,  7,  -1,  8,
+9,  10, 11, -1, 12, 13, 14, 15, -1, 16,
+17, 18, 19, -1, 20, 21, 22, 23, -1, 24,
+25, 26, 27, -1, 28, 29, 30, 31, -1, 32,
+33, 34, 35, -1, 36, 37, 38, 39, -1, -1
+]
+
+def randomiseLevels2(seed):
     global noRestrictions, challengeMode
+    random.seed(seed)
     firstLevels=[]
     levels=[1]
     toughLevelCheck=0
@@ -322,6 +330,198 @@ def randomiseLevels():
                                 levels=addToLevelsList(levels, j)
     return firstLevels
 
+def randomiseLevels(seed):
+    global noRestrictions, challengeMode
+    random.seed(seed)
+    firstLevels=[]
+    levels=[1]
+    toughLevelCheck=0
+    balloonCheck=0
+    if noRestrictions:
+        for i in range(2, 51):
+            levels.append(i)
+    for i in range(0,50):
+        levels, firstLevels = addLevel(levels, firstLevels)
+        levels = list(getAvailableStages(getDefaultPlantArrayFromLevels(firstLevels), firstLevels))
+    return firstLevels
+
+def randomiseLevelsAndPlants(seed):
+    global noRestrictions, challengeMode
+    random.seed(seed)
+    
+    plants = [1]
+    levels = [1]
+    unused_plants   = [i        for i in range(2,40)]
+    if challengeMode or noRestrictions:
+        level_plants    = [(-1,1.0) for i in range(0,51)]
+    else:
+        level_plants    = [(-1,0.8) for i in range(0,51)]
+    level_plants[0] =  (0, 0.0)
+    level_plants[1] =  (1, 0.0)
+    if not noRestrictions:
+        while 1: #select key plants for only levels you could have unlocked by that point
+            current_available = len(getAvailableStages(plants,levels))
+            plants.append(0)
+            key_plants   = []
+            key_weights  = []
+            key_weights2 = []
+            for i in unused_plants:
+                plants[-1] = i
+                if current_available < len(getAvailableStages(plants,levels)):
+                    key_plants.append(i)
+                    key_weights.append(1.0)
+                    key_weights2.append(3.0)
+                elif i in {2, 6, 7, 15, 17, 20, 29, 31, 35, 39}:
+                    key_plants.append(i)
+                    key_weights.append(0.23)
+                    if challengeMode:
+                        key_weights2.append(1.0)
+                    else:
+                        key_weights2.append(1.3)
+            
+            if not key_plants:
+                break
+            
+            chosen_plant     = random.choices(key_plants, weights=key_weights)[0]
+            chosen_weight    = key_weights2[key_plants.index(chosen_plant)]
+            plants[-1]       = chosen_plant
+            available_levels = list(getAvailableStages(plants[0:-2], levels))
+            chosen_level     = random.choice(available_levels)
+            unused_plants.remove(chosen_plant)
+            
+            levels.append(chosen_level)
+            level_plants[chosen_level] = (chosen_plant,chosen_weight)
+        
+    for i in unused_plants:
+        available_levels = list(getAvailableStages(plants, levels)) #should return all levels without plants assigned
+        chosen_level     = random.choice(available_levels)
+        
+        levels.append(chosen_level)
+        level_plants[chosen_level] = (i,1.0)
+    
+    levels = [1]
+    plants = [1]
+    world_weights = [0.93, 1.0, 1.0, 1.0, 1.0]
+    for i in range(1,50):
+        available_levels = list(getAvailableStages(plants, levels))
+        chosen_level     = random.choices(available_levels, weights=[level_plants[i][1]*world_weights[int((i-1)/10)] for i in available_levels])[0]
+        world_weights[int((chosen_level-1)/10)] -= 0.07
+        levels.append(chosen_level)
+        plants.append(level_plants[chosen_level][0])
+    
+    level_plants = [i[0] for i in level_plants]
+    return levels, level_plants
+
+def getDefaultPlantArrayFromLevels(levels):
+    global LEVEL_PLANTS
+    plants = []
+    for i in levels:
+        if LEVEL_PLANTS[i] != -1:
+            plants.append(LEVEL_PLANTS[i])
+    return plants
+
+def getAvailableStages(plants, used_levels=[]):
+    global noRestrictions, challengeMode
+    if len(used_levels) == 0:
+        level_set = {1}
+    elif noRestrictions:
+        level_set = {
+        2,  3,  4,  5,  6,  7,  8,  9,  10,
+        11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
+        21, 22, 23, 24, 25, 26, 27, 28, 29, 30,
+        31, 32, 33, 34, 35, 36, 37, 38, 39, 40,
+        41, 42, 43, 44, 45, 46, 47, 48, 49, 50}
+    else:
+        level_set = {2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20, 25, 30, 35, 40, 45, 50}
+        plant_set = set(plants)
+        
+        tough_check   = len(plant_set & {2, 6, 7, 15, 17, 20, 29, 31, 35, 39}) #cherry bomb, chomper, repeater, doom, squash, jalapeno, starfruit, magnet, coffee bean, melon pult
+        balloon_check = len(plant_set & {2, 15, 20}) + 2 * len(plant_set & {26, 27})
+        
+        if challengeMode:
+            tough_check = 9999
+        
+        has_puff              = 8  in plant_set
+        has_lily              = 16 in plant_set
+        has_pool_shooter      = 29 in plant_set or 18 in plant_set
+        has_seapeater         = 24 in plant_set and has_pool_shooter #threepeater or starfruit + sea shroom
+        has_fog_plants        = has_puff and (has_lily or 24 in plant_set)
+        has_pot               = 33 in plant_set
+        has_roof_plant        = 32 in plant_set or 39 in plant_set or has_pot
+        
+        if has_puff:
+            level_set.add(11)
+        if has_puff and tough_check >= 3:
+            level_set.add(12)
+        if has_puff:
+            level_set.add(13)
+        if has_puff and tough_check >= 3:
+            level_set.add(14)
+        if has_puff:
+            level_set.add(16)
+        if has_puff and tough_check >= 3:
+            level_set.add(17)
+        if has_puff:
+            level_set.add(18)
+        if has_puff and tough_check >= 3:
+            level_set.add(19)
+        
+        if has_lily or has_pool_shooter:
+            level_set.add(21)
+        if (has_lily or has_pool_shooter) and tough_check >= 3:
+            level_set.add(22)
+        if has_lily:
+            level_set.add(23)
+        if has_lily and tough_check >= 5:
+            level_set.add(24)
+        if (has_lily or has_pool_shooter) and tough_check >= 3:
+            level_set.add(26)
+        if has_lily and tough_check >= 5:
+            level_set.add(27)
+        if has_lily or has_seapeater:
+            level_set.add(28)
+        if (has_lily or has_seapeater) and tough_check >= 5:
+            level_set.add(29)
+        
+        if has_fog_plants:
+            level_set.add(31)
+        if has_puff and (has_lily or has_seapeater) and tough_check >= 3:
+            level_set.add(32)
+        if has_fog_plants:
+            level_set.add(33)
+        if has_puff and has_lily and balloon_check >= 2 and tough_check >= 3:
+            level_set.add(34)
+        if has_fog_plants:
+            level_set.add(36)
+        if has_puff and (has_lily or has_seapeater) and tough_check >= 5:
+            level_set.add(37)
+        if has_fog_plants:
+            level_set.add(38)
+        if has_puff and has_lily and balloon_check >= 2 and tough_check >= 5:
+            level_set.add(39)
+        
+        if has_roof_plant or len(used_levels) > 10:
+            level_set.add(41)
+        if has_pot and tough_check >= 3:
+            level_set.add(42)
+        if has_roof_plant and tough_check >= 3:
+            level_set.add(43)
+        if has_pot and tough_check >= 5:
+            level_set.add(44)
+        if has_roof_plant and tough_check >= 3:
+            level_set.add(46)
+        if has_pot and tough_check >= 5:
+            level_set.add(47)
+        if has_pot and tough_check >= 3:
+            level_set.add(48)
+        if has_pot and tough_check >= 5:
+            level_set.add(49)
+    
+    for i in used_levels:
+        if i in level_set:
+            level_set.remove(i)
+    
+    return level_set
 
 def addLevel(levels, firstLevels):
     global noRestrictions
@@ -365,21 +565,26 @@ def addToLevelsList(levels, numberList):
     for i in range(0, len(numberList)):
         levels.append(numberList[i])
     return levels
+
 def showAverage(): #balancing purposes
-    
+    global randomisePlants
     dayAverage=0
     nightAverage=0
     poolAverage=0
     fogAverage=0
     roofAverage=0
     averageTarget=10000
-    for i in range(0, averageTarget):
+    random_seeds = [random.getrandbits(32) for i in range(0,averageTarget)]
+    for i in random_seeds:
         dayCount=0
         nightCount=0
         poolCount=0
         fogCount=0
         roofCount=0
-        levels = randomiseLevels()
+        if randomisePlants:
+            levels, _ = randomiseLevelsAndPlants(i)
+        else:
+            levels = randomiseLevels(i)
         for j in range(30, 50):
             if levels[j]>30 and levels[j]<40 and levels[j]!=35:
                 fogCount+=1
@@ -417,8 +622,39 @@ def nightAverage():
 
 #showAverage()
 #nightAverage()
-levels = randomiseLevels()
-#print(levels)
+if randomisePlants:
+    levels, level_plants = randomiseLevelsAndPlants(seed)
+else:
+    levels = randomiseLevels(seed)
+    level_plants = LEVEL_PLANTS
+
+plants_array = [-1,0]
+for i in levels:
+    if level_plants[i] != -1:
+        plants_array.append(level_plants[i])
+for i in [40,41,42,43,44,45,46,47,48]:
+    plants_array.append(i)
+
+SEED_STRINGS = [
+    "Peashooter",   "Sunflower",      "Cherry Bomb",  "Wall-nut",     "Potato Mine",  "Snow Pea",       "Chomper",    "Repeater",
+    "Puff-shroom",  "Sun-shroom",     "Fume-shroom",  "Grave Buster", "Hypno-shroom", "Scaredy-shroom", "Ice-shroom", "Doom-shroom",
+    "Lily Pad",     "Squash",         "Threepeater",  "Tangle Kelp",  "Jalapeno",     "Spikeweed",      "Torchwood",  "Tall-nut",
+    "Sea-shroom",   "Plantern",       "Cactus",       "Blover",       "Split Pea",    "Starfruit",      "Pumpkin",    "Magnet-shroom",
+    "Cabbage-pult", "Flower Pot",     "Kernel-pult",  "Coffee Bean",  "Garlic",       "Umbrella Leaf",  "Marigold",   "Melon-pult",
+    "Gatling Pea",  "Twin Sunflower", "Gloom-shroom", "Cattail",      "Winter Melon", "Gold Magnet",    "Spikerock",  "Cob Cannon",
+    "Imitater",     "NONE"
+]
+
+LEVEL_STRINGS = ["Not a level",
+    "1-1", "1-2", "1-3", "1-4", "1-5", "1-6", "1-7", "1-8", "1-9", "1-10",
+    "2-1", "2-2", "2-3", "2-4", "2-5", "2-6", "2-7", "2-8", "2-9", "2-10",
+    "3-1", "3-2", "3-3", "3-4", "3-5", "3-6", "3-7", "3-8", "3-9", "3-10",
+    "4-1", "4-2", "4-3", "4-4", "4-5", "4-6", "4-7", "4-8", "4-9", "4-10",
+    "5-1", "5-2", "5-3", "5-4", "5-5", "5-6", "5-7", "5-8", "5-9", "5-10"
+]
+
+##for i in levels:
+##    print(LEVEL_STRINGS[i], SEED_STRINGS[level_plants[i]])
 
 #Seed packet rendering on the seed select screen
 
@@ -645,21 +881,6 @@ WriteMemory("unsigned char", [
 0xeb, 0xee                    #jmp  0x40bded
 ], 0x40bdeb)
 
-LEVEL_PLANTS = [
-0,
-1,  2,  3,  -1, 4,  5,  6,  7,  -1,  8,
-9,  10, 11, -1, 12, 13, 14, 15, -1, 16,
-17, 18, 19, -1, 20, 21, 22, 23, -1, 24,
-25, 26, 27, -1, 28, 29, 30, 31, -1, 32,
-33, 34, 35, -1, 36, 37, 38, 39, -1, -1
-]
-plants_array = [-1,0]
-for i in levels:
-    if LEVEL_PLANTS[i] != -1:
-        plants_array.append(LEVEL_PLANTS[i])
-for i in [40,41,42,43,44,45,46,47,48]:
-    plants_array.append(i)
-
 plants_unlocked = 1
 WriteMemory("int", plants_array, 0x651094)
 
@@ -680,7 +901,7 @@ for i in range(50):
         WriteMemory("bool",True,0x6A9EC0,0x82C,0x218)
     if(i != 0): 
         WriteMemory("int",newlevel-1,0x6A9EC0,0x768, 0x5550)
-    if(LEVEL_PLANTS[newlevel] != -1):
+    if(level_plants[newlevel] != -1):
         plants_unlocked += 1
     #if(newlevel >= 44): # gloom shroom
         #WriteMemory("bool",True,0x6A9EC0,0x82C,0x1C8)
