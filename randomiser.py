@@ -1,7 +1,167 @@
-from tkinter import *
+from   tkinter import *
+import platform
 try:
-    from pvz import *
-    from pvz.extra import *
+    if platform.system() == "Windows":
+        WINDOWS = True
+        LINUX   = False
+        from pvz import *
+        from pvz.extra import *
+    else:
+        LINUX   = True
+        WINDOWS = False
+        
+        import ctypes
+        import struct
+        import time
+        from os import listdir
+        libc = ctypes.CDLL("libc.so.6",use_errno=True)
+        
+        from ctypes import c_int     as INT
+        from ctypes import c_void_p  as VOIDP
+        from ctypes import c_ulong   as ULONG
+        from ctypes import c_ssize_t as SSIZE_T
+        from ctypes import c_size_t  as SIZE_T
+        from ctypes import c_uint    as UINT
+        from ctypes import c_char_p  as CHARP
+        
+        pwrite          = libc.pwrite
+        pwrite.argtypes = [INT,VOIDP,SIZE_T,VOIDP]
+        pwrite.restype  = SSIZE_T
+        
+        pread          = libc.pread
+        pread.argtypes = [INT,VOIDP,SIZE_T,VOIDP]
+        pread.restype  = SSIZE_T
+        
+        c_open          = libc.open
+        c_open.argtypes = [CHARP,INT,UINT]
+        c_open.restype  = INT
+        
+        cpp_typename = {
+            "char": "b",
+            "signed char": "b",
+            "int8_t": "b",
+            "unsigned char": "B",
+            "byte": "B",
+            "uint8_t": "B",
+            "bool": "?",
+            "short": "h",
+            "int16_t": "h",
+            "unsigned short": "H",
+            "uint16_t": "H",
+            "int": "i",
+            "int32_t": "i",
+            "intptr_t": "i",
+            "unsigned int": "I",
+            "uint32_t": "I",
+            "uintptr_t": "I",
+            "size_t": "I",
+            "long": "l",
+            "unsigned long": "L",
+            "long long": "q",
+            "int64_t": "q",
+            "intmax_t": "q",
+            "unsigned long long": "Q",
+            "uint64_t": "Q",
+            "uintmax_t": "Q",
+            "float": "f",
+            "double": "d",
+        }
+        
+        def openPVZ():
+            procfiles = listdir("/proc/")
+            processes = []
+            for i in procfiles:
+                if i.isdigit():
+                    processes.append(i)
+            
+            pvz_proc = None
+            for i in processes:
+                with open("/proc/"+i+"/comm", "rb") as namefile:
+                    name = namefile.read()
+                if name == b"popcapgame1.exe\n":
+                    pvz_proc = i
+                elif name == b"PlantsVsZombies\n":
+                    if not pvz_proc:
+                        pvz_proc = i
+            
+            if not pvz_proc:
+                raise ImportError("pvz not found!")
+            
+            print(pvz_proc)
+            pvz_memfd = c_open(b'/proc/'+bytes(pvz_proc,'utf-8')+b'/mem',0x1B6,0)
+            
+            return pvz_memfd
+        
+        def ReadMemory(data_type, *address, array=1): #most of this is stolen from pvzscripts
+            level      = len(address)
+            offset     = VOIDP()
+            buffer     = UINT()
+            bytes_read = ULONG()
+
+            for i in range(level):
+                offset.value = buffer.value + address[i]
+
+                if i != level - 1:
+                    size = ctypes.sizeof(buffer)
+                    bytes_read.value = pread(pvz_memfd,ctypes.byref(buffer),size,offset)
+                    if bytes_read.value != size:
+                        raise AttributeError("ReadMemory Error " + str(-ctypes.get_errno()))
+
+                else:
+                    fmt_str = "<" + str(array) + cpp_typename[data_type]
+                    size = struct.calcsize(fmt_str)
+                    buff = ctypes.create_string_buffer(size)
+                    bytes_read.value = pread(pvz_memfd,ctypes.byref(buff),size,offset)
+                    if bytes_read.value != size:
+                        raise AttributeError("ReadMemory Error " + str(-ctypes.get_errno()))
+
+                    result = struct.unpack(fmt_str, buff.raw)
+            if array == 1:
+                return result[0]
+            else:
+                return result
+        
+        def WriteMemory(data_type, values, *address): #most of this is stolen from pvzscripts too
+            if not isinstance(values, (tuple, list)):
+                values = [values]
+
+            level         = len(address)
+            offset        = VOIDP()
+            buffer        = UINT()
+            bytes_read    = ULONG()
+            bytes_written = ULONG()
+
+            for i in range(level):
+                offset.value = buffer.value + address[i]
+
+                if i != level - 1:
+                    size = ctypes.sizeof(buffer)
+                    bytes_read.value = pread(pvz_memfd,ctypes.byref(buffer),size,offset)
+                    if bytes_read.value != size:
+                        raise AttributeError("WriteMemory Error " + str(-ctypes.get_errno()))
+
+                else:
+                    array = len(values)
+                    fmt_str = "<" + str(array) + cpp_typename[data_type]
+                    size = struct.calcsize(fmt_str)
+                    buff = ctypes.create_string_buffer(size)
+                    buff.value = struct.pack(fmt_str, *values)
+                    bytes_written.value = pwrite(pvz_memfd,ctypes.byref(buff),size,offset)
+                    if bytes_written.value != size:
+                        raise AttributeError("WriteMemory Error " + str(-ctypes.get_errno()))
+        
+        def Sleep(time_cs): #this is stolen too, idk why its part of pvztools but it is
+            if time_cs > 0.0:
+                time.sleep(time_cs / 100)
+            elif time_cs == 0.0:
+                pass
+            else:
+                error("The thread sleep time cannot be less than zero.")
+        
+        def game_ui():
+            return ReadMemory("int", 0x6A9EC0, 0x7FC)
+        
+        pvz_memfd = openPVZ()
 except:
     print("pvz not found!")
 import random
