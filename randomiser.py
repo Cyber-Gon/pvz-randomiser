@@ -4,8 +4,16 @@ try:
     if platform.system() == "Windows":
         WINDOWS = True
         LINUX   = False
-        from pvz import *
-        from pvz.extra import *
+        
+        from   pvz import *
+        from   pvz.extra import *
+        import atexit
+        
+        def dealloc_rngmem():
+            try:
+                VirtualFreeEx(pvz_handle, rng_addr, 0, 0x8000)
+            except:
+                print("Could not deallocate rng memory")
     else:
         LINUX   = True
         WINDOWS = False
@@ -174,6 +182,7 @@ noRestrictions=False
 noAutoSlots=False
 imitater=False
 randomisePlants=False
+seeded=False
 seed=str(random.randint(1,999999999999))
 
 def challengeButtonClick():
@@ -208,6 +217,11 @@ def randPlantsButtonClick():
     global randomisePlants
     randomisePlants=not randomisePlants
     buttonClick()
+
+def seededButtonClick():
+    global seeded
+    seeded=not seeded
+    buttonClick()
     
 def closeButtonClick():
     getSeed()
@@ -219,12 +233,12 @@ def informationButtonClick():
     outputText.insert(END, manipulatedText)
 
 def buttonClick():
-    global noRestrictions, challengeMode, shopless, noAutoSlots, imitater, randomisePlants, spaces
+    global noRestrictions, challengeMode, shopless, noAutoSlots, imitater, randomisePlants, spaces, seeded
     outputText.delete(0.0, END) #this clears the contents of the text box widget
     if not noRestrictions:
-        manipulatedText="Challenge Mode: " + str(challengeMode) + (" " * spaces) + "Shopless: " + str(shopless) + (" " * spaces) + "No restrictions: " + str(noRestrictions) + (" " * spaces) + "Manual Money: " + str(noAutoSlots) + (" " * spaces) + "Instant Imitater: " + str(imitater) + (" " * spaces) + "Random Plants: " + str(randomisePlants)#Concatenation
+        manipulatedText="Challenge Mode: " + str(challengeMode) + (" " * spaces) + "Shopless: " + str(shopless) + (" " * spaces) + "No restrictions: " + str(noRestrictions) + (" " * spaces) + "Manual Money: " + str(noAutoSlots) + (" " * spaces) + "Instant Imitater: " + str(imitater) + (" " * spaces) + "Random Plants: " + str(randomisePlants) + (" " * spaces) + "Seeded: " + str(seeded)#Concatenation
     else:
-        manipulatedText="Challenge Mode (locked): " + str(challengeMode) + (" " * spaces) + "Shopless: " + str(shopless) + (" " * spaces) + "No restrictions: " + str(noRestrictions) + (" " * spaces) + "Manual Money: " + str(noAutoSlots) + (" " * spaces) + "Instant Imitater: " + str(imitater) + (" " * spaces) + "Random Plants: " + str(randomisePlants)#Concatenation
+        manipulatedText="Challenge Mode (locked): " + str(challengeMode) + (" " * spaces) + "Shopless: " + str(shopless) + (" " * spaces) + "No restrictions: " + str(noRestrictions) + (" " * spaces) + "Manual Money: " + str(noAutoSlots) + (" " * spaces) + "Instant Imitater: " + str(imitater) + (" " * spaces) + "Random Plants: " + str(randomisePlants) + (" " * spaces) + "Seeded: " + str(seeded)#Concatenation
     outputText.insert(END, manipulatedText) #this inserts the manipulatedText variable into the text box
 def getSeed():
     global seed
@@ -251,6 +265,8 @@ imitaterButton=Button(window, text="INSTANT IMITATER", width=15, command=imitate
 imitaterButton.grid(row=1, column=4, sticky=W)
 randPlantsButton=Button(window, text="RANDOM PLANTS", width=15, command=randPlantsButtonClick)
 randPlantsButton.grid(row=1, column=5, sticky=W)
+seededButton=Button(window, text="SEEDED", width=15, command=seededButtonClick)
+seededButton.grid(row=2, column=0, sticky=W)
 closeButton=Button(window, text="SUBMIT SETTINGS", width=15, command=closeButtonClick)
 closeButton.grid(row=1, column=6, sticky=W)
 informationButton=Button(window, text="INFORMATION", width=15, command=informationButtonClick)
@@ -263,7 +279,7 @@ entry.grid(row=0, column=1, sticky=W) #positioning this widget on the screen
 #create a text box widget
 outputText=Text(window, width=120, height=8, wrap=WORD, background="yellow")
 outputText.grid(row=3, column=0, columnspan=10, sticky=W)
-outputText.insert(END, "Challenge Mode: " + str(challengeMode) + (" " * spaces) + "Shopless: " + str(shopless) + (" " * spaces) + "No restrictions: " + str(noRestrictions) + (" " * spaces) + "Manual Money: "  + str(noAutoSlots) + (" " * spaces) + "Instant Imitater: " + str(imitater)+ (" " * spaces) + "Random Plants: " + str(randomisePlants))
+outputText.insert(END, "Challenge Mode: " + str(challengeMode) + (" " * spaces) + "Shopless: " + str(shopless) + (" " * spaces) + "No restrictions: " + str(noRestrictions) + (" " * spaces) + "Manual Money: "  + str(noAutoSlots) + (" " * spaces) + "Instant Imitater: " + str(imitater)+ (" " * spaces) + "Random Plants: " + str(randomisePlants) + (" " * spaces) + "Seeded: " + str(seeded))
 
 window.mainloop() #Run the event loop
 print(seed)
@@ -502,7 +518,7 @@ def randomiseLevels(seed):
             levels.append(i)
     for i in range(0,50):
         levels, firstLevels = addLevel(levels, firstLevels)
-        levels = list(getAvailableStages(getDefaultPlantArrayFromLevels(firstLevels), firstLevels))
+        levels = sorted(list(getAvailableStages(getDefaultPlantArrayFromLevels(firstLevels), firstLevels)))
     return firstLevels
 
 def randomiseLevelsAndPlants(seed):
@@ -545,7 +561,7 @@ def randomiseLevelsAndPlants(seed):
             chosen_plant     = random.choices(key_plants, weights=key_weights)[0]
             chosen_weight    = key_weights2[key_plants.index(chosen_plant)]
             plants[-1]       = chosen_plant
-            available_levels = list(getAvailableStages(plants[0:-2], levels))
+            available_levels = sorted(list(getAvailableStages(plants[0:-2], levels)))
             chosen_level     = random.choice(available_levels)
             unused_plants.remove(chosen_plant)
             
@@ -553,17 +569,20 @@ def randomiseLevelsAndPlants(seed):
             level_plants[chosen_level] = (chosen_plant,chosen_weight)
         
     for i in unused_plants:
-        available_levels = list(getAvailableStages(plants, levels)) #should return all levels without plants assigned
+        available_levels = sorted(list(getAvailableStages(plants, levels))) #should return all levels without plants assigned
         chosen_level     = random.choice(available_levels)
         
         levels.append(chosen_level)
-        level_plants[chosen_level] = (i,1.0)
+        if i==9:
+            level_plants[chosen_level] = (i,2.0)
+        else:
+            level_plants[chosen_level] = (i,1.0)
     
     levels = [1]
     plants = [1]
     world_weights = [0.93, 1.0, 1.0, 1.0, 1.0]
     for i in range(1,50):
-        available_levels = list(getAvailableStages(plants, levels))
+        available_levels = sorted(list(getAvailableStages(plants, levels)))
         chosen_level     = random.choices(available_levels, weights=[level_plants[i][1]*world_weights[int((i-1)/10)] for i in available_levels])[0]
         world_weights[int((chosen_level-1)/10)] -= 0.07
         levels.append(chosen_level)
@@ -1013,6 +1032,181 @@ WriteMemory("unsigned char", 1, 0x43c1d1)
 
 
 
+#chacha8 (for rng)
+
+WriteMemory("unsigned char", [
+0x65, 0x78, 0x70, 0x71, 0x6e, 0x64, 0x20, 0x33, 0x32, 0x2d, 0x62, 0x79, 0x74, 0x65, 0x20, 0x6b #expand 32-byte k
+], 0x651160)
+random.seed(seed)
+WriteMemory("unsigned int", [random.getrandbits(32) for i in range(8)], 0x651170)
+WriteMemory("int",1,0x651190)
+WriteMemory("unsigned char", [
+                                                      #chacha8:
+0xb8, 0x90, 0x11, 0x65, 0x00,                         #        movl   $0x651190,      %eax
+0xff, 0x42, 0x08,                                     #        incl   0x8(%edx)
+0x66, 0x0f, 0x1f, 0x44, 0x00, 0x00,                   #        nop
+0x66, 0x0f, 0x6f, 0x1a,                               #        movdqa (%edx),        %xmm3
+0x66, 0x0f, 0xc4, 0x58, 0x00, 0x06,                   #        pinsrw $6, 0x0(%eax), %xmm3
+0x66, 0x0f, 0xc4, 0x58, 0x02, 0x07,                   #        pinsrw $7, 0x2(%eax), %xmm3
+0x66, 0x0f, 0x6f, 0x04, 0x25, 0x60, 0x11, 0x65, 0x00, #        movdqa 0x651160, %xmm0
+0x66, 0x0f, 0x6f, 0x0c, 0x25, 0x70, 0x11, 0x65, 0x00, #        movdqa 0x651170, %xmm1
+0x66, 0x0f, 0x6f, 0x14, 0x25, 0x80, 0x11, 0x65, 0x00, #        movdqa 0x651180, %xmm2
+0x66, 0x0f, 0x7f, 0xdd,                               #        movdqa %xmm3,    %xmm5
+0x6a, 0x04,                                           #        pushl  $0x4
+0x8f, 0xc1,                                           #        popl   %ecx
+                                                      #        chacha8.loopA:
+0xe8, 0x59, 0x00, 0x00, 0x00,                         #                call   chacharound
+0x66, 0x0f, 0x70, 0xc9, 0x93,                         #                pshufd $0x93, %xmm1, %xmm1
+0x66, 0x0f, 0x70, 0xd2, 0x4e,                         #                pshufd $0x4e, %xmm2, %xmm2
+0x66, 0x0f, 0x70, 0xdb, 0x39,                         #                pshufd $0x39, %xmm3, %xmm3
+0xe8, 0x45, 0x00, 0x00, 0x00,                         #                call   chacharound
+0x66, 0x0f, 0x70, 0xc9, 0x39,                         #                pshufd $0x39, %xmm1, %xmm1
+0x66, 0x0f, 0x70, 0xd2, 0x4e,                         #                pshufd $0x4e, %xmm2, %xmm2
+0x66, 0x0f, 0x70, 0xdb, 0x93,                         #                pshufd $0x93, %xmm3, %xmm3
+0xe2, 0xd6,                                           #        loop   chacha8.loopA
+0x66, 0x0f, 0xfe, 0x04, 0x25, 0x60, 0x11, 0x65, 0x00, #        paddd  0x651160,   %xmm0
+0x66, 0x0f, 0xfe, 0x0c, 0x25, 0x70, 0x11, 0x65, 0x00, #        paddd  0x651170,   %xmm1
+0x66, 0x0f, 0xfe, 0x14, 0x25, 0x80, 0x11, 0x65, 0x00, #        paddd  0x651180,   %xmm2
+0x66, 0x0f, 0xfe, 0xdd,                               #        paddd  %xmm5,      %xmm3
+0x66, 0x0f, 0x7f, 0x42, 0x10,                         #        movdqa %xmm0, 0x10(%edx)
+0x66, 0x0f, 0x7f, 0x4a, 0x20,                         #        movdqa %xmm1, 0x20(%edx)
+0x66, 0x0f, 0x7f, 0x52, 0x30,                         #        movdqa %xmm2, 0x30(%edx)
+0x66, 0x0f, 0x7f, 0x5a, 0x40,                         #        movdqa %xmm3, 0x40(%edx)
+0xc3,                                                 #        retl
+
+                                                      #chacharound:
+0x66, 0x0f, 0xfe, 0xc1,                               #        paddd   %xmm1, %xmm0
+0x66, 0x0f, 0xef, 0xd8,                               #        pxor    %xmm0, %xmm3
+0xf3, 0x0f, 0x70, 0xdb, 0xb1,                         #        pshufhw $0xb1, %xmm3, %xmm3
+0xf2, 0x0f, 0x70, 0xdb, 0xb1,                         #        pshuflw $0xb1, %xmm3, %xmm3
+0x66, 0x0f, 0xfe, 0xd3,                               #        paddd   %xmm3, %xmm2
+0x66, 0x0f, 0xef, 0xca,                               #        pxor    %xmm2, %xmm1
+0x66, 0x0f, 0x7f, 0xcc,                               #        movdqa  %xmm1, %xmm4
+0x66, 0x0f, 0x72, 0xf1, 0x0c,                         #        pslld   $12,   %xmm1
+0x66, 0x0f, 0x72, 0xd4, 0x14,                         #        psrld   $20,   %xmm4
+0x66, 0x0f, 0xeb, 0xcc,                               #        por     %xmm4, %xmm1
+0x66, 0x0f, 0xfe, 0xc1,                               #        paddd   %xmm1, %xmm0
+0x66, 0x0f, 0xef, 0xd8,                               #        pxor    %xmm0, %xmm3
+0x66, 0x0f, 0x7f, 0xdc,                               #        movdqa  %xmm3, %xmm4
+0x66, 0x0f, 0x72, 0xf3, 0x08,                         #        pslld   $8,    %xmm3
+0x66, 0x0f, 0x72, 0xd4, 0x18,                         #        psrld   $24,   %xmm4
+0x66, 0x0f, 0xeb, 0xdc,                               #        por     %xmm4, %xmm3
+0x66, 0x0f, 0xfe, 0xd3,                               #        paddd   %xmm3, %xmm2
+0x66, 0x0f, 0xef, 0xca,                               #        pxor    %xmm2, %xmm1
+0x66, 0x0f, 0x7f, 0xcc,                               #        movdqa  %xmm1, %xmm4
+0x66, 0x0f, 0x72, 0xf1, 0x07,                         #        pslld   $7,    %xmm1
+0x66, 0x0f, 0x72, 0xd4, 0x19,                         #        psrld   $25,   %xmm4
+0x66, 0x0f, 0xeb, 0xcc,                               #        por     %xmm4, %xmm1
+0xc3                                                  #        retl
+], 0x651edc)
+
+
+
+#seeded rng stuff
+
+WriteMemory("unsigned char", [
+                                          #rng_raw:
+0x6a, 0x04,                               #        pushl $0x4
+0xeb, 0x06,                               #        jmp   rng
+                                          #rng_int:
+0x6a, 0x04,                               #        pushl $0x4
+0xeb, 0x02,                               #        jmp   rng
+                                          #rng_flt:
+0x6a, 0x18,                               #        pushl $0x18
+                                          #rng:
+0x58,                                     #        popl  %eax
+0x8b, 0x04, 0x04,                         #        movl (%esp,%eax), %eax
+
+0x3d, 0x56, 0x9a, 0x5a, 0x00,             #        cmpl $0x5a9a56,   %eax
+0x75, 0x04,                               #        jne  rng.locG
+0x8b, 0x44, 0x24, 0x0c,                   #                movl 0xc(%esp), %eax
+                                          #        rng.locG:
+
+0x3d, 0x40, 0x15, 0x51, 0x00,             #        cmpl $0x511540,   %eax
+0x75, 0x04,                               #        jne  rng.locA
+0x8b, 0x44, 0x24, 0x14,                   #                movl 0x14(%esp),  %eax
+                                          #        rng.locA:
+
+0x3d, 0x90, 0x15, 0x51, 0x00,             #        cmpl $0x511590,   %eax
+0x75, 0x04,                               #        jne  rng.locB
+0x8b, 0x44, 0x24, 0x14,                   #                movl 0x14(%esp),  %eax
+                                          #        rng.locB:
+
+0x3d, 0xc9, 0x1c, 0x51, 0x00,             #        cmpl $0x511cc9,   %eax
+0x75, 0x04,                               #        jne  rng.locC
+0x8b, 0x44, 0x24, 0x20,                   #                movl 0x20(%esp), %eax
+                                          #        rng.locC:
+
+0x3d, 0xad, 0xce, 0x41, 0x00,             #        cmpl $0x41cead,   %eax
+0x75, 0x04,                               #        jne  rng.locD
+0x03, 0x44, 0x24, 0x2c,                   #                addl 0x2c(%esp), %eax #this should add the zombie weight to the coin rng RA
+                                          #        rng.locD:
+
+0x3d, 0x20, 0x02, 0x53, 0x00,             #        cmpl $0x530220,   %eax
+0x75, 0x02,                               #        jne  rng.locH
+0x03, 0xc6,                               #                addl %esi, %eax #this should add the zombie weight to the BTLZ 1/4 coin chance RA
+                                          #        rng.locH:
+
+0xba, 0xff, 0x03, 0x00, 0x00,             #        movl $0x3ff,            %edx
+0x21, 0xc2,                               #        andl %eax,              %edx
+0x8b, 0x0c, 0x95, 0x00, 0x00, 0x00, 0x00, #        movl 0x??????(,%edx,4), %ecx #patch +0x10 at +0x58
+
+0xe3, 0x2a,                               #        jecxz rng.locF
+                                          #        rng.loopA:
+0x39, 0x01,                               #                cmpl %eax,    (%ecx)
+0x74, 0x07,                               #                je   rng.exloopA
+0x8b, 0x49, 0x0c,                         #                movl 0xc(%ecx), %ecx
+0xe3, 0x21,                               #                jecxz rng.locF
+0xeb, 0xf5,                               #        jmp rng.loopA
+                                          #        rng.exloopA:
+
+0x8b, 0x51, 0x04,                         #        movl  0x4(%ecx), %edx
+0xff, 0xca,                               #        decl  %edx
+0x79, 0x0e,                               #        jns   rng.locE
+0x89, 0xca,                               #                movl %ecx, %edx
+0xe8, 0x3f, 0x00, 0x00, 0x00,             #                call chacha8
+0x8b, 0xca,                               #                movl %edx, %ecx
+0xba, 0x0f, 0x00, 0x00, 0x00,             #                movl $0xf, %edx
+                                          #        rng.locE:
+0x89, 0x51, 0x04,                         #        movl  %edx,         0x4(%ecx)
+0x8b, 0x44, 0x91, 0x10,                   #        movl  0x10(%ecx,%edx,4), %eax
+0xd1, 0xe8,                               #        shrl  $0x1,              %edx
+0xc3,                                     #        retl
+
+                                          #        rng.locF:
+0x50,                                     #        pushl %eax
+0x8b, 0x0c, 0x25, 0x5c, 0x11, 0x65, 0x00, #        movl  0x??????,          %ecx #patch at +0x8c
+0x8d, 0x41, 0x50,                         #        leal  0x50(%ecx),        %eax
+0xa3, 0x5c, 0x11, 0x65, 0x00,             #        movl  %eax,          0x?????? #patch at +0x94
+0x8b, 0x04, 0x95, 0x00, 0x00, 0x00, 0x00, #        movl  0x??????(,%edx,4), %eax #patch +0x10 at +0x9b
+0x89, 0x0c, 0x95, 0x00, 0x00, 0x00, 0x00, #        movl  %ecx, 0x??????(,%edx,4) #patch +0x10 at +0xa2
+0x89, 0x41, 0x0c,                         #        movl  %eax,         0xc(%ecx)
+0x31, 0xc0,                               #        xorl  %eax,              %eax
+0x89, 0x41, 0x08,                         #        movl  %eax,         0x8(%ecx)
+0x89, 0x41, 0x04,                         #        movl  %eax,         0x4(%ecx)
+0x58,                                     #        popl  %eax
+0x89, 0x01,                               #        movl  %eax,         0xc(%ecx)
+0xeb, 0xb3                                #        jmp   rng.exloopA
+], 0x651e26)
+if seeded:
+    if LINUX:
+        rng_addr = 0x200000
+    else:
+        rng_addr = VirtualAllocEx(pvz_handle, None, 0x30000, 0x1000, 0x40)
+        atexit.register(dealloc_rngmem)
+        print("WARNING: SET SEED IS NOT YET TESTED ON WINDOWS")
+        ##raise Exception("Seeded rng is not yet supported on windows!")
+    WriteMemory("int", 0x651e26-0x5a993a, 0x5a9936) #raw rng
+    WriteMemory("int", 0x651e2a-0x5a9a45, 0x5a9a41) #int rng
+    WriteMemory("int", 0x651e2e-0x5a9a6b, 0x5a9a67) #flt rng
+    WriteMemory("int", rng_addr+0x10, 0x651e26+0x58)
+    WriteMemory("int", rng_addr,      0x651e26+0x8c)
+    WriteMemory("int", rng_addr,      0x651e26+0x94)
+    WriteMemory("int", rng_addr+0x10, 0x651e26+0x9b)
+    WriteMemory("int", rng_addr+0x10, 0x651e26+0xa2)
+
+
+
 #I haven't been bothered to label these yet
 
 WriteMemory("unsigned char", [
@@ -1046,16 +1240,24 @@ WriteMemory("int", plants_array, 0x651094)
 
 for i in range(50):
     WriteMemory("int",plants_unlocked,0x651090)
+    if seeded:
+        WriteMemory("int", [0 for i in range(1024)], rng_addr+0x10)
+        WriteMemory("int", rng_addr+0x1010, rng_addr)
     newlevel=levels[i]
     if(i == 0):
-        while(ReadMemory("int",0x6A9EC0,0x82C, 0x24) != 1): # current level
-            Sleep(0.1)
+        try:
+            while(ReadMemory("int",0x6A9EC0,0x82C, 0x24) != 1): # current level
+                Sleep(0.1)
+        except:
+            print("oops")
     if not noAutoSlots or shopless:
         WriteMemory("int",0,0x6A9EC0,0x82C, 0x28)
     if imitater and i != 0:
         WriteMemory("bool",True,0x6A9EC0,0x82C,0x1E0)
         WriteMemory("int", 0, 0x453aea)
     WriteMemory("int",newlevel,0x6A9EC0,0x82C, 0x24)
+    if seeded:
+        WriteMemory("int",newlevel,0x651190)
     if not shopless:
         WriteMemory("bool",True,0x6A9EC0,0x82C,0x21C)
         WriteMemory("bool",True,0x6A9EC0,0x82C,0x218)
