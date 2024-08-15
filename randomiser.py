@@ -807,10 +807,14 @@ else:
     levels = randomiseLevels(seed)
     level_plants = LEVEL_PLANTS
 
-plants_array = [-1,0]
+plants_array  = [-1,0]
+plants_array2 = []
 for i in levels:
     if level_plants[i] != -1:
+        plants_array2.append(level_plants[i])
         plants_array.append(level_plants[i])
+    else:
+        plants_array2.append(0x4b) #nothing plant, costs 6977196 sun
 for i in [40,41,42,43,44,45,46,47,48]:
     plants_array.append(i)
 
@@ -1194,8 +1198,6 @@ if seeded:
     else:
         rng_addr = VirtualAllocEx(pvz_handle, None, 0x30000, 0x1000, 0x40)
         atexit.register(dealloc_rngmem)
-        print("WARNING: SET SEED IS NOT YET TESTED ON WINDOWS")
-        ##raise Exception("Seeded rng is not yet supported on windows!")
     WriteMemory("int", 0x651e26-0x5a993a, 0x5a9936) #raw rng
     WriteMemory("int", 0x651e2a-0x5a9a45, 0x5a9a41) #int rng
     WriteMemory("int", 0x651e2e-0x5a9a6b, 0x5a9a67) #flt rng
@@ -1205,6 +1207,32 @@ if seeded:
     WriteMemory("int", rng_addr+0x10, 0x651e26+0x9b)
     WriteMemory("int", rng_addr+0x10, 0x651e26+0xa2)
 
+
+
+#Show correct seed packet in level transition
+
+WriteMemory("unsigned char", [
+0x75, 0x29,                               #jne   0x431804 <.text+0x30804>
+0x8b, 0x80, 0x2c, 0x08, 0x00, 0x00,       #movl  0x82c(%eax), %eax
+0x85, 0xc0,                               #testl %eax, %eax
+0x74, 0x06,                               #je    0x4317eb <.text+0x307eb>
+0x83, 0x78, 0x2c, 0x00,                   #cmpl  $0x0, 0x2c(%eax)
+0x7f, 0x19,                               #jg    0x431804 <.text+0x30804>
+0x8b, 0x41, 0x04,                         #movl  0x4(%ecx), %eax
+0x85, 0xc0,                               #testl %eax, %eax
+0x74, 0x12,                               #je    0x431804 <.text+0x30804>
+0x8b, 0x80, 0x50, 0x55, 0x00, 0x00,       #movl  0x5550(%eax), %eax
+0x83, 0xf8, 0x32,                         #cmpl  $0x32, %eax
+0x7f, 0x07,                               #jg    0x431804 <.text+0x30804>
+0xa1, 0x5c, 0x11, 0x65, 0x00,             #movl  0x65115c, %eax
+0xeb, 0x04,                               #jmp   0x431808 <.text+0x30808>
+0x83, 0xc8, 0xff,                         #orl   $-0x1, %eax
+0xc3,                                     #retl
+0x8b, 0x04, 0x85, 0x94, 0x11, 0x65, 0x00, #movl 0x651194(,%eax,4), %eax
+0xc3                                      #retl
+], 0x4317d9)
+for i in [0x52ffe2, 0x52ffeb, 0x52fff4, 0x52fff9, 0x52fffe, 0x530037, 0x530046, 0x530055, 0x530064]:
+    WriteMemory("unsigned char", 0x00, i)
 
 
 #I haven't been bothered to label these yet
@@ -1237,11 +1265,13 @@ WriteMemory("unsigned char", [
 
 plants_unlocked = 1
 WriteMemory("int", plants_array, 0x651094)
+WriteMemory("int", plants_array2, 0x651194)
+WriteMemory("int",0,0x65115c)
 
 for i in range(50):
     WriteMemory("int",plants_unlocked,0x651090)
     if seeded:
-        WriteMemory("int", [0 for i in range(1024)], rng_addr+0x10)
+        WriteMemory("int", [0 for j in range(1024)], rng_addr+0x10)
         WriteMemory("int", rng_addr+0x1010, rng_addr)
     newlevel=levels[i]
     if(i == 0):
@@ -1284,6 +1314,7 @@ for i in range(50):
         WriteMemory("int",0,0x6A9EC0,0x82C, 0x28)
     while(game_ui() != 3 or ReadMemory("bool",0x6A9EC0,0x768, 0x5603)):
         Sleep(0.1)
+    WriteMemory("int",i,0x65115c)
 
 while True:
     Sleep(10)
