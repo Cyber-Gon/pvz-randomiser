@@ -1108,6 +1108,11 @@ WriteMemory("unsigned char", [
 
 #seeded rng stuff
 
+WriteMemory("unsigned char",[
+0xd1, 0xe0,            #shll $1, %eax
+0xf7, 0x64, 0x24, 0x04 #mull 0x4(%esp)
+], 0x5a9a45)
+
 WriteMemory("unsigned char", [
                                           #rng_raw:
 0x6a, 0x04,                               #        pushl $0x4
