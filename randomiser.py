@@ -183,6 +183,7 @@ noAutoSlots=False
 imitater=False
 randomisePlants=False
 seeded=False
+upgradeRewards=False
 seed=str(random.randint(1,999999999999))
 
 def challengeButtonClick():
@@ -218,6 +219,11 @@ def randPlantsButtonClick():
     randomisePlants=not randomisePlants
     buttonClick()
 
+def upgradeButtonClick():
+    global upgradeRewards
+    upgradeRewards=not upgradeRewards
+    buttonClick()
+
 def seededButtonClick():
     global seeded
     seeded=not seeded
@@ -229,16 +235,16 @@ def closeButtonClick():
 
 def informationButtonClick():
     outputText.delete(0.0, END)
-    manipulatedText="Challenge Mode gets rid of the tough level restriction. With this disabled, you will not be able to play certain levels (like 5-2) without having 3 good plants. Other levels (like 5-9) will need 5 good plants to play. With this enabled, as soon as you unlock flower pot, you can play both 5-2 and 5-9 (for instance). Shopless mode forces you to play with 6 slots and no automatic pool cleaners / roof cleaners. No restrictions mode means that there is no logic as to what levels can be played next - the majority of no restrictions runs are impossible. With manual money enabled, you do not get automatic slot upgrades, but your money does not reset to 0 after every level, and so you can purchase the slots yourself - this also means you can buy rakes and upgrade plants! Instant imitater mode gives you access to an imitater immediately, which allows you to choose one of any plant to bring to the stage, even if you haven't unlocked it! This works especially well with no restrictions. Random plants means that the plant you get at the end of each level is RANDOMISED, in a similar way to the levels! Instead of unlocking the plant you usually unlock for beating that stage, you get a random one!"
+    manipulatedText="Challenge Mode gets rid of the tough level restriction. With this disabled, you will not be able to play certain levels (like 5-2) without having 3 good plants. Other levels (like 5-9) will need 5 good plants to play. With this enabled, as soon as you unlock flower pot, you can play both 5-2 and 5-9 (for instance)." + (" " * spaces) + "Shopless mode forces you to play with 6 slots and no automatic pool cleaners / roof cleaners." + (" " * spaces) + "No restrictions mode means that there is no logic as to what levels can be played next - the majority of no restrictions runs are impossible." + (" " * spaces) + "With manual money enabled, you do not get automatic slot upgrades, but your money does not reset to 0 after every level, and so you can purchase the slots yourself - this also means you can buy rakes and upgrade plants!" + (" " * spaces) + "Instant imitater mode gives you access to an imitater immediately, which allows you to choose one of any plant to bring to the stage, even if you haven't unlocked it! This works especially well with no restrictions." + (" " * spaces) + "Random plants means that the plant you get at the end of each level is RANDOMISED, in a similar way to the levels! Instead of unlocking the plant you usually unlock for beating that stage, you get a random one!" + (" " * spaces) + "Seeded means that the seed you enter will not only affect the random plants and levels you get, but also the zombie spawns and other types of RNG, which makes it perfect for races!" + (" " * spaces) + "Random upgrades means that most levels that would usually give you no reward instead gives you an upgrade plant! It is important to note that if you have 4 plants total and one upgrade plant, you will not have 4 seed slots - sorry about that."
     outputText.insert(END, manipulatedText)
 
 def buttonClick():
     global noRestrictions, challengeMode, shopless, noAutoSlots, imitater, randomisePlants, spaces, seeded
     outputText.delete(0.0, END) #this clears the contents of the text box widget
     if not noRestrictions:
-        manipulatedText="Challenge Mode: " + str(challengeMode) + (" " * spaces) + "Shopless: " + str(shopless) + (" " * spaces) + "No restrictions: " + str(noRestrictions) + (" " * spaces) + "Manual Money: " + str(noAutoSlots) + (" " * spaces) + "Instant Imitater: " + str(imitater) + (" " * spaces) + "Random Plants: " + str(randomisePlants) + (" " * spaces) + "Seeded: " + str(seeded)#Concatenation
+        manipulatedText="Challenge Mode: " + str(challengeMode) + (" " * spaces) + "Shopless: " + str(shopless) + (" " * spaces) + "No restrictions: " + str(noRestrictions) + (" " * spaces) + "Manual Money: " + str(noAutoSlots) + (" " * spaces) + "Instant Imitater: " + str(imitater) + (" " * spaces) + "Random Plants: " + str(randomisePlants) + (" " * spaces) + "Seeded: " + str(seeded)+ (" " * spaces) + "Upgrade Rewards: " + str(upgradeRewards)#Concatenation
     else:
-        manipulatedText="Challenge Mode (locked): " + str(challengeMode) + (" " * spaces) + "Shopless: " + str(shopless) + (" " * spaces) + "No restrictions: " + str(noRestrictions) + (" " * spaces) + "Manual Money: " + str(noAutoSlots) + (" " * spaces) + "Instant Imitater: " + str(imitater) + (" " * spaces) + "Random Plants: " + str(randomisePlants) + (" " * spaces) + "Seeded: " + str(seeded)#Concatenation
+        manipulatedText="Challenge Mode (locked): " + str(challengeMode) + (" " * spaces) + "Shopless: " + str(shopless) + (" " * spaces) + "No restrictions: " + str(noRestrictions) + (" " * spaces) + "Manual Money: " + str(noAutoSlots) + (" " * spaces) + "Instant Imitater: " + str(imitater) + (" " * spaces) + "Random Plants: " + str(randomisePlants) + (" " * spaces) + "Seeded: " + str(seeded)+ (" " * spaces) + "Upgrade Rewards: " + str(upgradeRewards)#Concatenation
     outputText.insert(END, manipulatedText) #this inserts the manipulatedText variable into the text box
 def getSeed():
     global seed
@@ -252,7 +258,7 @@ label.grid(row=0, column=0, sticky=W) #Poistioning this widget (now in a variabl
 
 spaces=150
 
-#create a button widget
+#create a button widget (dear god this is unwieldy)
 challengeButton=Button(window, text="CHALLENGE", width=15, command=challengeButtonClick)
 challengeButton.grid(row=1, column=0, sticky=W)
 shoplessButton=Button(window, text="SHOPLESS", width=15, command=shoplessButtonClick)
@@ -267,6 +273,8 @@ randPlantsButton=Button(window, text="RANDOM PLANTS", width=15, command=randPlan
 randPlantsButton.grid(row=1, column=5, sticky=W)
 seededButton=Button(window, text="SEEDED", width=15, command=seededButtonClick)
 seededButton.grid(row=2, column=0, sticky=W)
+seededButton=Button(window, text="UPGRADE REWARDS", width=15, command=upgradeButtonClick)
+seededButton.grid(row=2, column=1, sticky=W)
 closeButton=Button(window, text="SUBMIT SETTINGS", width=15, command=closeButtonClick)
 closeButton.grid(row=1, column=6, sticky=W)
 informationButton=Button(window, text="INFORMATION", width=15, command=informationButtonClick)
@@ -279,7 +287,7 @@ entry.grid(row=0, column=1, sticky=W) #positioning this widget on the screen
 #create a text box widget
 outputText=Text(window, width=120, height=8, wrap=WORD, background="yellow")
 outputText.grid(row=3, column=0, columnspan=10, sticky=W)
-outputText.insert(END, "Challenge Mode: " + str(challengeMode) + (" " * spaces) + "Shopless: " + str(shopless) + (" " * spaces) + "No restrictions: " + str(noRestrictions) + (" " * spaces) + "Manual Money: "  + str(noAutoSlots) + (" " * spaces) + "Instant Imitater: " + str(imitater)+ (" " * spaces) + "Random Plants: " + str(randomisePlants) + (" " * spaces) + "Seeded: " + str(seeded))
+outputText.insert(END, "Challenge Mode: " + str(challengeMode) + (" " * spaces) + "Shopless: " + str(shopless) + (" " * spaces) + "No restrictions: " + str(noRestrictions) + (" " * spaces) + "Manual Money: "  + str(noAutoSlots) + (" " * spaces) + "Instant Imitater: " + str(imitater)+ (" " * spaces) + "Random Plants: " + str(randomisePlants) + (" " * spaces) + "Seeded: " + str(seeded)+ (" " * spaces) + "Upgrade Rewards: " + str(upgradeRewards))
 
 window.mainloop() #Run the event loop
 print(seed)
@@ -623,7 +631,7 @@ def getAvailableStages(plants, used_levels=[]):
         has_puff              = 8  in plant_set
         has_lily              = 16 in plant_set
         has_pool_shooter      = 29 in plant_set or 18 in plant_set
-        has_seapeater         = 24 in plant_set and has_pool_shooter #threepeater or starfruit + sea shroom
+        has_seapeater         = (24 in plant_set or 19 in plant_set) and has_pool_shooter #threepeater or starfruit + sea shroom or kelp
         has_fog_plants        = has_puff and (has_lily or 24 in plant_set)
         has_pot               = 33 in plant_set
         has_roof_plant        = 32 in plant_set or 39 in plant_set or has_pot
@@ -1272,6 +1280,7 @@ plants_unlocked = 1
 WriteMemory("int", plants_array, 0x651094)
 WriteMemory("int", plants_array2, 0x651194)
 WriteMemory("int",0,0x65115c)
+upgradePlants=[0x1C4, 0x1C2, 0x1C8, 0x1D4, 0x1CC, 0x1D8, 0x1E0, 0x1D0, 0x1DC] #twin, gatling, gloom, gold, cattail, spike, imitater, winter, cob
 
 for i in range(50):
     WriteMemory("int",plants_unlocked,0x651090)
@@ -1287,6 +1296,18 @@ for i in range(50):
             print("oops")
     if not noAutoSlots or shopless:
         WriteMemory("int",0,0x6A9EC0,0x82C, 0x28)
+    if upgradeRewards:
+        if i!=0:
+            if(level_plants[lastlevel] == -1):
+                if randomisePlants:
+                    if len(upgradePlants)!=0:
+                        newUpgrade=random.choice(upgradePlants)
+                        upgradePlants.remove(newUpgrade)
+                        WriteMemory("bool",True,0x6A9EC0,0x82C,newUpgrade)
+                else:
+                    if lastlevel!=49 and lastlevel!=50:
+                        WriteMemory("bool",True,0x6A9EC0,0x82C,upgradePlants[lastlevel//5])
+        lastlevel=newlevel
     if imitater and i != 0:
         WriteMemory("bool",True,0x6A9EC0,0x82C,0x1E0)
         WriteMemory("int", 0, 0x453aea)
