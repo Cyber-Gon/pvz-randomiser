@@ -1392,8 +1392,11 @@ for i in range(50):
     if i!=0 and (randomWavePoints!=False or randomWeights):
         print(" "*100)
         print("Level:", convertToLevel(levels[i-1]))
+        zombies_type_offset = read_memory("unsigned int", 0x6A9EC0, 0x768) + 0x54D4
+        zombies_type = read_memory("bool",zombies_type_offset,array=33)
         for j in range(0, 24):
-            print(zombies[j], str(ReadMemory("int", 0x69DA88 + 0x1C*j)), ReadMemory("int", 0x69DA94 + 0x1C*j))
+            if(zombies_type[j]):
+                print(zombies[j], str(ReadMemory("int", 0x69DA88 + 0x1C*j)), ReadMemory("int", 0x69DA94 + 0x1C*j))
     WriteMemory("int",plants_unlocked,0x651090)
     if seeded:
         WriteMemory("int", [0 for j in range(1024)], rng_addr+0x10)
