@@ -1267,7 +1267,7 @@ WriteMemory("unsigned char",[
 
 #shovel
 
-WriteMemory("unsigned char", 1, 0x530028)
+WriteMemory("unsigned char", 0, 0x530028)
 WriteMemory("unsigned char", 1, 0x43c1d1)
 
 
@@ -1450,7 +1450,7 @@ if seeded:
 
 
 
-#Show correct seed packet in level transition
+#Level transition
 
 WriteMemory("unsigned char", [
 0x75, 0x29,                               #jne   0x431804 <.text+0x30804>
@@ -1475,6 +1475,134 @@ WriteMemory("unsigned char", [
 for i in [0x52ffe2, 0x52ffeb, 0x52fff4, 0x52fff9, 0x52fffe, 0x530037, 0x530046, 0x530055, 0x530064]:
     WriteMemory("unsigned char", 0x00, i)
 
+WriteMemory("unsigned int", 0x679890, 0x430f79)
+WriteMemory("unsigned int", 0x679890, 0x431007)
+WriteMemory("unsigned int", 0x651268, 0x430fd9)
+WriteMemory("unsigned int", 0x651264, 0x430fad)
+WriteMemory("unsigned int", 280, 0x430f4c)
+WriteMemory("unsigned char", [
+0xd9, 0x5e, 0x28,            #fstps 0x28(%esi)
+0x0f, 0x1f, 0x00,            #nop
+0xe8, 0x13, 0x0d, 0x22, 0x00 #call 0x651dc0
+], 0x4310a2)
+WriteMemory("unsigned char", [
+0xd9, 0x5e, 0x28,            #fstps 0x28(%esi)
+0x0f, 0x1f, 0x00,            #nop
+0xe8, 0xe3, 0x0c, 0x22, 0x00 #call 0x651dc0
+], 0x4310d2)
+WriteMemory("unsigned char", [
+0xd9, 0x5e, 0x28,            #fstps 0x28(%esi)
+0x0f, 0x1f, 0x00,            #nop
+0xe8, 0xa2, 0x0c, 0x22, 0x00 #call 0x651dc0
+], 0x431113)
+WriteMemory("float",  [0.01, 150.0, 4.0], 0x65125c)
+WriteMemory("double", [2.99], 0x651268)
+WriteMemory("unsigned char", [
+0x8b, 0x46, 0x54,                   #movl   0x54(%esi), %eax
+0x05, 0x51, 0xff, 0xff, 0xff,       #addl   $-175,      %eax
+0x19, 0xc9,                         #sbbl   %ecx,       %ecx
+0x21, 0xc8,                         #andl   %ecx,       %eax
+0xb9, 0x32, 0x00, 0x00, 0x00,       #movl   $100,       %ecx #used to be 300, but that was dumb
+0x39, 0xc1,                         #cmpl   %eax,       %ecx
+0x0f, 0x42, 0xc1,                   #cmovcl %ecx,       %eax
+0x50,                               #pushl  %eax
+0xdb, 0x04, 0x24,                   #fildl  (%esp)
+0xd8, 0x0d, 0x5c, 0x12, 0x65, 0x00, #fmuls  0x65125c
+0xd9, 0x1c, 0x24,                   #fstps  (%esp)
+0xe8, 0xd8, 0xfa, 0xeb, 0xff,       #call   0x5118c0 #offset 0x28
+0xd9, 0x1c, 0x24,                   #fstps  (%esp)
+0xe8, 0xd0, 0xfa, 0xeb, 0xff,       #call   0x5118c0 #offset 0x30
+0xd8, 0x0d, 0x60, 0x12, 0x65, 0x00, #fmuls  0x651260
+0xd8, 0x6e, 0x24,                   #fsubrs 0x24(%esi)
+0xd9, 0x5e, 0x24,                   #fstps  0x24(%esi)
+0x58,                               #popl   %eax
+0xc3,                               #retl
+], 0x651dc0)
+
+WriteMemory("unsigned char", [
+0x8b, 0xc8,                  #movl  %eax, %ecx
+0x8b, 0xc6,                  #movl  %esi, %eax
+0x50,                        #pushl %eax
+0xd9, 0x14, 0x24,            #fsts  (%esp)
+0x50,                        #pushl %eax
+0xd9, 0x1c, 0x24,            #fstps (%esp)
+0x50,                        #pushl %eax
+0xd9, 0x45, 0x34,            #flds  0x34(%ebp)
+0xd9, 0x14, 0x24,            #fsts  (%esp)
+0x50,                        #pushl %eax
+0xd9, 0x1c, 0x24,            #fstps (%esp)
+0xe8, 0xcd, 0x01, 0x22, 0x00 #call  0x651d00 #431b33
+], 0x431b17)
+WriteMemory("unsigned char", [
+0x81, 0x7d, 0x54, 0xaf, 0x00, 0x00, 0x00, #cmpl   $175, 0x54(%ebp)
+0x73, 0x01,                               #jnc    +0x1
+0xc3,                                     #retl
+0x50,                                     #pushl  %eax
+0x51,                                     #pushl  %ecx
+0x52,                                     #pushl  %edx
+
+0x8b, 0xc6,                               #movl   %esi,      %eax
+0xb1, 0x01,                               #movl   $0x1,       %cl
+0xe8, 0xfa, 0x4f, 0xf3, 0xff,             #call   0x586d10        #SetColorizeImages #586d10-651d16
+
+0x31, 0xc0,                               #xorl   %eax,      %eax
+0xb0, 0xff,                               #movl   $255,       %al
+0x50,                                     #pushl  %eax
+0xb0, 0xff,                               #movl   $0xff,      %al #blue
+0x50,                                     #pushl  %eax
+0xb0, 0xbb,                               #movl   $0xbb,      %al #green
+0x50,                                     #pushl  %eax
+0xb0, 0xdd,                               #movl   $0xdd,      %al #red
+0x50,                                     #pushl  %eax
+0x8b, 0xc4,                               #movl   %esp,      %eax
+0x8b, 0xce,                               #movl   %esi,      %ecx
+0xe8, 0x93, 0x4f, 0xf3, 0xff,             #call   0x586cc0        #SetColor #0x586cc0-651d2d
+0x83, 0xc4, 0x10,                         #addl   $0x10,     %esp
+
+0x8b, 0x0d, 0x14, 0x77, 0x6a, 0x00,       #movl   0x6a7714,  %ecx #FONT_HOUSEOFTERROR28
+0x8b, 0xc6,                               #movl   %esi,      %eax
+0xe8, 0x73, 0x4f, 0xf3, 0xff,             #call   0x586cb0        #SetFont #586cb0-651d3d
+
+0x68, 0xfa, 0x00, 0x00, 0x00,             #pushl  $250
+0x68, 0xee, 0x02, 0x00, 0x00,             #pushl  $750
+0xdb, 0x04, 0x24,                         #fildl  (%esp)
+0xd9, 0x45, 0x24,                         #flds   0x24(%ebp)
+0xde, 0xe9,                               #fsubp  %st(1)
+0xdb, 0x1c, 0x24,                         #fistpl (%esp)
+0x68, 0x70, 0x12, 0x65, 0x00,             #pushl  $0x651270
+0x8b, 0xc6,                               #movl   %esi,      %eax
+0xe8, 0xc2, 0x53, 0xf3, 0xff,             #call   0x587120        #DrawString #587120-651d5e
+
+0x83, 0xc4, 0xc0,                         #addl   $-0x40,    %esp #I was too lazy to do a real subtraction
+0x8b, 0xc4,                               #movl   %esp,      %eax
+0x8b, 0x0d, 0x90, 0x11, 0x65, 0x00,       #movl   0x651190,  %ecx
+0xe8, 0x02, 0x19, 0xe0, 0xff,             #call   0x453670       #GetStageString #453670-651d6e
+0x68, 0x1d, 0x01, 0x00, 0x00,             #pushl  $285
+0x68, 0xee, 0x02, 0x00, 0x00,             #pushl  $750
+0xdb, 0x04, 0x24,                         #fildl  (%esp)
+0xd9, 0x45, 0x24,                         #flds   0x24(%ebp)
+0xde, 0xe9,                               #fsubp  %st(1)
+0xdb, 0x1c, 0x24,                         #fistpl (%esp)
+0x50,                                     #pushl  %eax
+0x8b, 0xc6,                               #movl   %esi,      %eax
+0xe8, 0x95, 0x53, 0xf3, 0xff,             #call   0x587120        #DrawString #587120-651d8b
+0x83, 0xc4, 0x40,                         #addl   $0x40,     %esp
+
+0x8b, 0xc6,                               #movl   %esi,      %eax
+0xb1, 0x00,                               #movl   $0x0,      %cl
+0xe8, 0x79, 0x4f, 0xf3, 0xff,             #call   0x586d10       #SetColorizeImages #586d10-651d97
+0x5a,                                     #popl   %edx
+0x59,                                     #popl   %ecx
+0x58,                                     #popl   %eax
+0xc3                                      #retl
+], 0x651d00)
+WriteMemory("unsigned int", [0, 0x4e207055, 0x3a747865, 0, 0, 8], 0x651270)
+
+WriteMemory("unsigned char", [
+0x8b, 0x0d, 0x90, 0x11, 0x65, 0x00 #movl 0x651190, %ecx
+], 0x452331)
+WriteMemory("unsigned char", 0, 0x452339)
+WriteMemory("unsigned char", 0, 0x452365)
 
 #I haven't been bothered to label these yet
 
@@ -1506,7 +1634,7 @@ WriteMemory("unsigned char", [
 
 plants_unlocked = 1
 WriteMemory("int", plants_array, 0x651094)
-WriteMemory("int", plants_array2, 0x651194)
+WriteMemory("int", plants_array2, 0x651194) #ends at 0x65125c
 WriteMemory("int",0,0x65115c)
 upgradePlants=[0x1C4, 0x1C2, 0x1C8, 0x1D4, 0x1CC, 0x1D8, 0x1E0, 0x1D0, 0x1DC, "nothing", "nothing2"] #twin, gatling, gloom, gold, cattail, spike, imitater, winter, cob
 zombies=["Basic", "Flag (ignore)", "Cone", "Vaulter", "Bucket", "Newspaper", "Screen-Door", "Footballer", "Dancer", "Backup (ignore)", "Ducky-Tube (ignore)", "Snorkel", "Zomboni", "Bobsled", "Dolphin", "Jack", "Balloon", "Digger", "Pogo", "Yeti (ignore)", "Bungee", "Ladder", "Catapult", "Gargantuar"]
@@ -1574,13 +1702,12 @@ for i in range(50):
         randomiseWavePoints()
     if startingWave=="Random":
         randomiseStartingWave(startingWave)
-    if seeded and not saved:
+    if not saved:
         WriteMemory("int",newlevel,0x651190)
     if not shopless:
         WriteMemory("bool",True,0x6A9EC0,0x82C,0x21C)
         WriteMemory("bool",True,0x6A9EC0,0x82C,0x218)
     if(i != 0) and not saved: 
-        WriteMemory("int",newlevel-1,0x6A9EC0,0x768, 0x5550)
         Sleep(1)
     if(level_plants[newlevel] != -1):
         plants_unlocked += 1
@@ -1606,6 +1733,8 @@ for i in range(50):
     while(game_ui() != 3 or ReadMemory("bool",0x6A9EC0,0x768, 0x5603)):
         Sleep(0.1)
     WriteMemory("int",i,0x65115c)
+
+WriteMemory("int",0,0x651190)
 
 saveFile=open('saveFile.txt', 'w')
 saveFile.write("")
