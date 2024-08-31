@@ -198,6 +198,7 @@ upgradeRewards=False
 randomWeights=False
 randomWavePoints=False
 saved=False
+startingWave="False"
 seed=str(random.randint(1,999999999999))
 
 
@@ -290,8 +291,18 @@ def randomWavePointsButtonClick():
         randomWavePoints=False
     buttonClick()
 
+def startingWaveButtonClick():
+    global startingWave
+    if startingWave=="False":
+        startingWave="Random"
+    elif startingWave=="Random":
+        startingWave="Instant"
+    elif startingWave=="Instant":
+        startingWave="False"
+    buttonClick()
+
 def continueButtonClick():
-    global seed, challengeMode, shopless, noRestrictions, noAutoSlots, imitater, randomisePlants, seeded, upgradeRewards, randomWeights, randomWavePoints, saved, savePoint, fileInfo, jumpLevel
+    global seed, challengeMode, shopless, noRestrictions, noAutoSlots, imitater, randomisePlants, seeded, upgradeRewards, randomWeights, randomWavePoints, startingWave, saved, savePoint, fileInfo, jumpLevel
     seed=fileInfo[0].strip()
     savePoint=int(fileInfo[1].strip())
     WriteMemory("int", int(fileInfo[2].strip()), 0x6A9EC0,0x82C,0x214) #slots
@@ -307,6 +318,7 @@ def continueButtonClick():
     upgradeRewards=eval(fileInfo[11].strip())
     randomWeights=eval(fileInfo[12].strip())
     randomWavePoints=fileInfo[13].strip()
+    startingWave=fileInfo[14].strip()
     saved=True
     jumpLevel=""
     if randomWavePoints=="False":
@@ -320,16 +332,16 @@ def closeButtonClick():
 
 def informationButtonClick():
     outputText.delete(0.0, END)
-    manipulatedText="REALLY IMPORTANT: If you use either RANDOM WEIGHTS or RAND WAVE POINTS, and then you want to do another run WITHOUT those modifiers, close and reopen the game, otherwise things will be funky. Additionally, if you are continuing a saved run / jumping to a specific level, be aware that SEEDED mode does not work with it, and so is automatically disabled." + " "*spaces + "The jump level box allows you to jump to a specific level in the seed! This is great for recovering from a crash if you know your seed but for some reason the save file got corrupted. Just play 1-1 and then you should be at the same level (although with nothing bought from the shop)." + " "*spaces + "The Continue Last Run button only appears if you have an incomplete run in your save data. If you do, pressing this will close the settings menu and give you the same settings as before. After you play 1-1, you should be at the level you were previously at! You will also have the same plants, same money, and the same amount of slot upgrades. You will NOT save any other things bought from the shop (such as rakes or pre-unlocked upgrade plants)." + " "*spaces + "Challenge Mode gets rid of the tough level restriction. With this disabled, you will not be able to play certain levels (like 5-2) without having 3 good plants. Other levels (like 5-9) will need 5 good plants to play. With this enabled, as soon as you unlock flower pot, you can play both 5-2 and 5-9 (for instance)." + (" " * spaces) + "Shopless mode forces you to play with 6 slots and no automatic pool cleaners / roof cleaners." + (" " * spaces) + "No restrictions mode means that there is no logic as to what levels can be played next - the majority of no restrictions runs are impossible." + (" " * spaces) + "With manual money enabled, you do not get automatic slot upgrades, but your money does not reset to 0 after every level, and so you can purchase the slots yourself - this also means you can buy rakes and upgrade plants!" + (" " * spaces) + "Instant imitater mode gives you access to an imitater immediately, which allows you to choose one of any plant to bring to the stage, even if you haven't unlocked it! This works especially well with no restrictions." + (" " * spaces) + "Random plants means that the plant you get at the end of each level is RANDOMISED, in a similar way to the levels! Instead of unlocking the plant you usually unlock for beating that stage, you get a random one!" + (" " * spaces) + "Seeded means that the seed you enter will not only affect the random plants and levels you get, but also the zombie spawns and other types of RNG, which makes it perfect for races!" + (" " * spaces) + "Random upgrades means that most levels that would usually give you no reward instead gives you an upgrade plant! It is important to note that if you have 4 plants total and one upgrade plant, you will not have 4 seed slots - sorry about that." + (" " * spaces) + "Random Weights means that the likelihood for a zombie to spawn is a random number, and this changes from level to level. Cones might be extremely unlikely one level, and then extremely likely the next one!" + (" " * spaces) + "Random Wave Points has two modes: Normal and EXTREME. Normal mode means that a zombie's wave points can either stay the same, or increase/decrease by 1 wave point if they originally cost less than 5 wave points, 2 wave points if they originally cost 5-7 wave points, and 3 wave points if they originally cost 10 wave points. EXTREME mode means that a zombie's wave point value is a random number from 2 to 7 (or, in rare cases, 10). This changes from level to level, and the basic zombie always costs 1 wave point while the cone zombie always costs either 2 or 3 wave points. There is no guarantee that EXTREME mode is always possible. If you're using either randomised weights or randomised wave points, you can look at the program during the run to see a rundown of what weights and wave points each zombie type had!"
+    manipulatedText="REALLY IMPORTANT: If you use either RANDOM WEIGHTS or RAND WAVE POINTS, and then you want to do another run WITHOUT those modifiers, close and reopen the game, otherwise things will be funky. Additionally, if you are continuing a saved run / jumping to a specific level, be aware that SEEDED mode does not work with it, and so is automatically disabled." + " "*spaces + "The jump level box allows you to jump to a specific level in the seed! This is great for recovering from a crash if you know your seed but for some reason the save file got corrupted. Just play 1-1 and then you should be at the same level (although with nothing bought from the shop)." + " "*spaces + "The Continue Last Run button only appears if you have an incomplete run in your save data. If you do, pressing this will close the settings menu and give you the same settings as before. After you play 1-1, you should be at the level you were previously at! You will also have the same plants, same money, and the same amount of slot upgrades. You will NOT save any other things bought from the shop (such as rakes or pre-unlocked upgrade plants)." + " "*spaces + "Challenge Mode gets rid of the tough level restriction. With this disabled, you will not be able to play certain levels (like 5-2) without having 3 good plants. Other levels (like 5-9) will need 5 good plants to play. With this enabled, as soon as you unlock flower pot, you can play both 5-2 and 5-9 (for instance)." + (" " * spaces) + "Shopless mode forces you to play with 6 slots and no automatic pool cleaners / roof cleaners." + (" " * spaces) + "No restrictions mode means that there is no logic as to what levels can be played next - the majority of no restrictions runs are impossible." + (" " * spaces) + "With manual money enabled, you do not get automatic slot upgrades, but your money does not reset to 0 after every level, and so you can purchase the slots yourself - this also means you can buy rakes and upgrade plants!" + (" " * spaces) + "Instant imitater mode gives you access to an imitater immediately, which allows you to choose one of any plant to bring to the stage, even if you haven't unlocked it! This works especially well with no restrictions." + (" " * spaces) + "Random plants means that the plant you get at the end of each level is RANDOMISED, in a similar way to the levels! Instead of unlocking the plant you usually unlock for beating that stage, you get a random one!" + (" " * spaces) + "Seeded means that the seed you enter will not only affect the random plants and levels you get, but also the zombie spawns and other types of RNG, which makes it perfect for races!" + (" " * spaces) + "Random upgrades means that most levels that would usually give you no reward instead gives you an upgrade plant! It is important to note that if you have 4 plants total and one upgrade plant, you will not have 4 seed slots - sorry about that." + (" " * spaces) + "Random Weights means that the likelihood for a zombie to spawn is a random number, and this changes from level to level. Cones might be extremely unlikely one level, and then extremely likely the next one!" + (" " * spaces) + "Random Wave Points has two modes: Normal and EXTREME. Normal mode means that a zombie's wave points can either stay the same, or increase/decrease by 1 wave point if they originally cost less than 5 wave points, 2 wave points if they originally cost 5-7 wave points, and 3 wave points if they originally cost 10 wave points. EXTREME mode means that a zombie's wave point value is a random number from 2 to 7 (or, in rare cases, 10). This changes from level to level, and the basic zombie always costs 1 wave point while the cone zombie always costs either 2 or 3 wave points. There is no guarantee that EXTREME mode is always possible. If you're using either randomised weights or randomised wave points, you can look at the program during the run to see a rundown of what weights and wave points each zombie type had!" + "" * spaces + "The starting wave refers to what wave the zombies can start spawning at. Usually, the day/night zombies can spawn in the first 10 waves while the other zombies cannot. Random mode means that each zombie (except for basics, cones, and newspapers) has a random starting wave from 4 to 10. Vaulters, buckets, and screen-doors have a random starting wave from 1 to 10. Instant mode means that every zombie can immediately spawn from wave 1 (provided there is enough wave points)." 
     outputText.insert(END, manipulatedText)
 
 def buttonClick():
     global noRestrictions, challengeMode, shopless, noAutoSlots, imitater, randomisePlants, spaces, seeded
     outputText.delete(0.0, END) #this clears the contents of the text box widget
     if not noRestrictions:
-        manipulatedText="Challenge Mode: " + str(challengeMode) + (" " * spaces) + "Shopless: " + str(shopless) + (" " * spaces) + "No restrictions: " + str(noRestrictions) + (" " * spaces) + "Manual Money: " + str(noAutoSlots) + (" " * spaces) + "Instant Imitater: " + str(imitater) + (" " * spaces) + "Random Plants: " + str(randomisePlants) + (" " * spaces) + "Seeded: " + str(seeded)+ (" " * spaces) + "Upgrade Rewards: " + str(upgradeRewards)+ (" " * spaces) + "Random Weights: " + str(randomWeights)+ (" " * spaces) + "Random Wave Points: " + str(randomWavePoints)#Concatenation
+        manipulatedText="Challenge Mode: " + str(challengeMode) + (" " * spaces) + "Shopless: " + str(shopless) + (" " * spaces) + "No restrictions: " + str(noRestrictions) + (" " * spaces) + "Manual Money: " + str(noAutoSlots) + (" " * spaces) + "Instant Imitater: " + str(imitater) + (" " * spaces) + "Random Plants: " + str(randomisePlants) + (" " * spaces) + "Seeded: " + str(seeded)+ (" " * spaces) + "Upgrade Rewards: " + str(upgradeRewards)+ (" " * spaces) + "Random Weights: " + str(randomWeights)+ (" " * spaces) + "Random Wave Points: " + str(randomWavePoints)+ (" " * spaces) + "Starting Wave: " + startingWave#Concatenation
     else:
-        manipulatedText="Challenge Mode (locked): " + str(challengeMode) + (" " * spaces) + "Shopless: " + str(shopless) + (" " * spaces) + "No restrictions: " + str(noRestrictions) + (" " * spaces) + "Manual Money: " + str(noAutoSlots) + (" " * spaces) + "Instant Imitater: " + str(imitater) + (" " * spaces) + "Random Plants: " + str(randomisePlants) + (" " * spaces) + "Seeded: " + str(seeded)+ (" " * spaces) + "Upgrade Rewards: " + str(upgradeRewards)+ (" " * spaces) + "Random Weights: " + str(randomWeights)+ (" " * spaces) + "Random Wave Points: " + str(randomWavePoints)#Concatenation
+        manipulatedText="Challenge Mode (locked): " + str(challengeMode) + (" " * spaces) + "Shopless: " + str(shopless) + (" " * spaces) + "No restrictions: " + str(noRestrictions) + (" " * spaces) + "Manual Money: " + str(noAutoSlots) + (" " * spaces) + "Instant Imitater: " + str(imitater) + (" " * spaces) + "Random Plants: " + str(randomisePlants) + (" " * spaces) + "Seeded: " + str(seeded)+ (" " * spaces) + "Upgrade Rewards: " + str(upgradeRewards)+ (" " * spaces) + "Random Weights: " + str(randomWeights)+ (" " * spaces) + "Random Wave Points: " + str(randomWavePoints)+ (" " * spaces) + "Starting Wave: " + startingWave#Concatenation
     outputText.insert(END, manipulatedText) #this inserts the manipulatedText variable into the text box
 
 def getLevel():
@@ -395,6 +407,9 @@ randWeightsButton.grid(row=2, column=2, sticky=W)
 randWavePointsButton=Button(window, text="RAND WAVE POINTS", width=15, command=randomWavePointsButtonClick)
 randWavePointsButton.grid(row=2, column=3, sticky=W)
 
+waveStartButton=Button(window, text="STARTING WAVE", width=15, command=startingWaveButtonClick)
+waveStartButton.grid(row=2, column=4, sticky=W)
+
 closeButton=Button(window, text="SUBMIT SETTINGS", width=15, command=closeButtonClick)
 closeButton.grid(row=1, column=6, sticky=W)
 
@@ -408,7 +423,7 @@ entry.grid(row=0, column=1, sticky=W) #positioning this widget on the screen
 #create a text box widget
 outputText=Text(window, width=120, height=15, wrap=WORD, background="yellow")
 outputText.grid(row=3, column=0, columnspan=10, sticky=W)
-outputText.insert(END, "Challenge Mode: " + str(challengeMode) + (" " * spaces) + "Shopless: " + str(shopless) + (" " * spaces) + "No restrictions: " + str(noRestrictions) + (" " * spaces) + "Manual Money: "  + str(noAutoSlots) + (" " * spaces) + "Instant Imitater: " + str(imitater)+ (" " * spaces) + "Random Plants: " + str(randomisePlants) + (" " * spaces) + "Seeded: " + str(seeded)+ (" " * spaces) + "Upgrade Rewards: " + str(upgradeRewards)+ (" " * spaces) + "Random Weights: " + str(randomWeights)+ (" " * spaces) + "Random Wave Points: " + str(randomWavePoints))
+outputText.insert(END, "Challenge Mode: " + str(challengeMode) + (" " * spaces) + "Shopless: " + str(shopless) + (" " * spaces) + "No restrictions: " + str(noRestrictions) + (" " * spaces) + "Manual Money: "  + str(noAutoSlots) + (" " * spaces) + "Instant Imitater: " + str(imitater)+ (" " * spaces) + "Random Plants: " + str(randomisePlants) + (" " * spaces) + "Seeded: " + str(seeded)+ (" " * spaces) + "Upgrade Rewards: " + str(upgradeRewards)+ (" " * spaces) + "Random Weights: " + str(randomWeights)+ (" " * spaces) + "Random Wave Points: " + str(randomWavePoints)+ (" " * spaces) + "Starting Wave: " + startingWave)
 
 window.mainloop() #Run the event loop
 print(seed)
@@ -422,6 +437,7 @@ print("Seeded:", str(seeded))
 print("Upgrade Rewards:", str(upgradeRewards))
 print("Random Weights:", str(randomWeights))
 print("Random Wave Points:", str(randomWavePoints))
+print("Starting Wave:", startingWave)
 
 LEVEL_PLANTS = [
 0,
@@ -1008,6 +1024,17 @@ def convertToLevel(level):
     levelString=levelString+secondChar
     return levelString
 
+def randomiseStartingWave(startingWave):
+    if startingWave=="Instant":
+        for i in range(0, 24):
+            WriteMemory("int", 1, 0x69DA90 + 0x1C*i)
+    else:
+        for i in range(3, 24):
+            if i<7 and i!=5:
+                WriteMemory("int", random.randint(1,10), 0x69DA90 + 0x1C*i)
+            elif i!=5:
+                WriteMemory("int", random.randint(4,10), 0x69DA90 + 0x1C*i)
+
 #showAverage()
 #nightAverage()
 if randomisePlants:
@@ -1483,6 +1510,8 @@ WriteMemory("int", plants_array2, 0x651194)
 WriteMemory("int",0,0x65115c)
 upgradePlants=[0x1C4, 0x1C2, 0x1C8, 0x1D4, 0x1CC, 0x1D8, 0x1E0, 0x1D0, 0x1DC, "nothing", "nothing2"] #twin, gatling, gloom, gold, cattail, spike, imitater, winter, cob
 zombies=["Basic", "Flag (ignore)", "Cone", "Vaulter", "Bucket", "Newspaper", "Screen-Door", "Footballer", "Dancer", "Backup (ignore)", "Ducky-Tube (ignore)", "Snorkel", "Zomboni", "Bobsled", "Dolphin", "Jack", "Balloon", "Digger", "Pogo", "Yeti (ignore)", "Bungee", "Ladder", "Catapult", "Gargantuar"]
+if startingWave=="Instant":
+    randomiseStartingWave(startingWave)
 if saved and jumpLevel!="":
     for a in range(len(levels)):
         if levels[a]==jumpLevel:
@@ -1491,8 +1520,8 @@ for i in range(50):
     if saved:
         if savePoint-1==i:
             saved=False
-    if not saved:
-        linesToWrite=[seed, (i+1), str(ReadMemory("int", 0x6A9EC0,0x82C,0x214)), str(ReadMemory("int",0x6A9EC0,0x82C, 0x28)), (challengeMode), (shopless), (noRestrictions), (noAutoSlots), (imitater), (randomisePlants), (seeded), (upgradeRewards), (randomWeights), (randomWavePoints)]
+    if not saved and i!=0:
+        linesToWrite=[seed, (i+1), str(ReadMemory("int", 0x6A9EC0,0x82C,0x214)), str(ReadMemory("int",0x6A9EC0,0x82C, 0x28)), (challengeMode), (shopless), (noRestrictions), (noAutoSlots), (imitater), (randomisePlants), (seeded), (upgradeRewards), (randomWeights), (randomWavePoints), startingWave]
         saveFile=open('saveFile.txt', 'w')
         for k in range(len(linesToWrite)):
             linesToWrite[k]=str(linesToWrite[k])
@@ -1506,7 +1535,7 @@ for i in range(50):
             zombies_type = read_memory("bool",zombies_type_offset,array=33)
             for j in range(0, 24):
                 if(zombies_type[j]):
-                    print(zombies[j], str(ReadMemory("int", 0x69DA88 + 0x1C*j)), ReadMemory("int", 0x69DA94 + 0x1C*j))
+                    print(zombies[j], str(ReadMemory("int", 0x69DA88 + 0x1C*j)), ReadMemory("int", 0x69DA94 + 0x1C*j),ReadMemory("int", 0x69DA90 + 0x1C*j))
     print(str(i+1))
     WriteMemory("int",plants_unlocked,0x651090)
     if seeded and not saved:
@@ -1543,6 +1572,8 @@ for i in range(50):
         randomiseWeights()
     if randomWavePoints!=False:
         randomiseWavePoints()
+    if startingWave=="Random":
+        randomiseStartingWave(startingWave)
     if seeded and not saved:
         WriteMemory("int",newlevel,0x651190)
     if not shopless:
