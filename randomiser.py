@@ -1834,7 +1834,8 @@ for i in range(50):
     if randomWavePoints!=False:
         randomiseWavePoints()
     if i!=0:
-        randomiseCost()
+        if randomCost:
+            randomiseCost()
         if randomCooldowns:
             randomiseCooldown()
     if startingWave=="Random":
