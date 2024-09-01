@@ -199,6 +199,8 @@ randomWeights=False
 randomWavePoints=False
 saved=False
 startingWave="False"
+randomCost=False
+randomCooldowns=False
 seed=str(random.randint(1,999999999999))
 
 
@@ -301,8 +303,18 @@ def startingWaveButtonClick():
         startingWave="False"
     buttonClick()
 
+def costButtonClick():
+    global randomCost
+    randomCost=not randomCost
+    buttonClick()
+
+def cooldownButtonClick():
+    global randomCooldowns
+    randomCooldowns=not randomCooldowns
+    buttonClick()
+
 def continueButtonClick():
-    global seed, challengeMode, shopless, noRestrictions, noAutoSlots, imitater, randomisePlants, seeded, upgradeRewards, randomWeights, randomWavePoints, startingWave, saved, savePoint, fileInfo, jumpLevel
+    global seed, challengeMode, shopless, noRestrictions, noAutoSlots, imitater, randomisePlants, seeded, upgradeRewards, randomWeights, randomWavePoints, startingWave, randomCost, randomCooldowns, saved, savePoint, fileInfo, jumpLevel
     seed=fileInfo[0].strip()
     savePoint=int(fileInfo[1].strip())
     WriteMemory("int", int(fileInfo[2].strip()), 0x6A9EC0,0x82C,0x214) #slots
@@ -319,6 +331,8 @@ def continueButtonClick():
     randomWeights=eval(fileInfo[12].strip())
     randomWavePoints=fileInfo[13].strip()
     startingWave=fileInfo[14].strip()
+    randomCost=eval(fileInfo[15].strip())
+    randomCooldowns=eval(fileInfo[16].strip())
     saved=True
     jumpLevel=""
     if randomWavePoints=="False":
@@ -332,16 +346,16 @@ def closeButtonClick():
 
 def informationButtonClick():
     outputText.delete(0.0, END)
-    manipulatedText="REALLY IMPORTANT: If you use either RANDOM WEIGHTS or RAND WAVE POINTS, and then you want to do another run WITHOUT those modifiers, close and reopen the game, otherwise things will be funky. Additionally, if you are continuing a saved run / jumping to a specific level, be aware that SEEDED mode does not work with it, and so is automatically disabled." + " "*spaces + "The jump level box allows you to jump to a specific level in the seed! This is great for recovering from a crash if you know your seed but for some reason the save file got corrupted. Just play 1-1 and then you should be at the same level (although with nothing bought from the shop)." + " "*spaces + "The Continue Last Run button only appears if you have an incomplete run in your save data. If you do, pressing this will close the settings menu and give you the same settings as before. After you play 1-1, you should be at the level you were previously at! You will also have the same plants, same money, and the same amount of slot upgrades. You will NOT save any other things bought from the shop (such as rakes or pre-unlocked upgrade plants)." + " "*spaces + "Challenge Mode gets rid of the tough level restriction. With this disabled, you will not be able to play certain levels (like 5-2) without having 3 good plants. Other levels (like 5-9) will need 5 good plants to play. With this enabled, as soon as you unlock flower pot, you can play both 5-2 and 5-9 (for instance)." + (" " * spaces) + "Shopless mode forces you to play with 6 slots and no automatic pool cleaners / roof cleaners." + (" " * spaces) + "No restrictions mode means that there is no logic as to what levels can be played next - the majority of no restrictions runs are impossible." + (" " * spaces) + "With manual money enabled, you do not get automatic slot upgrades, but your money does not reset to 0 after every level, and so you can purchase the slots yourself - this also means you can buy rakes and upgrade plants!" + (" " * spaces) + "Instant imitater mode gives you access to an imitater immediately, which allows you to choose one of any plant to bring to the stage, even if you haven't unlocked it! This works especially well with no restrictions." + (" " * spaces) + "Random plants means that the plant you get at the end of each level is RANDOMISED, in a similar way to the levels! Instead of unlocking the plant you usually unlock for beating that stage, you get a random one!" + (" " * spaces) + "Seeded means that the seed you enter will not only affect the random plants and levels you get, but also the zombie spawns and other types of RNG, which makes it perfect for races!" + (" " * spaces) + "Random upgrades means that most levels that would usually give you no reward instead gives you an upgrade plant! It is important to note that if you have 4 plants total and one upgrade plant, you will not have 4 seed slots - sorry about that." + (" " * spaces) + "Random Weights means that the likelihood for a zombie to spawn is a random number, and this changes from level to level. Cones might be extremely unlikely one level, and then extremely likely the next one!" + (" " * spaces) + "Random Wave Points has two modes: Normal and EXTREME. Normal mode means that a zombie's wave points can either stay the same, or increase/decrease by 1 wave point if they originally cost less than 5 wave points, 2 wave points if they originally cost 5-7 wave points, and 3 wave points if they originally cost 10 wave points. EXTREME mode means that a zombie's wave point value is a random number from 2 to 7 (or, in rare cases, 10). This changes from level to level, and the basic zombie always costs 1 wave point while the cone zombie always costs either 2 or 3 wave points. There is no guarantee that EXTREME mode is always possible. If you're using either randomised weights or randomised wave points, you can look at the program during the run to see a rundown of what weights and wave points each zombie type had!" + "" * spaces + "The starting wave refers to what wave the zombies can start spawning at. Usually, the day/night zombies can spawn in the first 10 waves while the other zombies cannot. Random mode means that each zombie (except for basics, cones, and newspapers) has a random starting wave from 4 to 10. Vaulters, buckets, and screen-doors have a random starting wave from 1 to 10. Instant mode means that every zombie can immediately spawn from wave 1 (provided there is enough wave points)." 
+    manipulatedText="Aaronthewinner made the original version that randomised the levels. BulbasaurRepresent created most of the logic, modifiers, and GUI. Vsoup.vx did most of the complex stuff, including making the seed select update to show the right plants. LunarBlessing added the tooltip for the random cooldowns, and made the starting cooldowns scale with their actual cooldowns. REALLY IMPORTANT: If you use either RANDOM WEIGHTS or RAND WAVE POINTS, and then you want to do another run WITHOUT those modifiers, close and reopen the game, otherwise things will be funky. Additionally, if you are continuing a saved run / jumping to a specific level, be aware that SEEDED mode does not work with it, and so is automatically disabled." + " "*spaces + "The jump level box allows you to jump to a specific level in the seed! This is great for recovering from a crash if you know your seed but for some reason the save file got corrupted. Just play 1-1 and then you should be at the same level (although with nothing bought from the shop)." + " "*spaces + "The Continue Last Run button only appears if you have an incomplete run in your save data. If you do, pressing this will close the settings menu and give you the same settings as before. After you play 1-1, you should be at the level you were previously at! You will also have the same plants, same money, and the same amount of slot upgrades. You will NOT save any other things bought from the shop (such as rakes or pre-unlocked upgrade plants)." + " "*spaces + "Challenge Mode gets rid of the tough level restriction. With this disabled, you will not be able to play certain levels (like 5-2) without having 3 good plants. Other levels (like 5-9) will need 5 good plants to play. With this enabled, as soon as you unlock flower pot, you can play both 5-2 and 5-9 (for instance)." + (" " * spaces) + "Shopless mode forces you to play with 6 slots and no automatic pool cleaners / roof cleaners." + (" " * spaces) + "No restrictions mode means that there is no logic as to what levels can be played next - the majority of no restrictions runs are impossible." + (" " * spaces) + "With manual money enabled, you do not get automatic slot upgrades, but your money does not reset to 0 after every level, and so you can purchase the slots yourself - this also means you can buy rakes and upgrade plants!" + (" " * spaces) + "Instant imitater mode gives you access to an imitater immediately, which allows you to choose one of any plant to bring to the stage, even if you haven't unlocked it! This works especially well with no restrictions." + (" " * spaces) + "Random plants means that the plant you get at the end of each level is RANDOMISED, in a similar way to the levels! Instead of unlocking the plant you usually unlock for beating that stage, you get a random one!" + (" " * spaces) + "Seeded means that the seed you enter will not only affect the random plants and levels you get, but also the zombie spawns and other types of RNG, which makes it perfect for races!" + (" " * spaces) + "Random upgrades means that most levels that would usually give you no reward instead gives you an upgrade plant! It is important to note that if you have 4 plants total and one upgrade plant, you will not have 4 seed slots - sorry about that." + (" " * spaces) + "Random Weights means that the likelihood for a zombie to spawn is a random number, and this changes from level to level. Cones might be extremely unlikely one level, and then extremely likely the next one!" + (" " * spaces) + "Random Wave Points has two modes: Normal and EXTREME. Normal mode means that a zombie's wave points can either stay the same, or increase/decrease by 1 wave point if they originally cost less than 5 wave points, 2 wave points if they originally cost 5-7 wave points, and 3 wave points if they originally cost 10 wave points. EXTREME mode means that a zombie's wave point value is a random number from 2 to 7 (or, in rare cases, 10). This changes from level to level, and the basic zombie always costs 1 wave point while the cone zombie always costs either 2 or 3 wave points. There is no guarantee that EXTREME mode is always possible. If you're using either randomised weights or randomised wave points, you can look at the program during the run to see a rundown of what weights and wave points each zombie type had!" + "" * spaces + "The starting wave refers to what wave the zombies can start spawning at. Usually, the day/night zombies can spawn in the first 10 waves while the other zombies cannot. Random mode means that each zombie (except for basics, cones, and newspapers) has a random starting wave from 4 to 10. Vaulters, buckets, and screen-doors have a random starting wave from 1 to 10. Instant mode means that every zombie can immediately spawn from wave 1 (provided there is enough wave points)." +" " * spaces + "Random costs will set the cost of almost every plant to 50-200% of the original price! The only exception is the sunflower (and the peashooter in 1-1)." +" "*spaces +"Random cooldowns will set the cooldown of almost every plant to 50-200% of the original cooldown! The only exceptions are sunflower, puff shroom, and flower pot." 
     outputText.insert(END, manipulatedText)
 
 def buttonClick():
     global noRestrictions, challengeMode, shopless, noAutoSlots, imitater, randomisePlants, spaces, seeded
     outputText.delete(0.0, END) #this clears the contents of the text box widget
     if not noRestrictions:
-        manipulatedText="Challenge Mode: " + str(challengeMode) + (" " * spaces) + "Shopless: " + str(shopless) + (" " * spaces) + "No restrictions: " + str(noRestrictions) + (" " * spaces) + "Manual Money: " + str(noAutoSlots) + (" " * spaces) + "Instant Imitater: " + str(imitater) + (" " * spaces) + "Random Plants: " + str(randomisePlants) + (" " * spaces) + "Seeded: " + str(seeded)+ (" " * spaces) + "Upgrade Rewards: " + str(upgradeRewards)+ (" " * spaces) + "Random Weights: " + str(randomWeights)+ (" " * spaces) + "Random Wave Points: " + str(randomWavePoints)+ (" " * spaces) + "Starting Wave: " + startingWave#Concatenation
+        manipulatedText="Challenge Mode: " + str(challengeMode) + (" " * spaces) + "Shopless: " + str(shopless) + (" " * spaces) + "No restrictions: " + str(noRestrictions) + (" " * spaces) + "Manual Money: " + str(noAutoSlots) + (" " * spaces) + "Instant Imitater: " + str(imitater) + (" " * spaces) + "Random Plants: " + str(randomisePlants) + (" " * spaces) + "Seeded: " + str(seeded)+ (" " * spaces) + "Upgrade Rewards: " + str(upgradeRewards)+ (" " * spaces) + "Random Weights: " + str(randomWeights)+ (" " * spaces) + "Random Wave Points: " + str(randomWavePoints)+ (" " * spaces) + "Starting Wave: " + startingWave+ (" " * spaces) + "Random Cost: " + str(randomCost)+ (" " * spaces) + "Random Cooldowns: " + str(randomCooldowns)#Concatenation
     else:
-        manipulatedText="Challenge Mode (locked): " + str(challengeMode) + (" " * spaces) + "Shopless: " + str(shopless) + (" " * spaces) + "No restrictions: " + str(noRestrictions) + (" " * spaces) + "Manual Money: " + str(noAutoSlots) + (" " * spaces) + "Instant Imitater: " + str(imitater) + (" " * spaces) + "Random Plants: " + str(randomisePlants) + (" " * spaces) + "Seeded: " + str(seeded)+ (" " * spaces) + "Upgrade Rewards: " + str(upgradeRewards)+ (" " * spaces) + "Random Weights: " + str(randomWeights)+ (" " * spaces) + "Random Wave Points: " + str(randomWavePoints)+ (" " * spaces) + "Starting Wave: " + startingWave#Concatenation
+        manipulatedText="Challenge Mode (locked): " + str(challengeMode) + (" " * spaces) + "Shopless: " + str(shopless) + (" " * spaces) + "No restrictions: " + str(noRestrictions) + (" " * spaces) + "Manual Money: " + str(noAutoSlots) + (" " * spaces) + "Instant Imitater: " + str(imitater) + (" " * spaces) + "Random Plants: " + str(randomisePlants) + (" " * spaces) + "Seeded: " + str(seeded)+ (" " * spaces) + "Upgrade Rewards: " + str(upgradeRewards)+ (" " * spaces) + "Random Weights: " + str(randomWeights)+ (" " * spaces) + "Random Wave Points: " + str(randomWavePoints)+ (" " * spaces) + "Starting Wave: " + startingWave+ (" " * spaces) + "Random Cost: " + str(randomCost)+ (" " * spaces) + "Random Cooldowns: " + str(randomCooldowns)#Concatenation
     outputText.insert(END, manipulatedText) #this inserts the manipulatedText variable into the text box
 
 def getLevel():
@@ -410,6 +424,12 @@ randWavePointsButton.grid(row=2, column=3, sticky=W)
 waveStartButton=Button(window, text="STARTING WAVE", width=15, command=startingWaveButtonClick)
 waveStartButton.grid(row=2, column=4, sticky=W)
 
+costButton=Button(window, text="RANDOM COST", width=15, command=costButtonClick)
+costButton.grid(row=2, column=5, sticky=W)
+
+cooldownButton=Button(window, text="RAND COOLDOWNS", width=15, command=cooldownButtonClick)
+cooldownButton.grid(row=2, column=6, sticky=W)
+
 closeButton=Button(window, text="SUBMIT SETTINGS", width=15, command=closeButtonClick)
 closeButton.grid(row=1, column=6, sticky=W)
 
@@ -423,7 +443,7 @@ entry.grid(row=0, column=1, sticky=W) #positioning this widget on the screen
 #create a text box widget
 outputText=Text(window, width=120, height=15, wrap=WORD, background="yellow")
 outputText.grid(row=3, column=0, columnspan=10, sticky=W)
-outputText.insert(END, "Challenge Mode: " + str(challengeMode) + (" " * spaces) + "Shopless: " + str(shopless) + (" " * spaces) + "No restrictions: " + str(noRestrictions) + (" " * spaces) + "Manual Money: "  + str(noAutoSlots) + (" " * spaces) + "Instant Imitater: " + str(imitater)+ (" " * spaces) + "Random Plants: " + str(randomisePlants) + (" " * spaces) + "Seeded: " + str(seeded)+ (" " * spaces) + "Upgrade Rewards: " + str(upgradeRewards)+ (" " * spaces) + "Random Weights: " + str(randomWeights)+ (" " * spaces) + "Random Wave Points: " + str(randomWavePoints)+ (" " * spaces) + "Starting Wave: " + startingWave)
+outputText.insert(END, "Challenge Mode: " + str(challengeMode) + (" " * spaces) + "Shopless: " + str(shopless) + (" " * spaces) + "No restrictions: " + str(noRestrictions) + (" " * spaces) + "Manual Money: "  + str(noAutoSlots) + (" " * spaces) + "Instant Imitater: " + str(imitater)+ (" " * spaces) + "Random Plants: " + str(randomisePlants) + (" " * spaces) + "Seeded: " + str(seeded)+ (" " * spaces) + "Upgrade Rewards: " + str(upgradeRewards)+ (" " * spaces) + "Random Weights: " + str(randomWeights)+ (" " * spaces) + "Random Wave Points: " + str(randomWavePoints)+ (" " * spaces) + "Starting Wave: " + startingWave+ (" " * spaces) + "Random Cost: " + str(randomCost)+ (" " * spaces) + "Random Cooldowns: " + str(randomCooldowns))
 
 window.mainloop() #Run the event loop
 print(seed)
@@ -438,6 +458,8 @@ print("Upgrade Rewards:", str(upgradeRewards))
 print("Random Weights:", str(randomWeights))
 print("Random Wave Points:", str(randomWavePoints))
 print("Starting Wave:", startingWave)
+print("Random Cost:", str(randomCost))
+print("Random Cooldowns:", str(randomCooldowns))
 
 LEVEL_PLANTS = [
 0,
@@ -1034,7 +1056,26 @@ def randomiseStartingWave(startingWave):
                 WriteMemory("int", random.randint(1,10), 0x69DA90 + 0x1C*i)
             elif i!=5:
                 WriteMemory("int", random.randint(4,10), 0x69DA90 + 0x1C*i)
+plants=[[100, 750], [50, 750], [150, 5000], [50, 3000], [25, 3000], [175, 750], [150, 750], [200, 750], [0, 750], [25, 750], [75, 750], [75, 750], [75, 3000], [25, 750], [75, 5000], [125, 5000], [25, 750], [50, 3000], [325, 750], [25, 3000], [125, 5000], [100, 750], [175, 750], [125, 5000], [0, 3000], [25, 3000], [125, 750], [100, 750], [125, 750], [125, 750], [125, 3000], [100, 750], [100, 750], [25, 750], [100, 750], [75, 750], [50, 750], [100, 750], [50, 3000], [300, 750], [250, 5000], [150, 5000], [150, 5000], [225, 5000], [200, 5000], [50, 5000], [125, 5000], [500, 5000]]
+for i in range(0, 48):
+    WriteMemory("int", plants[i][0], 0x69F2C0 + 0x24*i)
+    WriteMemory("int", plants[i][1], 0x69F2C4 + 0x24*i)
+    
+def randomiseCost():
+    for i in range(0, 48):
+        if i!=1:
+            divider=random.uniform(1,2)
+            power=random.choice([-1, 1])
+            newCost=int(plants[i][0]*(divider**power))
+            WriteMemory("int", newCost , 0x69F2C0 + 0x24*i)
 
+def randomiseCooldown():
+    for i in range(0, 48):
+        if i!=1 and i!=8 and i!=33:
+            divider=random.uniform(1,2)
+            power=random.choice([-1, 1])
+            newCooldown=int(plants[i][1]*(divider**power))
+            WriteMemory("int", newCooldown , 0x69F2C4 + 0x24*i)
 #showAverage()
 #nightAverage()
 if randomisePlants:
@@ -1267,10 +1308,102 @@ WriteMemory("unsigned char",[
 
 #shovel
 
-WriteMemory("unsigned char", 1, 0x530028)
+WriteMemory("unsigned char", 0, 0x530028)
 WriteMemory("unsigned char", 1, 0x43c1d1)
 
+# scaling starting cooldowns when random cooldowns on:
+if randomCooldowns:
+    WriteMemory("unsigned char", [0x66, 0x90], 0x489C00)        # 2 byte nop - to make upgrade plants follow common path for cooldown
+    WriteMemory("unsigned char", [
+        0x3D, 0xE8,0x03,0x00,0x00,  #cmp eax,#1000 // 10 sec  for no cooldown     
+        0x7E,0x33,                  #jle 489C43
+        0x2D,0xE8,0x03,0x00,0x00,   # sub eax, #1000
+        0xB9,0x09,0x00,0x00,0x00,   # mov ecx,9
+        0xF7,0xE1,                  #mul ecx
+        0x31,0xD2,                  #xor edx,edx
+        0xB9,0x0A,0x00,0x00,0x00,   # mov ecx,#10
+        0xF7,0xF1,                  #div ecx
+        0x5D,                       #pop ebp
+        0x89,0x46,0x28,             # mov[esi+28],eax
+        0xC6,0x46,0x49,0x01,        # mov byte[esi+49],1
+        0xC6,0x46,0x48,0x00,        # mov byte[esi+48],0
+        0x5B,                       #pop ebx
+        0xC3                        #ret
+    ],                      
+        0x489C09)
+    
+# actiavte code for changing plant names to their cooldown when random cooldowns are on
+if randomCooldowns:
+    WriteMemory("unsigned char", [
+        0xE9,0x49,0x9F,0x1E,0x00,   # jmp 651C00
+        0x0F,0x1F,0x00              # 3 byte nop
+    ],
+        0x467CB2)
+    WriteMemory("unsigned char", [
+        0xE9,0xC4,0x9F,0x1E,0x00,       # jmp 651C24
+        0x66,0x0F,0x1F,0x44,0x00,0x00,  # 6 byte nop
+    ],
+        0x467C5B)
 
+#code for changing plant names to their cooldown
+WriteMemory("unsigned char", [ 
+        0x57,                                   # push edi
+        0x8B,0xBC,0x24,0xA0,0x00,0x00,0x00,     # mov edi,[esp+000000A0]
+        0x83,0xFF,0x30,                         # cmp edi,30
+        0x74,0x09,                              # je 651C16
+        0x0F,0x1F,0x40,0x00,                    # nop dword ptr [eax+00]
+        0xE8,0x30,0x00,0x00,0x00,               # call 651C46 // call make_string
+        0x5F,                                   # pop edi
+        0xC6,0x84,0x24,0x8C,0x00,0x00,0x00,0x03, # mov byte ptr [esp+0000008C],03
+        0xE9,0x96,0x60,0xE1,0xFF,               # jmp 467CBA // return to original code
+        0x83,0xFD,0x30,                         # cmp ebp,30
+        0x74,0x0D,                              # je 651C36
+        0x0F,0x1F,0x40,0x00,                    # nop dword ptr [eax+00]
+        0x57,                                   # push edi
+        0x8B,0xFD,                              # mov edi,ebp
+        0xE8,0x11,0x00,0x00,0x00,               # call 651C46 // call make_string
+        0x5F,                                   # pop edi
+        0x83,0xFD,0x30,                         # cmp ebp,30
+        0xC6,0x84,0x24,0x8C,0x00,0x00,0x00,0x01, # mov byte ptr [esp+0000008C],01
+        0xE9,0x20,0x60,0xE1,0xFF,               # jmp 467C66 // return to original code
+        # make_string function:
+        0x60,                                   # pushad 
+        0x83,0xFF,0x30,                         # cmp edi,30
+        0x75,0x07,                              # jne 651C53
+        0x0F,0x1F,0x40,0x00,                       # nop dword ptr [eax+00]
+        0x8B,0x7B,0x34,                         # mov edi,[ebx+34]
+        0x8D,0x1C,0xFF,                         # lea ebx,[edi+edi*8]
+        0x8B,0x1C,0x9D,0xC4,0xF2,0x69,0x00,     # mov ebx,[ebx*4+69F2C4]
+        0x83,0xC0,0x04,                         # add eax,04
+        0x8B,0xF8,                              # mov edi,eax
+        0xC7,0x00,0x63,0x64,0x3A,0x20,          # mov [eax],'cd: '
+        0x83,0xC0,0x04,                         # add eax,04
+        0x68,0x0A,0x00,0x00,0x00,               # push 0000000A // base 10
+        0x68,0x08,0x00,0x00,0x00,               # push 00000008 // buffer length
+        0x50,                                   # push eax
+        0x53,                                   # push ebx
+        0xE8,0x70,0x49,0xFD,0xFF,               # call 6265EC (itoa_s)
+        0x83,0xC4,0x10,                         # add esp,10
+        0x57,                                   # push edi
+        0xE8,0xBB,0xFA,0xFC,0xFF,               # call 621740 (strlen)
+        0x5F,                                   # pop edi
+        0x8D,0x34,0x38,                         # lea esi,[eax+edi]
+        0x83,0xEE,0x02,                         # sub esi,02
+        0x8A,0x0E,                              # mov cl,[esi]
+        0xC6,0x06,0x2C,                         # mov byte ptr [esi],2C
+        0x46,                                   # inc esi
+        0x88,0x0E,                              # mov [esi],cl
+        0x46,                                   # inc esi
+        0xC7,0x06,0x20,0x73,0x65,0x63,          # mov [esi],' sec'
+        0x83,0xC6,0x04,                         # add esi,04
+        0xC6,0x06,0x00,                         # mov byte ptr [esi],00
+        0x83,0xC0,0x04,                         # add eax,04
+        0x89,0x47,0x10,                         # mov [edi+10],eax
+        0xC7,0x47,0x14,0x0F,0x00,0x00,0x00,     # mov [edi+14],0000000F
+        0x61,                                   # popad 
+        0xC3,                                   # ret 
+    ],
+        0x651C00)
 
 #chacha8 (for rng)
 
@@ -1450,7 +1583,7 @@ if seeded:
 
 
 
-#Show correct seed packet in level transition
+#Level transition
 
 WriteMemory("unsigned char", [
 0x75, 0x29,                               #jne   0x431804 <.text+0x30804>
@@ -1475,6 +1608,134 @@ WriteMemory("unsigned char", [
 for i in [0x52ffe2, 0x52ffeb, 0x52fff4, 0x52fff9, 0x52fffe, 0x530037, 0x530046, 0x530055, 0x530064]:
     WriteMemory("unsigned char", 0x00, i)
 
+WriteMemory("unsigned int", 0x679890, 0x430f79)
+WriteMemory("unsigned int", 0x679890, 0x431007)
+WriteMemory("unsigned int", 0x651268, 0x430fd9)
+WriteMemory("unsigned int", 0x651264, 0x430fad)
+WriteMemory("unsigned int", 280, 0x430f4c)
+WriteMemory("unsigned char", [
+0xd9, 0x5e, 0x28,            #fstps 0x28(%esi)
+0x0f, 0x1f, 0x00,            #nop
+0xe8, 0x13, 0x0d, 0x22, 0x00 #call 0x651dc0
+], 0x4310a2)
+WriteMemory("unsigned char", [
+0xd9, 0x5e, 0x28,            #fstps 0x28(%esi)
+0x0f, 0x1f, 0x00,            #nop
+0xe8, 0xe3, 0x0c, 0x22, 0x00 #call 0x651dc0
+], 0x4310d2)
+WriteMemory("unsigned char", [
+0xd9, 0x5e, 0x28,            #fstps 0x28(%esi)
+0x0f, 0x1f, 0x00,            #nop
+0xe8, 0xa2, 0x0c, 0x22, 0x00 #call 0x651dc0
+], 0x431113)
+WriteMemory("float",  [0.01, 150.0, 4.0], 0x65125c)
+WriteMemory("double", [2.99], 0x651268)
+WriteMemory("unsigned char", [
+0x8b, 0x46, 0x54,                   #movl   0x54(%esi), %eax
+0x05, 0x51, 0xff, 0xff, 0xff,       #addl   $-175,      %eax
+0x19, 0xc9,                         #sbbl   %ecx,       %ecx
+0x21, 0xc8,                         #andl   %ecx,       %eax
+0xb9, 0x32, 0x00, 0x00, 0x00,       #movl   $100,       %ecx #used to be 300, but that was dumb
+0x39, 0xc1,                         #cmpl   %eax,       %ecx
+0x0f, 0x42, 0xc1,                   #cmovcl %ecx,       %eax
+0x50,                               #pushl  %eax
+0xdb, 0x04, 0x24,                   #fildl  (%esp)
+0xd8, 0x0d, 0x5c, 0x12, 0x65, 0x00, #fmuls  0x65125c
+0xd9, 0x1c, 0x24,                   #fstps  (%esp)
+0xe8, 0xd8, 0xfa, 0xeb, 0xff,       #call   0x5118c0 #offset 0x28
+0xd9, 0x1c, 0x24,                   #fstps  (%esp)
+0xe8, 0xd0, 0xfa, 0xeb, 0xff,       #call   0x5118c0 #offset 0x30
+0xd8, 0x0d, 0x60, 0x12, 0x65, 0x00, #fmuls  0x651260
+0xd8, 0x6e, 0x24,                   #fsubrs 0x24(%esi)
+0xd9, 0x5e, 0x24,                   #fstps  0x24(%esi)
+0x58,                               #popl   %eax
+0xc3,                               #retl
+], 0x651dc0)
+
+WriteMemory("unsigned char", [
+0x8b, 0xc8,                  #movl  %eax, %ecx
+0x8b, 0xc6,                  #movl  %esi, %eax
+0x50,                        #pushl %eax
+0xd9, 0x14, 0x24,            #fsts  (%esp)
+0x50,                        #pushl %eax
+0xd9, 0x1c, 0x24,            #fstps (%esp)
+0x50,                        #pushl %eax
+0xd9, 0x45, 0x34,            #flds  0x34(%ebp)
+0xd9, 0x14, 0x24,            #fsts  (%esp)
+0x50,                        #pushl %eax
+0xd9, 0x1c, 0x24,            #fstps (%esp)
+0xe8, 0xcd, 0x01, 0x22, 0x00 #call  0x651d00 #431b33
+], 0x431b17)
+WriteMemory("unsigned char", [
+0x81, 0x7d, 0x54, 0xaf, 0x00, 0x00, 0x00, #cmpl   $175, 0x54(%ebp)
+0x73, 0x01,                               #jnc    +0x1
+0xc3,                                     #retl
+0x50,                                     #pushl  %eax
+0x51,                                     #pushl  %ecx
+0x52,                                     #pushl  %edx
+
+0x8b, 0xc6,                               #movl   %esi,      %eax
+0xb1, 0x01,                               #movl   $0x1,       %cl
+0xe8, 0xfa, 0x4f, 0xf3, 0xff,             #call   0x586d10        #SetColorizeImages #586d10-651d16
+
+0x31, 0xc0,                               #xorl   %eax,      %eax
+0xb0, 0xff,                               #movl   $255,       %al
+0x50,                                     #pushl  %eax
+0xb0, 0xff,                               #movl   $0xff,      %al #blue
+0x50,                                     #pushl  %eax
+0xb0, 0xbb,                               #movl   $0xbb,      %al #green
+0x50,                                     #pushl  %eax
+0xb0, 0xdd,                               #movl   $0xdd,      %al #red
+0x50,                                     #pushl  %eax
+0x8b, 0xc4,                               #movl   %esp,      %eax
+0x8b, 0xce,                               #movl   %esi,      %ecx
+0xe8, 0x93, 0x4f, 0xf3, 0xff,             #call   0x586cc0        #SetColor #0x586cc0-651d2d
+0x83, 0xc4, 0x10,                         #addl   $0x10,     %esp
+
+0x8b, 0x0d, 0x14, 0x77, 0x6a, 0x00,       #movl   0x6a7714,  %ecx #FONT_HOUSEOFTERROR28
+0x8b, 0xc6,                               #movl   %esi,      %eax
+0xe8, 0x73, 0x4f, 0xf3, 0xff,             #call   0x586cb0        #SetFont #586cb0-651d3d
+
+0x68, 0xfa, 0x00, 0x00, 0x00,             #pushl  $250
+0x68, 0xee, 0x02, 0x00, 0x00,             #pushl  $750
+0xdb, 0x04, 0x24,                         #fildl  (%esp)
+0xd9, 0x45, 0x24,                         #flds   0x24(%ebp)
+0xde, 0xe9,                               #fsubp  %st(1)
+0xdb, 0x1c, 0x24,                         #fistpl (%esp)
+0x68, 0x70, 0x12, 0x65, 0x00,             #pushl  $0x651270
+0x8b, 0xc6,                               #movl   %esi,      %eax
+0xe8, 0xc2, 0x53, 0xf3, 0xff,             #call   0x587120        #DrawString #587120-651d5e
+
+0x83, 0xc4, 0xc0,                         #addl   $-0x40,    %esp #I was too lazy to do a real subtraction
+0x8b, 0xc4,                               #movl   %esp,      %eax
+0x8b, 0x0d, 0x90, 0x11, 0x65, 0x00,       #movl   0x651190,  %ecx
+0xe8, 0x02, 0x19, 0xe0, 0xff,             #call   0x453670       #GetStageString #453670-651d6e
+0x68, 0x1d, 0x01, 0x00, 0x00,             #pushl  $285
+0x68, 0xee, 0x02, 0x00, 0x00,             #pushl  $750
+0xdb, 0x04, 0x24,                         #fildl  (%esp)
+0xd9, 0x45, 0x24,                         #flds   0x24(%ebp)
+0xde, 0xe9,                               #fsubp  %st(1)
+0xdb, 0x1c, 0x24,                         #fistpl (%esp)
+0x50,                                     #pushl  %eax
+0x8b, 0xc6,                               #movl   %esi,      %eax
+0xe8, 0x95, 0x53, 0xf3, 0xff,             #call   0x587120        #DrawString #587120-651d8b
+0x83, 0xc4, 0x40,                         #addl   $0x40,     %esp
+
+0x8b, 0xc6,                               #movl   %esi,      %eax
+0xb1, 0x00,                               #movl   $0x0,      %cl
+0xe8, 0x79, 0x4f, 0xf3, 0xff,             #call   0x586d10       #SetColorizeImages #586d10-651d97
+0x5a,                                     #popl   %edx
+0x59,                                     #popl   %ecx
+0x58,                                     #popl   %eax
+0xc3                                      #retl
+], 0x651d00)
+WriteMemory("unsigned int", [0, 0x4e207055, 0x3a747865, 0, 0, 8], 0x651270)
+
+WriteMemory("unsigned char", [
+0x8b, 0x0d, 0x90, 0x11, 0x65, 0x00 #movl 0x651190, %ecx
+], 0x452331)
+WriteMemory("unsigned char", 0, 0x452339)
+WriteMemory("unsigned char", 0, 0x452365)
 
 #I haven't been bothered to label these yet
 
@@ -1506,7 +1767,7 @@ WriteMemory("unsigned char", [
 
 plants_unlocked = 1
 WriteMemory("int", plants_array, 0x651094)
-WriteMemory("int", plants_array2, 0x651194)
+WriteMemory("int", plants_array2, 0x651194) #ends at 0x65125c
 WriteMemory("int",0,0x65115c)
 upgradePlants=[0x1C4, 0x1C2, 0x1C8, 0x1D4, 0x1CC, 0x1D8, 0x1E0, 0x1D0, 0x1DC, "nothing", "nothing2"] #twin, gatling, gloom, gold, cattail, spike, imitater, winter, cob
 zombies=["Basic", "Flag (ignore)", "Cone", "Vaulter", "Bucket", "Newspaper", "Screen-Door", "Footballer", "Dancer", "Backup (ignore)", "Ducky-Tube (ignore)", "Snorkel", "Zomboni", "Bobsled", "Dolphin", "Jack", "Balloon", "Digger", "Pogo", "Yeti (ignore)", "Bungee", "Ladder", "Catapult", "Gargantuar"]
@@ -1521,7 +1782,7 @@ for i in range(50):
         if savePoint-1==i:
             saved=False
     if not saved and i!=0:
-        linesToWrite=[seed, (i+1), str(ReadMemory("int", 0x6A9EC0,0x82C,0x214)), str(ReadMemory("int",0x6A9EC0,0x82C, 0x28)), (challengeMode), (shopless), (noRestrictions), (noAutoSlots), (imitater), (randomisePlants), (seeded), (upgradeRewards), (randomWeights), (randomWavePoints), startingWave]
+        linesToWrite=[seed, (i+1), str(ReadMemory("int", 0x6A9EC0,0x82C,0x214)), str(ReadMemory("int",0x6A9EC0,0x82C, 0x28)), (challengeMode), (shopless), (noRestrictions), (noAutoSlots), (imitater), (randomisePlants), (seeded), (upgradeRewards), (randomWeights), (randomWavePoints), startingWave, randomCost, randomCooldowns]
         saveFile=open('saveFile.txt', 'w')
         for k in range(len(linesToWrite)):
             linesToWrite[k]=str(linesToWrite[k])
@@ -1531,8 +1792,8 @@ for i in range(50):
         if i!=0 and (randomWavePoints!=False or randomWeights):
             print(" "*100)
             print("Level:", convertToLevel(levels[i-1]))
-            zombies_type_offset = read_memory("unsigned int", 0x6A9EC0, 0x768) + 0x54D4
-            zombies_type = read_memory("bool",zombies_type_offset,array=33)
+            zombies_type_offset = ReadMemory("unsigned int", 0x6A9EC0, 0x768) + 0x54D4
+            zombies_type = ReadMemory("bool",zombies_type_offset,array=33)
             for j in range(0, 24):
                 if(zombies_type[j]):
                     print(zombies[j], str(ReadMemory("int", 0x69DA88 + 0x1C*j)), ReadMemory("int", 0x69DA94 + 0x1C*j),ReadMemory("int", 0x69DA90 + 0x1C*j))
@@ -1572,15 +1833,18 @@ for i in range(50):
         randomiseWeights()
     if randomWavePoints!=False:
         randomiseWavePoints()
+    if i!=0:
+        randomiseCost()
+        if randomCooldowns:
+            randomiseCooldown()
     if startingWave=="Random":
         randomiseStartingWave(startingWave)
-    if seeded and not saved:
+    if not saved:
         WriteMemory("int",newlevel,0x651190)
     if not shopless:
         WriteMemory("bool",True,0x6A9EC0,0x82C,0x21C)
         WriteMemory("bool",True,0x6A9EC0,0x82C,0x218)
     if(i != 0) and not saved: 
-        WriteMemory("int",newlevel-1,0x6A9EC0,0x768, 0x5550)
         Sleep(1)
     if(level_plants[newlevel] != -1):
         plants_unlocked += 1
@@ -1607,8 +1871,11 @@ for i in range(50):
         Sleep(0.1)
     WriteMemory("int",i,0x65115c)
 
+WriteMemory("int",0,0x651190)
+
 saveFile=open('saveFile.txt', 'w')
 saveFile.write("")
+saveFile.close()
 
 while True:
     Sleep(10)
