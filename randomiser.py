@@ -1070,12 +1070,17 @@ def randomiseCost():
             WriteMemory("int", newCost , 0x69F2C0 + 0x24*i)
 
 def randomiseCooldown():
+    color_array = []
     for i in range(0, 48):
         if i!=1 and i!=8 and i!=33:
             divider=random.uniform(1,2)
             power=random.choice([-1, 1])
+            color_array.append(round(((divider-1.0)**0.5)*127) + ((1-power)<<6))
             newCooldown=int(plants[i][1]*(divider**power))
             WriteMemory("int", newCooldown , 0x69F2C4 + 0x24*i)
+        else:
+            color_array.append(0)
+    WriteMemory("unsigned char", color_array, 0x651290)
 #showAverage()
 #nightAverage()
 if randomisePlants:
@@ -1404,6 +1409,49 @@ WriteMemory("unsigned char", [
         0xC3,                                   # ret 
     ],
         0x651C00)
+
+WriteMemory("unsigned char", [
+0xe8, 0x1a, 0x9a, 0x1c, 0x00, #call  0x651bc0
+0x8d, 0x54, 0x24, 0x3c,       #leal  0x3c(%esp), %edx
+0x52,                         #pushl %edx
+0x50,                         #pushl %eax
+0x8d, 0x54, 0x24, 0x7c,       #leal  0x7c(%esp), %edx
+0x56,                         #pushl %esi
+], 0x4881c1)
+WriteMemory("unsigned char", 0x20, 0x4881d8)
+WriteMemory("unsigned char", [
+0xdd, 0xd8,                               #fstp   %st(0)
+0x31, 0xc0,                               #xorl   %eax,              %eax
+0x89, 0x44, 0x24, 0x4c,                   #movl   %eax,        0x4c(%esp)
+0x89, 0x44, 0x24, 0x50,                   #movl   %eax,        0x50(%esp)
+0x89, 0x44, 0x24, 0x54,                   #movl   %eax,        0x54(%esp)
+0xb0, 0xff,                               #movb   $0xff,              %al
+0x89, 0x44, 0x24, 0x58,                   #movl   %eax,        0x58(%esp)
+0x0f, 0xb6, 0x95, 0x90, 0x12, 0x65, 0x00, #movzbl 0x651290(%ebp),    %edx
+0xd0, 0xe2,                               #shlb   $0x1,               %dl
+0x19, 0xc9,                               #sbbl   %ecx,              %ecx
+0x89, 0x54, 0x8c, 0x54,                   #movl   %edx, 0x54(%esp,%ecx,4)
+0x8b, 0x35, 0x98, 0x74, 0x6a, 0x00,       #movl   0x6a7498,          %esi
+0x8d, 0x54, 0x24, 0x60,                   #leal   0x60(%esp),        %edx
+0x8d, 0x7c, 0x24, 0x28,                   #leal   0x28(%esp),        %edi
+0x0f, 0x1f, 0x40, 0x00,                   #nop    (4 bytes)
+], 0x4880ba)
+WriteMemory("unsigned char", [
+0x0f, 0xb6, 0x95, 0x90, 0x12, 0x65, 0x00, #movzbl 0x651290(%ebp),   %edx
+0x6a, 0x00,                               #pushl  $0x0
+0x6a, 0x00,                               #pushl  $0x0
+0x6a, 0x00,                               #pushl  $0x0
+0xd0, 0xe2,                               #shlb   $0x1,              %dl
+0x19, 0xc9,                               #sbbl   %ecx,             %ecx
+0x89, 0x54, 0x8c, 0x08,                   #movl   %edx, 0x8(%esp,%ecx,4)
+0xb2, 0xff,                               #movb   $0xff,             %dl
+0x87, 0x54, 0x24, 0x0c,                   #xchgl  %edx,        0xc(%esp)
+0x89, 0xe1,                               #movl   %esp,             %ecx
+0x51,                                     #pushl  %ecx
+0xff, 0xe2                                #jmp    *%edx
+], 0x651be0)
+
+
 
 #chacha8 (for rng)
 
