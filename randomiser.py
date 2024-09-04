@@ -1,4 +1,5 @@
 from   tkinter import *
+from   tkinter import ttk
 import platform
 try:
     if platform.system() == "Windows":
@@ -187,20 +188,20 @@ if len(fileInfo)>0:
 saveFile.close()
 window=Tk() #Creates a window object from the Tk class
 window.title("Randomiser settings")
-challengeMode=False
-shopless=False
-noRestrictions=False
-noAutoSlots=False
-imitater=False
-randomisePlants=False
-seeded=False
-upgradeRewards=False
-randomWeights=False
-randomWavePoints=False
-saved=False
-startingWave="False"
-randomCost=False
-randomCooldowns=False
+challengeMode    = BooleanVar(value=False)
+shopless         = BooleanVar(value=False)
+noRestrictions   = BooleanVar(value=False)
+noAutoSlots      = BooleanVar(value=False)
+imitater         = BooleanVar(value=False)
+randomisePlants  = BooleanVar(value=False)
+seeded           = BooleanVar(value=False)
+upgradeRewards   = BooleanVar(value=False)
+randomWeights    = BooleanVar(value=False)
+randomWavePoints = StringVar(value="False")
+saved            = BooleanVar(value=False)
+startingWave     = StringVar(value="False")
+randomCost       = BooleanVar(value=False)
+randomCooldowns  = BooleanVar(value=False)
 seed=str(random.randint(1,999999999999))
 
 
@@ -235,83 +236,21 @@ def checkValidNumber(level):
         print("Invalid jump level. Use the format x-y.")
     return check
 
-def challengeButtonClick():
-    global noRestrictions, challengeMode
-    if not noRestrictions:
-        challengeMode=not challengeMode
-    buttonClick()
-def shoplessButtonClick():
-    global shopless
-    shopless=not shopless
-    buttonClick()
-
 def noRestrictionsButtonClick():
-    global noRestrictions, challengeMode
-    noRestrictions=not noRestrictions
-    if noRestrictions:
-        challengeMode=True
-    buttonClick()
+    global noRestrictions, challengeMode, challengeButton
+    if noRestrictions.get():
+        challengeMode.set(True)
+        challengeButton.config(state=DISABLED)
+    else:
+        challengeButton.config(state=NORMAL)
 
-def autoSlotsButtonClick():
-    global noAutoSlots, shopless
-    if not shopless:
-        noAutoSlots=not noAutoSlots
-    buttonClick()
-
-def imitaterButtonClick():
-    global imitater
-    imitater=not imitater
-    buttonClick()
-
-def randPlantsButtonClick():
-    global randomisePlants
-    randomisePlants=not randomisePlants
-    buttonClick()
-
-def upgradeButtonClick():
-    global upgradeRewards
-    upgradeRewards=not upgradeRewards
-    buttonClick()
-
-def seededButtonClick():
-    global seeded
-    seeded=not seeded
-    buttonClick()
-
-def randomWeightsButtonClick():
-    global randomWeights
-    randomWeights=not randomWeights
-    buttonClick()
-
-def randomWavePointsButtonClick():
-    global randomWavePoints
-    if randomWavePoints==False:
-        randomWavePoints="Normal"
-    elif randomWavePoints=="Normal":
-        randomWavePoints="EXTREME"
-    elif randomWavePoints=="EXTREME":
-        randomWavePoints=False
-    buttonClick()
-
-def startingWaveButtonClick():
-    global startingWave
-    if startingWave=="False":
-        startingWave="Random"
-    elif startingWave=="Random":
-        startingWave="Instant"
-    elif startingWave=="Instant":
-        startingWave="False"
-    buttonClick()
-
-def costButtonClick():
-    global randomCost
-    randomCost=not randomCost
-    buttonClick()
-
-def cooldownButtonClick():
-    global randomCooldowns
-    randomCooldowns=not randomCooldowns
-    buttonClick()
+def shoplessButtonClick():
+    global shopless, noAutoSlots, manualMoneyButton
+    if shopless.get():
+        noAutoSlots.set(False)
+        manualMoneyButton.config(state=DISABLED)
+    else:
+        manualMoneyButton.config(state=NORMAL)
 
 def continueButtonClick():
     global seed, challengeMode, shopless, noRestrictions, noAutoSlots, imitater, randomisePlants, seeded, upgradeRewards, randomWeights, randomWavePoints, startingWave, randomCost, randomCooldowns, saved, savePoint, fileInfo, jumpLevel
@@ -319,24 +258,22 @@ def continueButtonClick():
     savePoint=int(fileInfo[1].strip())
     WriteMemory("int", int(fileInfo[2].strip()), 0x6A9EC0,0x82C,0x214) #slots
     WriteMemory("int", int(fileInfo[3].strip()), 0x6A9EC0,0x82C,0x28) #money
-    challengeMode=eval(fileInfo[4].strip())
-    shopless=eval(fileInfo[5].strip())
-    noRestrictions=eval(fileInfo[6].strip())
-    noAutoSlots=eval(fileInfo[7].strip())
-    imitater=eval(fileInfo[8].strip())
-    randomisePlants=eval(fileInfo[9].strip())
-    #seeded=eval(fileInfo[10].strip())
-    seeded=False
-    upgradeRewards=eval(fileInfo[11].strip())
-    randomWeights=eval(fileInfo[12].strip())
-    randomWavePoints=fileInfo[13].strip()
-    startingWave=fileInfo[14].strip()
-    randomCost=eval(fileInfo[15].strip())
-    randomCooldowns=eval(fileInfo[16].strip())
-    saved=True
+    challengeMode.set(  eval(fileInfo[4].strip()))
+    shopless.set(       eval(fileInfo[5].strip()))
+    noRestrictions.set( eval(fileInfo[6].strip()))
+    noAutoSlots.set(    eval(fileInfo[7].strip()))
+    imitater.set(       eval(fileInfo[8].strip()))
+    randomisePlants.set(eval(fileInfo[9].strip()))
+    #seeded.set(         eval(fileInfo[10].strip()))
+    seeded.set(False)
+    upgradeRewards.set( eval(fileInfo[11].strip()))
+    randomWeights.set(  eval(fileInfo[12].strip()))
+    randomWavePoints.set(    fileInfo[13].strip())
+    startingWave.set(        fileInfo[14].strip())
+    randomCost.set(     eval(fileInfo[15].strip()))
+    randomCooldowns.set(eval(fileInfo[16].strip()))
+    saved.set(True)
     jumpLevel=""
-    if randomWavePoints=="False":
-        randomWavePoints=False
     window.destroy()
     
 def closeButtonClick():
@@ -349,15 +286,6 @@ def informationButtonClick():
     manipulatedText="Aaronthewinner made the original version that randomised the levels. BulbasaurRepresent created most of the logic, modifiers, and GUI. Vsoup.vx did most of the complex stuff, including making the seed select update to show the right plants. LunarBlessing added the tooltip for the random cooldowns, and made the starting cooldowns scale with their actual cooldowns. REALLY IMPORTANT: If you use either RANDOM WEIGHTS or RAND WAVE POINTS, and then you want to do another run WITHOUT those modifiers, close and reopen the game, otherwise things will be funky. Additionally, if you are continuing a saved run / jumping to a specific level, be aware that SEEDED mode does not work with it, and so is automatically disabled." + " "*spaces + "The jump level box allows you to jump to a specific level in the seed! This is great for recovering from a crash if you know your seed but for some reason the save file got corrupted. Just play 1-1 and then you should be at the same level (although with nothing bought from the shop)." + " "*spaces + "The Continue Last Run button only appears if you have an incomplete run in your save data. If you do, pressing this will close the settings menu and give you the same settings as before. After you play 1-1, you should be at the level you were previously at! You will also have the same plants, same money, and the same amount of slot upgrades. You will NOT save any other things bought from the shop (such as rakes or pre-unlocked upgrade plants)." + " "*spaces + "Challenge Mode gets rid of the tough level restriction. With this disabled, you will not be able to play certain levels (like 5-2) without having 3 good plants. Other levels (like 5-9) will need 5 good plants to play. With this enabled, as soon as you unlock flower pot, you can play both 5-2 and 5-9 (for instance)." + (" " * spaces) + "Shopless mode forces you to play with 6 slots and no automatic pool cleaners / roof cleaners." + (" " * spaces) + "No restrictions mode means that there is no logic as to what levels can be played next - the majority of no restrictions runs are impossible." + (" " * spaces) + "With manual money enabled, you do not get automatic slot upgrades, but your money does not reset to 0 after every level, and so you can purchase the slots yourself - this also means you can buy rakes and upgrade plants!" + (" " * spaces) + "Instant imitater mode gives you access to an imitater immediately, which allows you to choose one of any plant to bring to the stage, even if you haven't unlocked it! This works especially well with no restrictions." + (" " * spaces) + "Random plants means that the plant you get at the end of each level is RANDOMISED, in a similar way to the levels! Instead of unlocking the plant you usually unlock for beating that stage, you get a random one!" + (" " * spaces) + "Seeded means that the seed you enter will not only affect the random plants and levels you get, but also the zombie spawns and other types of RNG, which makes it perfect for races!" + (" " * spaces) + "Random upgrades means that most levels that would usually give you no reward instead gives you an upgrade plant! It is important to note that if you have 4 plants total and one upgrade plant, you will not have 4 seed slots - sorry about that." + (" " * spaces) + "Random Weights means that the likelihood for a zombie to spawn is a random number, and this changes from level to level. Cones might be extremely unlikely one level, and then extremely likely the next one!" + (" " * spaces) + "Random Wave Points has two modes: Normal and EXTREME. Normal mode means that a zombie's wave points can either stay the same, or increase/decrease by 1 wave point if they originally cost less than 5 wave points, 2 wave points if they originally cost 5-7 wave points, and 3 wave points if they originally cost 10 wave points. EXTREME mode means that a zombie's wave point value is a random number from 2 to 7 (or, in rare cases, 10). This changes from level to level, and the basic zombie always costs 1 wave point while the cone zombie always costs either 2 or 3 wave points. There is no guarantee that EXTREME mode is always possible. If you're using either randomised weights or randomised wave points, you can look at the program during the run to see a rundown of what weights and wave points each zombie type had!" + "" * spaces + "The starting wave refers to what wave the zombies can start spawning at. Usually, the day/night zombies can spawn in the first 10 waves while the other zombies cannot. Random mode means that each zombie (except for basics, cones, and newspapers) has a random starting wave from 4 to 10. Vaulters, buckets, and screen-doors have a random starting wave from 1 to 10. Instant mode means that every zombie can immediately spawn from wave 1 (provided there is enough wave points)." +" " * spaces + "Random costs will set the cost of almost every plant to 50-200% of the original price! The only exception is the sunflower (and the peashooter in 1-1)." +" "*spaces +"Random cooldowns will set the cooldown of almost every plant to 50-200% of the original cooldown! The only exceptions are sunflower, puff shroom, and flower pot." 
     outputText.insert(END, manipulatedText)
 
-def buttonClick():
-    global noRestrictions, challengeMode, shopless, noAutoSlots, imitater, randomisePlants, spaces, seeded
-    outputText.delete(0.0, END) #this clears the contents of the text box widget
-    if not noRestrictions:
-        manipulatedText="Challenge Mode: " + str(challengeMode) + (" " * spaces) + "Shopless: " + str(shopless) + (" " * spaces) + "No restrictions: " + str(noRestrictions) + (" " * spaces) + "Manual Money: " + str(noAutoSlots) + (" " * spaces) + "Instant Imitater: " + str(imitater) + (" " * spaces) + "Random Plants: " + str(randomisePlants) + (" " * spaces) + "Seeded: " + str(seeded)+ (" " * spaces) + "Upgrade Rewards: " + str(upgradeRewards)+ (" " * spaces) + "Random Weights: " + str(randomWeights)+ (" " * spaces) + "Random Wave Points: " + str(randomWavePoints)+ (" " * spaces) + "Starting Wave: " + startingWave+ (" " * spaces) + "Random Cost: " + str(randomCost)+ (" " * spaces) + "Random Cooldowns: " + str(randomCooldowns)#Concatenation
-    else:
-        manipulatedText="Challenge Mode (locked): " + str(challengeMode) + (" " * spaces) + "Shopless: " + str(shopless) + (" " * spaces) + "No restrictions: " + str(noRestrictions) + (" " * spaces) + "Manual Money: " + str(noAutoSlots) + (" " * spaces) + "Instant Imitater: " + str(imitater) + (" " * spaces) + "Random Plants: " + str(randomisePlants) + (" " * spaces) + "Seeded: " + str(seeded)+ (" " * spaces) + "Upgrade Rewards: " + str(upgradeRewards)+ (" " * spaces) + "Random Weights: " + str(randomWeights)+ (" " * spaces) + "Random Wave Points: " + str(randomWavePoints)+ (" " * spaces) + "Starting Wave: " + startingWave+ (" " * spaces) + "Random Cost: " + str(randomCost)+ (" " * spaces) + "Random Cooldowns: " + str(randomCooldowns)#Concatenation
-    outputText.insert(END, manipulatedText) #this inserts the manipulatedText variable into the text box
-
 def getLevel():
     global jumpLevel, saved, seeded
     jumpLevel=jumpEntry.get()
@@ -365,8 +293,8 @@ def getLevel():
         jumpLevel=convertToNumber(jumpLevel)
         if jumpLevel!="":
             savePoint=jumpLevel
-            saved=True
-            seeded=False
+            saved.set(True)
+            seeded.set(False)
 
 def getSeed():
     global seed
@@ -385,56 +313,66 @@ jumpEntry=Entry(window, width=20, bg="light green")
 jumpEntry.grid(row=0, column=3, sticky=W)
 
 if hasSave:
-    continueButton=Button(window, text="CONTINUE LAST RUN", width=15, command=continueButtonClick)
+    continueButton=Button(window, text="CONTINUE LAST RUN", width=16, command=continueButtonClick)
     continueButton.grid(row=0, column=4, sticky=W)
 
 spaces=150
 
 #create a button widget (dear god this is unwieldy)
-challengeButton=Button(window, text="CHALLENGE", width=15, command=challengeButtonClick)
+challengeButton=Checkbutton(window, text="CHALLENGE", width=16, variable=challengeMode, anchor="w")#command=challengeButtonClick)
 challengeButton.grid(row=1, column=0, sticky=W)
 
-shoplessButton=Button(window, text="SHOPLESS", width=15, command=shoplessButtonClick)
-shoplessButton.grid(row=1, column=1, sticky=W)
+shoplessButton=Checkbutton(window, text="SHOPLESS", width=16, variable=shopless, anchor="w", command=shoplessButtonClick)
+shoplessButton.grid(row=3, column=0, sticky=W)
 
-noRestrictionsButton=Button(window, text="NO RESTRICTIONS", width=15, command=noRestrictionsButtonClick)
-noRestrictionsButton.grid(row=1, column=2, sticky=W)
+noRestrictionsButton=Checkbutton(window, text="NO RESTRICTIONS", width=16, variable=noRestrictions, anchor="w", command=noRestrictionsButtonClick)
+noRestrictionsButton.grid(row=2, column=0, sticky=W)
 
-manualMoneyButton=Button(window, text="MANUAL MONEY", width=15, command=autoSlotsButtonClick)
+manualMoneyButton=Checkbutton(window, text="MANUAL MONEY", width=16, variable=noAutoSlots, anchor="w")#command=autoSlotsButtonClick)
 manualMoneyButton.grid(row=1, column=3, sticky=W)
 
-imitaterButton=Button(window, text="INSTANT IMITATER", width=15, command=imitaterButtonClick)
-imitaterButton.grid(row=1, column=4, sticky=W)
+imitaterButton=Checkbutton(window, text="INSTANT IMITATER", width=16, variable=imitater, anchor="w")#command=imitaterButtonClick)
+imitaterButton.grid(row=2, column=3, sticky=W)
 
-randPlantsButton=Button(window, text="RANDOM PLANTS", width=15, command=randPlantsButtonClick)
-randPlantsButton.grid(row=1, column=5, sticky=W)
+randPlantsButton=Checkbutton(window, text="RANDOM PLANTS", width=16, variable=randomisePlants, anchor="w")#command=randPlantsButtonClick)
+randPlantsButton.grid(row=1, column=1, sticky=W)
 
-seededButton=Button(window, text="SEEDED", width=15, command=seededButtonClick)
-seededButton.grid(row=2, column=0, sticky=W)
+seededButton=Checkbutton(window, text="SEEDED", width=16, variable=seeded, anchor="w")#command=seededButtonClick)
+seededButton.grid(row=3, column=3, sticky=W)
 
-upgradeButton=Button(window, text="UPGRADE REWARDS", width=15, command=upgradeButtonClick)
-upgradeButton.grid(row=2, column=1, sticky=W)
+upgradeButton=Checkbutton(window, text="UPGRADE REWARDS", width=16, variable=upgradeRewards, anchor="w")#command=upgradeButtonClick)
+upgradeButton.grid(row=2, column=3, sticky=W)
 
-randWeightsButton=Button(window, text="RANDOM WEIGHTS", width=15, command=randomWeightsButtonClick)
-randWeightsButton.grid(row=2, column=2, sticky=W)
+randWeightsButton=Checkbutton(window, text="RANDOM WEIGHTS", width=16, variable=randomWeights, anchor="w")#command=randomWeightsButtonClick)
+randWeightsButton.grid(row=2, column=1, sticky=W)
 
-randWavePointsButton=Button(window, text="RAND WAVE POINTS", width=15, command=randomWavePointsButtonClick)
-randWavePointsButton.grid(row=2, column=3, sticky=W)
+randWavePointsLabel=Label(window, text="RAND WAVE POINTS:")
+randWavePointsLabel.grid(row=1, column=2, sticky=W)
+randWavePointsButton=ttk.Combobox(window, text="RAND WAVE POINTS", width=16, textvariable=randomWavePoints)#command=randomWavePointsButtonClick)
+randWavePointsButton["values"] = ["False", "Normal", "EXTREME"]
+randWavePointsButton.state(["readonly"])
+randWavePointsButton.bind('<<ComboboxSelected>>', lambda e: randWavePointsButton.selection_clear())
+randWavePointsButton.grid(row=2, column=2, sticky=W)
 
-waveStartButton=Button(window, text="STARTING WAVE", width=15, command=startingWaveButtonClick)
-waveStartButton.grid(row=2, column=4, sticky=W)
+waveStartLabel=Label(window, text="STARTING WAVE:")
+waveStartLabel.grid(row=3, column=2, sticky=W)
+waveStartButton=ttk.Combobox(window, text="STARTING WAVE", width=16, textvariable=startingWave)#command=startingWaveButtonClick)
+waveStartButton["values"] = ["False", "Random", "Instant"]
+waveStartButton.state(["readonly"])
+waveStartButton.bind('<<ComboboxSelected>>', lambda e: waveStartButton.selection_clear())
+waveStartButton.grid(row=4, column=2, sticky=W)
 
-costButton=Button(window, text="RANDOM COST", width=15, command=costButtonClick)
-costButton.grid(row=2, column=5, sticky=W)
+costButton=Checkbutton(window, text="RANDOM COST", width=16, variable=randomCost, anchor="w")#command=costButtonClick)
+costButton.grid(row=3, column=1, sticky=W)
 
-cooldownButton=Button(window, text="RAND COOLDOWNS", width=15, command=cooldownButtonClick)
-cooldownButton.grid(row=2, column=6, sticky=W)
+cooldownButton=Checkbutton(window, text="RAND COOLDOWNS", width=16, variable=randomCooldowns, anchor="w")#command=cooldownButtonClick)
+cooldownButton.grid(row=4, column=1, sticky=W)
 
-closeButton=Button(window, text="SUBMIT SETTINGS", width=15, command=closeButtonClick)
-closeButton.grid(row=1, column=6, sticky=W)
+closeButton=Button(window, text="SUBMIT SETTINGS", width=16, command=closeButtonClick)
+closeButton.grid(row=0, column=6, sticky=W)
 
-informationButton=Button(window, text="INFORMATION", width=15, command=informationButtonClick)
-informationButton.grid(row=1, column=7, sticky=W)
+informationButton=Button(window, text="INFORMATION", width=16, command=informationButtonClick)
+informationButton.grid(row=0, column=7, sticky=W)
 
 #creates an entry widget, assigning it to a variable
 entry=Entry(window, width=20, bg="light green")
@@ -442,24 +380,23 @@ entry.grid(row=0, column=1, sticky=W) #positioning this widget on the screen
 
 #create a text box widget
 outputText=Text(window, width=120, height=15, wrap=WORD, background="yellow")
-outputText.grid(row=3, column=0, columnspan=10, sticky=W)
-outputText.insert(END, "Challenge Mode: " + str(challengeMode) + (" " * spaces) + "Shopless: " + str(shopless) + (" " * spaces) + "No restrictions: " + str(noRestrictions) + (" " * spaces) + "Manual Money: "  + str(noAutoSlots) + (" " * spaces) + "Instant Imitater: " + str(imitater)+ (" " * spaces) + "Random Plants: " + str(randomisePlants) + (" " * spaces) + "Seeded: " + str(seeded)+ (" " * spaces) + "Upgrade Rewards: " + str(upgradeRewards)+ (" " * spaces) + "Random Weights: " + str(randomWeights)+ (" " * spaces) + "Random Wave Points: " + str(randomWavePoints)+ (" " * spaces) + "Starting Wave: " + startingWave+ (" " * spaces) + "Random Cost: " + str(randomCost)+ (" " * spaces) + "Random Cooldowns: " + str(randomCooldowns))
+outputText.grid(row=5, column=0, columnspan=10, sticky=W)
 
 window.mainloop() #Run the event loop
 print(seed)
-print("Challenge Mode:", str(challengeMode))
-print("Shopless:", str(shopless))
-print("No Restrictions:", str(noRestrictions))
-print("Manual Money:", str(noAutoSlots))
-print("Instant Imitater:", str(imitater))
-print("Random Plants:", str(randomisePlants))
-print("Seeded:", str(seeded))
-print("Upgrade Rewards:", str(upgradeRewards))
-print("Random Weights:", str(randomWeights))
-print("Random Wave Points:", str(randomWavePoints))
-print("Starting Wave:", startingWave)
-print("Random Cost:", str(randomCost))
-print("Random Cooldowns:", str(randomCooldowns))
+print("Challenge Mode:",     str(challengeMode.get()))
+print("Shopless:",           str(shopless.get()))
+print("No Restrictions:",    str(noRestrictions.get()))
+print("Manual Money:",       str(noAutoSlots.get()))
+print("Instant Imitater:",   str(imitater.get()))
+print("Random Plants:",      str(randomisePlants.get()))
+print("Seeded:",             str(seeded.get()))
+print("Upgrade Rewards:",    str(upgradeRewards.get()))
+print("Random Weights:",     str(randomWeights.get()))
+print("Random Wave Points:", str(randomWavePoints.get()))
+print("Starting Wave:",          startingWave.get())
+print("Random Cost:",        str(randomCost.get()))
+print("Random Cooldowns:",   str(randomCooldowns.get()))
 
 LEVEL_PLANTS = [
 0,
@@ -470,226 +407,14 @@ LEVEL_PLANTS = [
 33, 34, 35, -1, 36, 37, 38, 39, -1, -1
 ]
 
-def randomiseLevels2(seed):
-    global noRestrictions, challengeMode
-    random.seed(seed)
-    firstLevels=[]
-    levels=[1]
-    toughLevelCheck=0
-    balloonCheck=0
-    if noRestrictions:
-        for i in range(2, 51):
-            levels.append(i)
-    for i in range(0,50):
-        levels, firstLevels = addLevel(levels, firstLevels)
-        if not noRestrictions:
-            if i==0: #after 1-1, can play any day stage or any x-5 / x-10
-                levels=addToLevelsList(levels, [2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20, 25, 30, 35, 40, 45, 50])
-            if firstLevels[i] in [2, 7, 8, 18, 21, 25, 36, 38, 43, 48]: #cherry bomb, chomper, repeater, doom, squash, jalapeno, starfruit, magnet, coffee bean, melon pult
-                    toughLevelCheck += 1
-            if firstLevels[i] in [2, 18, 25]:
-                balloonCheck+=1
-            elif firstLevels[i] in [32, 33]:
-                balloonCheck+=2
-            has_puff              = 10 in firstLevels
-            has_lily              = 20 in firstLevels
-            has_fog_plants        = has_puff and (has_lily or 30 in firstLevels)
-            has_pot               = 41 in firstLevels
-            has_roof_plant        = 40 in firstLevels or has_pot
-            for j in range(1, 51):
-                if j not in levels and j not in firstLevels:
-                    if j==11:
-                        if has_puff:
-                            levels=addToLevelsList(levels, j)
-                    elif j==12:
-                        if has_puff:
-                            if not challengeMode:
-                                if toughLevelCheck>=3:
-                                    levels=addToLevelsList(levels, j)
-                            else:
-                                levels=addToLevelsList(levels, j)
-                    elif j==13:
-                        if has_puff:
-                            levels=addToLevelsList(levels, j)
-                    elif j==14:
-                        if has_puff:
-                            if not challengeMode:
-                                if toughLevelCheck>=3:
-                                    levels=addToLevelsList(levels, j)
-                            else:
-                                levels=addToLevelsList(levels, j)
-                    elif j==16:
-                        if has_puff:
-                            levels=addToLevelsList(levels, j)
-                    elif j==17:
-                        if has_puff:   
-                            if not challengeMode:
-                                if toughLevelCheck>=3:
-                                    levels=addToLevelsList(levels, j)
-                            else:
-                                levels=addToLevelsList(levels, j)
-                    elif j==18:
-                        if has_puff:
-                            levels=addToLevelsList(levels, j)
-                    elif j==19:
-                        if has_puff:
-                            if not challengeMode:
-                                if toughLevelCheck>=3:
-                                    levels=addToLevelsList(levels, j)
-                            else:
-                                levels=addToLevelsList(levels, j)
-                    elif j==21:
-                        if has_lily or 36 in firstLevels:
-                            levels=addToLevelsList(levels, j)
-                    elif j==22:
-                        if has_lily or 36 in firstLevels:
-                            if not challengeMode:
-                                if toughLevelCheck>=3:
-                                    levels=addToLevelsList(levels, j)
-                            else:
-                                levels=addToLevelsList(levels, j)
-                    elif j==23:
-                        if has_lily:
-                            levels=addToLevelsList(levels, j)
-                    elif j==24:
-                        if has_lily:
-                            if not challengeMode:
-                                if toughLevelCheck>=5:
-                                    levels=addToLevelsList(levels, j)
-                            else:
-                                levels=addToLevelsList(levels, j)
-                    elif j==26:
-                        if has_lily or 36 in firstLevels:
-                            if not challengeMode:
-                                if toughLevelCheck>=3:
-                                    levels=addToLevelsList(levels, j)
-                            else:
-                                levels=addToLevelsList(levels, j)
-                    elif j==27:
-                        if has_lily:
-                            if not challengeMode:
-                                if toughLevelCheck>=5:
-                                    levels=addToLevelsList(levels, j)
-                            else:
-                                levels=addToLevelsList(levels, j)
-                    elif j==28:
-                        if has_lily or ((22 in firstLevels or 36 in firstLevels) and 30 in firstLevels):
-                            levels=addToLevelsList(levels, j)
-                    elif j==29:
-                        if has_lily or ((22 in firstLevels or 36 in firstLevels) and 30 in firstLevels): #if you have lilypad, OR if you have sea shroom + threepeater or starfruit
-                            if not challengeMode:
-                                if toughLevelCheck>=5:
-                                    levels=addToLevelsList(levels, j)
-                            else:
-                                levels=addToLevelsList(levels, j)
-                    elif j==31:
-                        if has_fog_plants:
-                            levels=addToLevelsList(levels, j)
-                    elif j==32:
-                        if has_puff:
-                            if has_lily or (30 in firstLevels and (22 in firstLevels or 36 in firstLevels)): #if you have lilypad, OR if you have sea shroom + threepeater or starfruit
-                                if not challengeMode:
-                                    if toughLevelCheck>=3:
-                                        levels=addToLevelsList(levels, j)
-                                else:
-                                    levels=addToLevelsList(levels, j)
-                    elif j==33:
-                        if has_fog_plants:
-                            levels=addToLevelsList(levels, j)
-                    elif j==34:
-                        if has_puff:
-                            if has_lily:
-                                if balloonCheck>=2:
-                                    if not challengeMode:
-                                        if toughLevelCheck>=3:
-                                            levels=addToLevelsList(levels, j)
-                                    else:
-                                        levels=addToLevelsList(levels, j)
-                    elif j==36:
-                        if has_fog_plants:
-                            levels=addToLevelsList(levels, j)
-                    elif j==37:
-                        if has_puff:
-                            if has_lily or (30 in firstLevels and (22 in firstLevels or 36 in firstLevels)): #if you have lilypad, OR if you have sea shroom + threepeater or starfruit
-                                if not challengeMode:
-                                    if toughLevelCheck>=5:
-                                        levels=addToLevelsList(levels, j)
-                                else:
-                                    levels=addToLevelsList(levels, j)
-                    elif j==38:
-                        if has_fog_plants:
-                                levels=addToLevelsList(levels, j)
-                    elif j==39:
-                        if has_puff:
-                            if has_lily:
-                                if balloonCheck>=2:
-                                    if not challengeMode:
-                                        if toughLevelCheck>=5:
-                                            levels=addToLevelsList(levels, j)
-                                    else:
-                                        levels=addToLevelsList(levels, j)
-                    elif j==41:
-                        if i>=10 or 40 in firstLevels:
-                            levels=addToLevelsList(levels, j)
-                    elif j==42:
-                        if has_pot:
-                            if not challengeMode:
-                                if toughLevelCheck>=3:
-                                    levels=addToLevelsList(levels, j)
-                            else:
-                                levels=addToLevelsList(levels, j)
-                    elif j==43:
-                        if has_roof_plant:
-                            if not challengeMode:
-                                if toughLevelCheck>=3:
-                                    levels=addToLevelsList(levels, j)
-                            else:
-                                levels=addToLevelsList(levels, j)
-                    elif j==44:
-                        if has_pot:
-                            if not challengeMode:
-                                if toughLevelCheck>=5:
-                                    levels=addToLevelsList(levels, j)
-                            else:
-                                levels=addToLevelsList(levels, j)
-                    elif j==46:
-                        if has_roof_plant:
-                            if not challengeMode:
-                                if toughLevelCheck>=3:
-                                    levels=addToLevelsList(levels, j)
-                            else:
-                                levels=addToLevelsList(levels, j)
-                    elif j==47:
-                        if has_pot:
-                            if not challengeMode:
-                                if toughLevelCheck>=5:
-                                    levels=addToLevelsList(levels, j)
-                            else:
-                                levels=addToLevelsList(levels, j)
-                    elif j==48:
-                        if has_pot:
-                            if not challengeMode:
-                                if toughLevelCheck>=3:
-                                    levels=addToLevelsList(levels, j)
-                            else:
-                                levels=addToLevelsList(levels, j)
-                    elif j==49:
-                        if has_pot:
-                            if not challengeMode:
-                                if toughLevelCheck>=5:
-                                    levels=addToLevelsList(levels, j)
-                            else:
-                                levels=addToLevelsList(levels, j)
-    return firstLevels
-
 def randomiseLevels(seed):
-    global noRestrictions, challengeMode
+    global noRestrictions
     random.seed(seed)
     firstLevels=[]
     levels=[1]
     toughLevelCheck=0
     balloonCheck=0
-    if noRestrictions:
+    if noRestrictions.get():
         for i in range(2, 51):
             levels.append(i)
     for i in range(0,50):
@@ -704,13 +429,13 @@ def randomiseLevelsAndPlants(seed):
     plants = [1]
     levels = [1]
     unused_plants   = [i        for i in range(2,40)]
-    if challengeMode or noRestrictions:
+    if challengeMode.get() or noRestrictions.get():
         level_plants    = [(-1,1.0) for i in range(0,51)]
     else:
         level_plants    = [(-1,0.8) for i in range(0,51)]
     level_plants[0] =  (0, 0.0)
     level_plants[1] =  (1, 0.0)
-    if not noRestrictions:
+    if not noRestrictions.get():
         while 1: #select key plants for only levels you could have unlocked by that point
             current_available = len(getAvailableStages(plants,levels))
             plants.append(0)
@@ -726,7 +451,7 @@ def randomiseLevelsAndPlants(seed):
                 elif i in {2, 6, 7, 15, 17, 20, 29, 31, 35, 39}:
                     key_plants.append(i)
                     key_weights.append(0.23)
-                    if challengeMode:
+                    if challengeMode.get():
                         key_weights2.append(1.0)
                     else:
                         key_weights2.append(1.3)
@@ -779,7 +504,7 @@ def getAvailableStages(plants, used_levels=[]):
     global noRestrictions, challengeMode
     if len(used_levels) == 0:
         level_set = {1}
-    elif noRestrictions:
+    elif noRestrictions.get():
         level_set = {
         2,  3,  4,  5,  6,  7,  8,  9,  10,
         11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
@@ -793,7 +518,7 @@ def getAvailableStages(plants, used_levels=[]):
         tough_check   = len(plant_set & {2, 6, 7, 15, 17, 20, 29, 31, 35, 39}) #cherry bomb, chomper, repeater, doom, squash, jalapeno, starfruit, magnet, coffee bean, melon pult
         balloon_check = len(plant_set & {2, 15, 20}) + 2 * len(plant_set & {26, 27})
         
-        if challengeMode:
+        if challengeMode.get():
             tough_check = 9999
         
         has_puff              = 8  in plant_set
@@ -883,7 +608,7 @@ def addLevel(levels, firstLevels):
     newLevel=1
     count=0
     countTarget=(len(firstLevels)//5)+1
-    if not noRestrictions:
+    if not noRestrictions.get():
         if 10 in levels or 20 in levels or 30 in levels or 40 in levels or 41 in levels:
             while count<countTarget and newLevel not in [10, 20, 30, 40, 41]:
                 count=count+1
@@ -936,7 +661,7 @@ def showAverage(): #balancing purposes
         poolCount=0
         fogCount=0
         roofCount=0
-        if randomisePlants:
+        if randomisePlants.get():
             levels, _ = randomiseLevelsAndPlants(i)
         else:
             levels = randomiseLevels(i)
@@ -1004,7 +729,7 @@ def randomiseWavePoints():
             addWavePoint=0
             randomCheck=0
             while addWavePoint==0 and not randomCheck:
-                if randomWavePoints=="EXTREME":
+                if randomWavePoints.get()=="EXTREME":
                     if i==5:
                         wavePoint=(random.randint(10,83))//10
                     elif i==2:
@@ -1083,7 +808,7 @@ def randomiseCooldown():
     WriteMemory("unsigned char", color_array, 0x651290)
 #showAverage()
 #nightAverage()
-if randomisePlants:
+if randomisePlants.get():
     levels, level_plants = randomiseLevelsAndPlants(seed)
 else:
     levels = randomiseLevels(seed)
@@ -1241,7 +966,7 @@ WriteMemory("unsigned char", [
 
 #Get number of seeds unlocked function
 
-if imitater:
+if imitater.get():
     WriteMemory("unsigned char", [
     0xa1, 0x90, 0x10, 0x65, 0x00,             #movl  0x651090,    %eax
     0x81, 0x3c, 0x24, 0x1e, 0x3c, 0x45, 0x00, #cmpl  $0x453c1e, (%esp)
@@ -1317,7 +1042,7 @@ WriteMemory("unsigned char", 0, 0x530028)
 WriteMemory("unsigned char", 1, 0x43c1d1)
 
 # scaling starting cooldowns when random cooldowns on:
-if randomCooldowns:
+if randomCooldowns.get():
     WriteMemory("unsigned char", [0x66, 0x90], 0x489C00)        # 2 byte nop - to make upgrade plants follow common path for cooldown
     WriteMemory("unsigned char", [
         0x3D, 0xE8,0x03,0x00,0x00,  #cmp eax,#1000 // 10 sec  for no cooldown     
@@ -1338,7 +1063,7 @@ if randomCooldowns:
         0x489C09)
     
 # actiavte code for changing plant names to their cooldown when random cooldowns are on
-if randomCooldowns:
+if randomCooldowns.get():
     WriteMemory("unsigned char", [
         0xE9,0x49,0x9F,0x1E,0x00,   # jmp 651C00
         0x0F,0x1F,0x00              # 3 byte nop
@@ -1614,7 +1339,7 @@ WriteMemory("unsigned char", [
 0x89, 0x01,                               #        movl  %eax,         0xc(%ecx)
 0xeb, 0xb3                                #        jmp   rng.exloopA
 ], 0x651e26)
-if seeded:
+if seeded.get():
     if LINUX:
         rng_addr = 0x200000
     else:
@@ -1819,25 +1544,25 @@ WriteMemory("int", plants_array2, 0x651194) #ends at 0x65125c
 WriteMemory("int",0,0x65115c)
 upgradePlants=[0x1C4, 0x1C2, 0x1C8, 0x1D4, 0x1CC, 0x1D8, 0x1E0, 0x1D0, 0x1DC, "nothing", "nothing2"] #twin, gatling, gloom, gold, cattail, spike, imitater, winter, cob
 zombies=["Basic", "Flag (ignore)", "Cone", "Vaulter", "Bucket", "Newspaper", "Screen-Door", "Footballer", "Dancer", "Backup (ignore)", "Ducky-Tube (ignore)", "Snorkel", "Zomboni", "Bobsled", "Dolphin", "Jack", "Balloon", "Digger", "Pogo", "Yeti (ignore)", "Bungee", "Ladder", "Catapult", "Gargantuar"]
-if startingWave=="Instant":
-    randomiseStartingWave(startingWave)
-if saved and jumpLevel!="":
+if startingWave.get()=="Instant":
+    randomiseStartingWave(startingWave.get())
+if saved.get() and jumpLevel!="":
     for a in range(len(levels)):
         if levels[a]==jumpLevel:
             savePoint=a+1
 for i in range(50):
-    if saved:
+    if saved.get():
         if savePoint-1==i:
-            saved=False
-    if not saved and i!=0:
-        linesToWrite=[seed, (i+1), str(ReadMemory("int", 0x6A9EC0,0x82C,0x214)), str(ReadMemory("int",0x6A9EC0,0x82C, 0x28)), (challengeMode), (shopless), (noRestrictions), (noAutoSlots), (imitater), (randomisePlants), (seeded), (upgradeRewards), (randomWeights), (randomWavePoints), startingWave, randomCost, randomCooldowns]
+            saved.set(False)
+    if not saved.get() and i!=0:
+        linesToWrite=[seed, (i+1), str(ReadMemory("int", 0x6A9EC0,0x82C,0x214)), str(ReadMemory("int",0x6A9EC0,0x82C, 0x28)), (challengeMode.get()), (shopless.get()), (noRestrictions.get()), (noAutoSlots.get()), (imitater.get()), (randomisePlants.get()), (seeded.get()), (upgradeRewards.get()), (randomWeights.get()), (randomWavePoints.get()), startingWave.get(), randomCost.get(), randomCooldowns.get()]
         saveFile=open('saveFile.txt', 'w')
         for k in range(len(linesToWrite)):
             linesToWrite[k]=str(linesToWrite[k])
             linesToWrite[k]=linesToWrite[k]+"\n"
         saveFile.writelines(linesToWrite)
         saveFile.close()
-        if i!=0 and (randomWavePoints!=False or randomWeights):
+        if i!=0 and (randomWavePoints.get()!="False" or randomWeights.get()):
             print(" "*100)
             print("Level:", convertToLevel(levels[i-1]))
             zombies_type_offset = ReadMemory("unsigned int", 0x6A9EC0, 0x768) + 0x54D4
@@ -1847,22 +1572,22 @@ for i in range(50):
                     print(zombies[j], str(ReadMemory("int", 0x69DA88 + 0x1C*j)), ReadMemory("int", 0x69DA94 + 0x1C*j),ReadMemory("int", 0x69DA90 + 0x1C*j))
     print(str(i+1))
     WriteMemory("int",plants_unlocked,0x651090)
-    if seeded and not saved:
+    if seeded.get() and not saved.get():
         WriteMemory("int", [0 for j in range(1024)], rng_addr+0x10)
         WriteMemory("int", rng_addr+0x1010, rng_addr)
     newlevel=levels[i]
-    if(i == 0) and not saved:
+    if(i == 0) and not saved.get():
         try:
             while(ReadMemory("int",0x6A9EC0,0x82C, 0x24) != 1): # current level
                 Sleep(0.1)
         except:
             print("oops")
-    if not noAutoSlots or shopless:
+    if not noAutoSlots.get() or shopless.get():
         WriteMemory("int",0,0x6A9EC0,0x82C, 0x28)
-    if upgradeRewards:
+    if upgradeRewards.get():
         if i!=0:
             if(level_plants[lastlevel] == -1):
-                if randomisePlants:
+                if randomisePlants.get():
                     if len(upgradePlants)!=0:
                         newUpgrade=random.choice(upgradePlants)
                         upgradePlants.remove(newUpgrade)
@@ -1872,49 +1597,49 @@ for i in range(50):
                     if lastlevel!=49 and lastlevel!=50:
                         WriteMemory("bool",True,0x6A9EC0,0x82C,upgradePlants[lastlevel//5])
         lastlevel=newlevel
-    if imitater and i != 0:
+    if imitater.get() and i != 0:
         WriteMemory("bool",True,0x6A9EC0,0x82C,0x1E0)
         WriteMemory("int", 0, 0x453aea)
-    if not saved:
+    if not saved.get():
         WriteMemory("int",newlevel,0x6A9EC0,0x82C, 0x24)
-    if randomWeights:
+    if randomWeights.get():
         randomiseWeights()
-    if randomWavePoints!=False:
+    if randomWavePoints.get()!="False":
         randomiseWavePoints()
     if i!=0:
-        if randomCost:
+        if randomCost.get():
             randomiseCost()
-        if randomCooldowns:
+        if randomCooldowns.get():
             randomiseCooldown()
-    if startingWave=="Random":
+    if startingWave.get()=="Random":
         randomiseStartingWave(startingWave)
-    if not saved:
+    if not saved.get():
         WriteMemory("int",newlevel,0x651190)
-    if not shopless:
+    if not shopless.get():
         WriteMemory("bool",True,0x6A9EC0,0x82C,0x21C)
         WriteMemory("bool",True,0x6A9EC0,0x82C,0x218)
-    if(i != 0) and not saved: 
+    if(i != 0) and not saved.get(): 
         Sleep(1)
     if(level_plants[newlevel] != -1):
         plants_unlocked += 1
-    if(i >= 24 and plants_unlocked > 7 and not (shopless or noAutoSlots)): # slots
+    if(i >= 24 and plants_unlocked > 7 and not (shopless.get() or noAutoSlots.get())): # slots
         WriteMemory("int",2,0x6A9EC0,0x82C,0x214)
-    elif(i >= 14 and plants_unlocked > 6 and not (shopless or noAutoSlots)):
+    elif(i >= 14 and plants_unlocked > 6 and not (shopless.get() or noAutoSlots.get())):
         WriteMemory("int",1,0x6A9EC0,0x82C,0x214)
-    if(i == 0) and not saved:
+    if(i == 0) and not saved.get():
         while(game_ui() != 3):
             Sleep(0.1)
-    if saved:
+    if saved.get():
         Sleep(1)
     else:
         Sleep(500)
-    if not noAutoSlots or shopless:
+    if not noAutoSlots.get() or shopless.get():
         WriteMemory("int",0,0x6A9EC0,0x82C, 0x28)
-    if saved:
+    if saved.get():
         Sleep(1)
     else:
         Sleep(500)
-    if not noAutoSlots or shopless:
+    if not noAutoSlots.get() or shopless.get():
         WriteMemory("int",0,0x6A9EC0,0x82C, 0x28)
     while(game_ui() != 3 or ReadMemory("bool",0x6A9EC0,0x768, 0x5603)):
         Sleep(0.1)
