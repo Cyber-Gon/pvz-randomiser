@@ -332,7 +332,7 @@ manualMoneyButton=Checkbutton(window, text="MANUAL MONEY", width=16, variable=no
 manualMoneyButton.grid(row=1, column=3, sticky=W)
 
 imitaterButton=Checkbutton(window, text="INSTANT IMITATER", width=16, variable=imitater, anchor="w")#command=imitaterButtonClick)
-imitaterButton.grid(row=2, column=3, sticky=W)
+imitaterButton.grid(row=4, column=3, sticky=W)
 
 randPlantsButton=Checkbutton(window, text="RANDOM PLANTS", width=16, variable=randomisePlants, anchor="w")#command=randPlantsButtonClick)
 randPlantsButton.grid(row=1, column=1, sticky=W)
