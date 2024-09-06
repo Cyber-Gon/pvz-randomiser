@@ -1,6 +1,7 @@
 from   tkinter import *
 from   tkinter import ttk
 import platform
+import locale
 try:
     if platform.system() == "Windows":
         WINDOWS = True
@@ -202,9 +203,11 @@ saved            = BooleanVar(value=False)
 startingWave     = StringVar(value="False")
 randomCost       = BooleanVar(value=False)
 randomCooldowns  = BooleanVar(value=False)
+costTextToggle   = BooleanVar(value=False)
 seed=str(random.randint(1,999999999999))
 
 
+def clamp(n, smallest, largest): return max(smallest, min(n, largest))
 
 def convertToNumber(level):
     if checkValidNumber(level):
@@ -235,6 +238,14 @@ def checkValidNumber(level):
     if not check:
         print("Invalid jump level. Use the format x-y.")
     return check
+
+def costButtonClick():
+    global costTextToggle, randomCost, costTextButton
+    if randomCost.get():
+        costTextButton.config(state=NORMAL)
+    else:
+        costTextToggle.set(False)
+        costTextButton.config(state=DISABLED)
 
 def noRestrictionsButtonClick():
     global noRestrictions, challengeMode, challengeButton
@@ -272,6 +283,7 @@ def continueButtonClick():
     startingWave.set(        fileInfo[14].strip())
     randomCost.set(     eval(fileInfo[15].strip()))
     randomCooldowns.set(eval(fileInfo[16].strip()))
+    costTextToggle.set(eval(fileInfo[17].strip()))
     saved.set(True)
     jumpLevel=""
     window.destroy()
@@ -335,7 +347,7 @@ imitaterButton=Checkbutton(window, text="INSTANT IMITATER", width=16, variable=i
 imitaterButton.grid(row=4, column=3, sticky=W)
 
 randPlantsButton=Checkbutton(window, text="RANDOM PLANTS", width=16, variable=randomisePlants, anchor="w")#command=randPlantsButtonClick)
-randPlantsButton.grid(row=1, column=1, sticky=W)
+randPlantsButton.grid(row=4, column=0, sticky=W)
 
 seededButton=Checkbutton(window, text="SEEDED", width=16, variable=seeded, anchor="w")#command=seededButtonClick)
 seededButton.grid(row=3, column=3, sticky=W)
@@ -344,7 +356,7 @@ upgradeButton=Checkbutton(window, text="UPGRADE REWARDS", width=16, variable=upg
 upgradeButton.grid(row=2, column=3, sticky=W)
 
 randWeightsButton=Checkbutton(window, text="RANDOM WEIGHTS", width=16, variable=randomWeights, anchor="w")#command=randomWeightsButtonClick)
-randWeightsButton.grid(row=2, column=1, sticky=W)
+randWeightsButton.grid(row=1, column=1, sticky=W)
 
 randWavePointsLabel=Label(window, text="RAND WAVE POINTS:")
 randWavePointsLabel.grid(row=1, column=2, sticky=W)
@@ -362,8 +374,12 @@ waveStartButton.state(["readonly"])
 waveStartButton.bind('<<ComboboxSelected>>', lambda e: waveStartButton.selection_clear())
 waveStartButton.grid(row=4, column=2, sticky=W)
 
-costButton=Checkbutton(window, text="RANDOM COST", width=16, variable=randomCost, anchor="w")#command=costButtonClick)
-costButton.grid(row=3, column=1, sticky=W)
+costButton=Checkbutton(window, text="RANDOM COST", width=16, variable=randomCost, anchor="w", command=costButtonClick)
+costButton.grid(row=2, column=1, sticky=W)
+
+costTextButton=Checkbutton(window, text="COLOURED COST", width=16, variable=costTextToggle, anchor="w")#command=costTextButtonClick)
+costTextButton.grid(row=3, column=1, sticky=W)
+costTextButton.config(state=DISABLED)
 
 cooldownButton=Checkbutton(window, text="RAND COOLDOWNS", width=16, variable=randomCooldowns, anchor="w")#command=cooldownButtonClick)
 cooldownButton.grid(row=4, column=1, sticky=W)
@@ -396,6 +412,7 @@ print("Random Weights:",     str(randomWeights.get()))
 print("Random Wave Points:", str(randomWavePoints.get()))
 print("Starting Wave:",          startingWave.get())
 print("Random Cost:",        str(randomCost.get()))
+print("Coloured Cost:",        str(costTextToggle.get()))
 print("Random Cooldowns:",   str(randomCooldowns.get()))
 
 LEVEL_PLANTS = [
@@ -787,12 +804,18 @@ for i in range(0, 48):
     WriteMemory("int", plants[i][1], 0x69F2C4 + 0x24*i)
     
 def randomiseCost():
+    color_array = []
     for i in range(0, 48):
         if i!=1:
             divider=random.uniform(1,2)
             power=random.choice([-1, 1])
-            newCost=int(plants[i][0]*(divider**power))
+            color_array.append(round(((divider-1.0)**0.5)*127) + ((1-power)<<6))
+            newCost=round(plants[i][0]*(divider**power))
             WriteMemory("int", newCost , 0x69F2C0 + 0x24*i)
+        else:
+            color_array.append(0)
+    if costTextToggle.get():
+        WriteMemory("unsigned char", color_array, 0x651290)
 
 def randomiseCooldown():
     color_array = []
@@ -800,12 +823,12 @@ def randomiseCooldown():
         if i!=1 and i!=8 and i!=33:
             divider=random.uniform(1,2)
             power=random.choice([-1, 1])
-            color_array.append(round(((divider-1.0)**0.5)*127) + ((1-power)<<6))
-            newCooldown=int(plants[i][1]*(divider**power))
+            color_array.append(round(clamp((divider**power - 0.5) / 1.4 - 0.05, 0, 1) * 150)) # 150 is max alpha for red color here
+            newCooldown=round(plants[i][1]*(divider**power))
             WriteMemory("int", newCooldown , 0x69F2C4 + 0x24*i)
         else:
             color_array.append(0)
-    WriteMemory("unsigned char", color_array, 0x651290)
+    WriteMemory("unsigned char", color_array, 0x6512C2)
 #showAverage()
 #nightAverage()
 if randomisePlants.get():
@@ -1043,18 +1066,18 @@ WriteMemory("unsigned char", 1, 0x43c1d1)
 
 # scaling starting cooldowns when random cooldowns on:
 if randomCooldowns.get():
-    WriteMemory("unsigned char", [0x66, 0x90], 0x489C00)        # 2 byte nop - to make upgrade plants follow common path for cooldown
+    WriteMemory("unsigned char", [0x66, 0x90], 0x489C00) # 2 byte nop - to make upgrade plants follow common path for cooldown
     WriteMemory("unsigned char", [
         0x3D, 0xE8,0x03,0x00,0x00,  #cmp eax,#1000 // 10 sec  for no cooldown     
         0x7E,0x33,                  #jle 489C43
+        0x89,0x46,0x28,             # mov[esi+28],eax // store total cooldown as starting cooldown
         0x2D,0xE8,0x03,0x00,0x00,   # sub eax, #1000
-        0xB9,0x09,0x00,0x00,0x00,   # mov ecx,9
-        0xF7,0xE1,                  #mul ecx
-        0x31,0xD2,                  #xor edx,edx
+        0x31,0xD2,                  # xor edx,edx
         0xB9,0x0A,0x00,0x00,0x00,   # mov ecx,#10
-        0xF7,0xF1,                  #div ecx
-        0x5D,                       #pop ebp
-        0x89,0x46,0x28,             # mov[esi+28],eax
+        0xF7,0xF1,                  # div ecx
+        0x05,0xE8,0x03,0x00,0x00,   # add eax,000003E8
+        0x89,0x46,0x24,             # mov [esi+24],eax // set recharge progress
+        0x5D,                       # pop ebp
         0xC6,0x46,0x49,0x01,        # mov byte[esi+49],1
         0xC6,0x46,0x48,0x00,        # mov byte[esi+48],0
         0x5B,                       #pop ebx
@@ -1074,6 +1097,23 @@ if randomCooldowns.get():
         0x66,0x0F,0x1F,0x44,0x00,0x00,  # 6 byte nop
     ],
         0x467C5B)
+
+# actiavte code for coloring seeds on selection screen based on their cooldown
+if randomCooldowns.get():
+    WriteMemory("unsigned char", [ 
+        0xE9,0x53,0x9D,0x1C,0x00,  # jmp popcapgame1.exe+251B40
+        0x90,                      # nop 
+    ],
+        0x487DE8)
+    WriteMemory("unsigned char", [ 
+        0xE9,0xDD,0x9C,0x1C,0x00,  # jmp popcapgame1.exe+251B64
+    ],
+        0x487E82)
+    WriteMemory("unsigned char", [ 
+        0xE9,0x61,0x9D,0x1C,0x00,  # jmp popcapgame1.exe+251B97
+    ],
+        0x487E31)
+
 
 #code for changing plant names to their cooldown
 WriteMemory("unsigned char", [ 
@@ -1120,7 +1160,7 @@ WriteMemory("unsigned char", [
         0x8D,0x34,0x38,                         # lea esi,[eax+edi]
         0x83,0xEE,0x02,                         # sub esi,02
         0x8A,0x0E,                              # mov cl,[esi]
-        0xC6,0x06,0x2C,                         # mov byte ptr [esi],2C
+        0xC6,0x06,(0x2C if locale.localeconv()['decimal_point'] == ',' else 0x2E),  # mov byte ptr [esi],2C
         0x46,                                   # inc esi
         0x88,0x0E,                              # mov [esi],cl
         0x46,                                   # inc esi
@@ -1135,6 +1175,48 @@ WriteMemory("unsigned char", [
     ],
         0x651C00)
 
+# color seeds based on cooldowns
+WriteMemory("unsigned char", [ 
+        0x0F,0x84,0xA8,0x62,0xE3,0xFF,          # je popcapgame1.exe+87DEE
+        0x8B,0x9C,0x24,0xF4,0x00,0x00,0x00,     # mov ebx,[esp+000000F4]
+        0x80,0xFB,0xD1,                         # cmp bl,#2F
+        0x0F,0x84,0x98,0x62,0xE3,0xFF,          # je popcapgame1.exe+87DEE
+        0x80,0xFB,0x77,                         # cmp bl,77
+        0x0F,0x84,0x8F,0x62,0xE3,0xFF,          # je popcapgame1.exe+87DEE
+        0xE9,0xCF,0x63,0xE3,0xFF,               # jmp popcapgame1.exe+87F33
+        0x8A,0x84,0x24,0x04,0x01,0x00,0x00,     # mov al,[esp+00000104]
+        0x3C,0xD1,                              # cmp al,#2F
+        0x74,0x11,                              # je popcapgame1.exe+251B80
+        0x0F,0x1F,0x40,0x00,                    # nop dword ptr [eax+00]
+        0x3C,0x77,                              # cmp al,77
+        0x74,0x09,                              # je popcapgame1.exe+251B80
+        0x0F,0x1F,0x40,0x00,                    # nop dword ptr [eax+00]
+        0xEB,0x10,                              # jmp popcapgame1.exe+251B8D
+        0x0F,0x1F,0x00,                         # nop dword ptr [eax]
+        0x83,0x44,0x24,0x04,0x08,               # add dword ptr [esp+04],08
+        0xC7,0x44,0x24,0x0C,0x2D,0x00,0x00,0x00, # mov [esp+0C],0000002D
+        0xE8,0xAE,0x5C,0xF3,0xFF,               # call popcapgame1.exe+187840
+        0xE9,0xF0,0x62,0xE3,0xFF,               # jmp popcapgame1.exe+87E87
+        0x8A,0x84,0x24,0xF4,0x00,0x00,0x00,     # mov al,[esp+000000F4]
+        0x3C,0xD1,                              # cmp al,#2F
+        0x74,0x11,                              # je popcapgame1.exe+251BB3
+        0x0F,0x1F,0x40,0x00,                    # nop dword ptr [eax+00]
+        0x3C,0x77,                              # cmp al,77
+        0x74,0x09,                              # je popcapgame1.exe+251BB3
+        0x0F,0x1F,0x40,0x00,                    # nop dword ptr [eax+00]
+        0xEB,0x20,                              # jmp popcapgame1.exe+251BD0
+        0x0F,0x1F,0x00,                         # nop dword ptr [eax]
+        0x8B,0x8C,0x24,0x04,0x01,0x00,0x00,     # mov ecx,[esp+00000104]
+        0x0F,0xB6,0x89,0xC2,0x12,0x65,0x00,     # movzx ecx,byte ptr [ecx+popcapgame1.exe+2512C2]
+        0x51,                                   # push ecx
+        0x6A,0x10,                              # push 10
+        0xB9,0xC8,0x00,0x00,0x00,               # mov ecx,000000C8
+        0x31,0xD2,                              # xor edx,edx
+        0xE9,0x6F,0x62,0xE3,0xFF,               # jmp popcapgame1.exe+87E3F
+        0x68,0xFF,0x00,0x00,0x00,               # push 000000FF
+        0xE9,0x5C,0x62,0xE3,0xFF,               # jmp popcapgame1.exe+87E36
+    ],
+        0x651b40)
 WriteMemory("unsigned char", [
 0xe8, 0x1a, 0x9a, 0x1c, 0x00, #call  0x651bc0
 0x8d, 0x54, 0x24, 0x3c,       #leal  0x3c(%esp), %edx
@@ -1555,7 +1637,7 @@ for i in range(50):
         if savePoint-1==i:
             saved.set(False)
     if not saved.get() and i!=0:
-        linesToWrite=[seed, (i+1), str(ReadMemory("int", 0x6A9EC0,0x82C,0x214)), str(ReadMemory("int",0x6A9EC0,0x82C, 0x28)), (challengeMode.get()), (shopless.get()), (noRestrictions.get()), (noAutoSlots.get()), (imitater.get()), (randomisePlants.get()), (seeded.get()), (upgradeRewards.get()), (randomWeights.get()), (randomWavePoints.get()), startingWave.get(), randomCost.get(), randomCooldowns.get()]
+        linesToWrite=[seed, (i+1), str(ReadMemory("int", 0x6A9EC0,0x82C,0x214)), str(ReadMemory("int",0x6A9EC0,0x82C, 0x28)), (challengeMode.get()), (shopless.get()), (noRestrictions.get()), (noAutoSlots.get()), (imitater.get()), (randomisePlants.get()), (seeded.get()), (upgradeRewards.get()), (randomWeights.get()), (randomWavePoints.get()), startingWave.get(), randomCost.get(), randomCooldowns.get(), costTextToggle.get()]
         saveFile=open('saveFile.txt', 'w')
         for k in range(len(linesToWrite)):
             linesToWrite[k]=str(linesToWrite[k])
