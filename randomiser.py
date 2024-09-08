@@ -879,10 +879,13 @@ def generateZombies(levels, level_plants):
                         elif j==23 and not (has_instant):
                             continue
                         elif j==32 and not (has_instant):
-                            if random.randint(0, 7):
-                                continue
+                            continue
                         else:
-                            currentZombies.append(j)
+                            if j==32:
+                                if not random.randint(0, 6):
+                                    currentZombies.append(j)
+                            else:
+                                currentZombies.append(j)
         zombiesToRandomise.append(currentZombies)
     return zombiesToRandomise
 
