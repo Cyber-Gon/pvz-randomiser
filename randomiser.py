@@ -204,6 +204,7 @@ startingWave     = StringVar(value="False")
 randomCost       = BooleanVar(value=False)
 randomCooldowns  = BooleanVar(value=False)
 costTextToggle   = BooleanVar(value=False)
+randomZombies    = BooleanVar(value=False)
 seed=str(random.randint(1,999999999999))
 
 
@@ -284,6 +285,7 @@ def continueButtonClick():
     randomCost.set(     eval(fileInfo[15].strip()))
     randomCooldowns.set(eval(fileInfo[16].strip()))
     costTextToggle.set(eval(fileInfo[17].strip()))
+    randomZombies.set(eval(fileInfo[18].strip()))
     saved.set(True)
     jumpLevel=""
     window.destroy()
@@ -295,7 +297,7 @@ def closeButtonClick():
 
 def informationButtonClick():
     outputText.delete(0.0, END)
-    manipulatedText="Aaronthewinner made the original version that randomised the levels. BulbasaurRepresent created most of the logic, modifiers, and GUI. Vsoup.vx did most of the complex stuff, including making the seed select update to show the right plants. LunarBlessing added the tooltip for the random cooldowns, and made the starting cooldowns scale with their actual cooldowns. REALLY IMPORTANT: If you use either RANDOM WEIGHTS or RAND WAVE POINTS, and then you want to do another run WITHOUT those modifiers, close and reopen the game, otherwise things will be funky. Additionally, if you are continuing a saved run / jumping to a specific level, be aware that SEEDED mode does not work with it, and so is automatically disabled." + " "*spaces + "The jump level box allows you to jump to a specific level in the seed! This is great for recovering from a crash if you know your seed but for some reason the save file got corrupted. Just play 1-1 and then you should be at the same level (although with nothing bought from the shop)." + " "*spaces + "The Continue Last Run button only appears if you have an incomplete run in your save data. If you do, pressing this will close the settings menu and give you the same settings as before. After you play 1-1, you should be at the level you were previously at! You will also have the same plants, same money, and the same amount of slot upgrades. You will NOT save any other things bought from the shop (such as rakes or pre-unlocked upgrade plants)." + " "*spaces + "Challenge Mode gets rid of the tough level restriction. With this disabled, you will not be able to play certain levels (like 5-2) without having 3 good plants. Other levels (like 5-9) will need 5 good plants to play. With this enabled, as soon as you unlock flower pot, you can play both 5-2 and 5-9 (for instance)." + (" " * spaces) + "Shopless mode forces you to play with 6 slots and no automatic pool cleaners / roof cleaners." + (" " * spaces) + "No restrictions mode means that there is no logic as to what levels can be played next - the majority of no restrictions runs are impossible." + (" " * spaces) + "With manual money enabled, you do not get automatic slot upgrades, but your money does not reset to 0 after every level, and so you can purchase the slots yourself - this also means you can buy rakes and upgrade plants!" + (" " * spaces) + "Instant imitater mode gives you access to an imitater immediately, which allows you to choose one of any plant to bring to the stage, even if you haven't unlocked it! This works especially well with no restrictions." + (" " * spaces) + "Random plants means that the plant you get at the end of each level is RANDOMISED, in a similar way to the levels! Instead of unlocking the plant you usually unlock for beating that stage, you get a random one!" + (" " * spaces) + "Seeded means that the seed you enter will not only affect the random plants and levels you get, but also the zombie spawns and other types of RNG, which makes it perfect for races!" + (" " * spaces) + "Random upgrades means that most levels that would usually give you no reward instead gives you an upgrade plant! It is important to note that if you have 4 plants total and one upgrade plant, you will not have 4 seed slots - sorry about that." + (" " * spaces) + "Random Weights means that the likelihood for a zombie to spawn is a random number, and this changes from level to level. Cones might be extremely unlikely one level, and then extremely likely the next one!" + (" " * spaces) + "Random Wave Points has two modes: Normal and EXTREME. Normal mode means that a zombie's wave points can either stay the same, or increase/decrease by 1 wave point if they originally cost less than 5 wave points, 2 wave points if they originally cost 5-7 wave points, and 3 wave points if they originally cost 10 wave points. EXTREME mode means that a zombie's wave point value is a random number from 2 to 7 (or, in rare cases, 10). This changes from level to level, and the basic zombie always costs 1 wave point while the cone zombie always costs either 2 or 3 wave points. There is no guarantee that EXTREME mode is always possible. If you're using either randomised weights or randomised wave points, you can look at the program during the run to see a rundown of what weights and wave points each zombie type had!" + "" * spaces + "The starting wave refers to what wave the zombies can start spawning at. Usually, the day/night zombies can spawn in the first 10 waves while the other zombies cannot. Random mode means that each zombie (except for basics, cones, and newspapers) has a random starting wave from 4 to 10. Vaulters, buckets, and screen-doors have a random starting wave from 1 to 10. Instant mode means that every zombie can immediately spawn from wave 1 (provided there is enough wave points)." +" " * spaces + "Random costs will set the cost of almost every plant to 50-200% of the original price! The only exception is the sunflower (and the peashooter in 1-1)." +" "*spaces +"Random cooldowns will set the cooldown of almost every plant to 50-200% of the original cooldown! The only exceptions are sunflower, puff shroom, and flower pot." 
+    manipulatedText="Aaronthewinner made the original version that randomised the levels. BulbasaurRepresent created most of the logic, modifiers, and GUI. Vsoup.vx did most of the complex stuff, including making the seed select update to show the right plants. LunarBlessing added the tooltip for the random cooldowns, and made the starting cooldowns scale with their actual cooldowns. REALLY IMPORTANT: If you use either RANDOM WEIGHTS or RAND WAVE POINTS, and then you want to do another run WITHOUT those modifiers, close and reopen the game, otherwise things will be funky. Additionally, if you are continuing a saved run / jumping to a specific level, be aware that SEEDED mode does not work with it, and so is automatically disabled." + " "*spaces + "The jump level box allows you to jump to a specific level in the seed! This is great for recovering from a crash if you know your seed but for some reason the save file got corrupted. Just play 1-1 and then you should be at the same level (although with nothing bought from the shop)." + " "*spaces + "The Continue Last Run button only appears if you have an incomplete run in your save data. If you do, pressing this will close the settings menu and give you the same settings as before. After you play 1-1, you should be at the level you were previously at! You will also have the same plants, same money, and the same amount of slot upgrades. You will NOT save any other things bought from the shop (such as rakes or pre-unlocked upgrade plants)." + " "*spaces + "Challenge Mode gets rid of the tough level restriction. With this disabled, you will not be able to play certain levels (like 5-2) without having 3 good plants. Other levels (like 5-9) will need 5 good plants to play. With this enabled, as soon as you unlock flower pot, you can play both 5-2 and 5-9 (for instance)." + (" " * spaces) + "Shopless mode forces you to play with 6 slots and no automatic pool cleaners / roof cleaners." + (" " * spaces) + "No restrictions mode means that there is no logic as to what levels can be played next - the majority of no restrictions runs are impossible." + (" " * spaces) + "With manual money enabled, you do not get automatic slot upgrades, but your money does not reset to 0 after every level, and so you can purchase the slots yourself - this also means you can buy rakes and upgrade plants!" + (" " * spaces) + "Instant imitater mode gives you access to an imitater immediately, which allows you to choose one of any plant to bring to the stage, even if you haven't unlocked it! This works especially well with no restrictions." + (" " * spaces) + "Random plants means that the plant you get at the end of each level is RANDOMISED, in a similar way to the levels! Instead of unlocking the plant you usually unlock for beating that stage, you get a random one!" + (" " * spaces) + "Seeded means that the seed you enter will not only affect the random plants and levels you get, but also the zombie spawns and other types of RNG, which makes it perfect for races!" + (" " * spaces) + "Random upgrades means that most levels that would usually give you no reward instead gives you an upgrade plant! It is important to note that if you have 4 plants total and one upgrade plant, you will not have 4 seed slots - sorry about that." + (" " * spaces) + "Random Weights means that the likelihood for a zombie to spawn is a random number, and this changes from level to level. Cones might be extremely unlikely one level, and then extremely likely the next one!" + (" " * spaces) + "Random Wave Points has two modes: Normal and EXTREME. Normal mode means that a zombie's wave points can either stay the same, or increase/decrease by 1 wave point if they originally cost less than 5 wave points, 2 wave points if they originally cost 5-7 wave points, and 3 wave points if they originally cost 10 wave points. EXTREME mode means that a zombie's wave point value is a random number from 2 to 7 (or, in rare cases, 10). This changes from level to level, and the basic zombie always costs 1 wave point while the cone zombie always costs either 2 or 3 wave points. There is no guarantee that EXTREME mode is always possible. If you're using either randomised weights or randomised wave points, you can look at the program during the run to see a rundown of what weights and wave points each zombie type had!" + "" * spaces + "The starting wave refers to what wave the zombies can start spawning at. Usually, the day/night zombies can spawn in the first 10 waves while the other zombies cannot. Random mode means that each zombie (except for basics, cones, and newspapers) has a random starting wave from 4 to 10. Vaulters, buckets, and screen-doors have a random starting wave from 1 to 10. Instant mode means that every zombie can immediately spawn from wave 1 (provided there is enough wave points)." +" " * spaces + "Random costs will set the cost of almost every plant to 50-200% of the original price! The only exception is the sunflower (and the peashooter in 1-1)." + " "*spaces + "Coloured cost means that plants that cost less than they usually do will be green, and plants that cost more than usual will be blue!"+" "*spaces +"Random cooldowns will set the cooldown of almost every plant to 50-200% of the original cooldown! The only exceptions are sunflower, puff shroom, and flower pot. The redder the seed during seed select, the worse the cooldown!" + " "*spaces + "Random zombies means that each level can have random zombie show up! Each zombie (including zombotany zombies) has a 1/15 chance to either no longer appear / now appear on a level! Introduction stages will still always have their intro zombies. SAVING IS INCONSISTENT HERE. It has like a 50/50 shot of working. If you reload a save and it's not the same zombies as before, reload it until it's the same. I have no idea why this is inconsistent, it makes no sense." 
     outputText.insert(END, manipulatedText)
 
 def getLevel():
@@ -384,6 +386,9 @@ costTextButton.config(state=DISABLED)
 cooldownButton=Checkbutton(window, text="RAND COOLDOWNS", width=16, variable=randomCooldowns, anchor="w")#command=cooldownButtonClick)
 cooldownButton.grid(row=4, column=1, sticky=W)
 
+zombiesButton=Checkbutton(window, text="RANDOM ZOMBIES", width=16, variable=randomZombies, anchor="w")#command=cooldownButtonClick)
+zombiesButton.grid(row=1, column=4, sticky=W)
+
 closeButton=Button(window, text="SUBMIT SETTINGS", width=16, command=closeButtonClick)
 closeButton.grid(row=0, column=6, sticky=W)
 
@@ -414,6 +419,7 @@ print("Starting Wave:",          startingWave.get())
 print("Random Cost:",        str(randomCost.get()))
 print("Coloured Cost:",        str(costTextToggle.get()))
 print("Random Cooldowns:",   str(randomCooldowns.get()))
+print("Random Zombies:",   str(randomZombies.get()))
 
 LEVEL_PLANTS = [
 0,
@@ -719,8 +725,8 @@ def nightAverage():
 
 
 def randomiseWeights():
-    for i in range(0, 24):
-        if i!=1 and i!=9:
+    for i in range(0, 33):
+        if i!=1 and i!=9 and i!=25:
             if i>2:
                 weight=random.randint(1, 60)
             elif i==23:
@@ -741,8 +747,8 @@ wavePointArray=[1, 1, 2, 2, 4, 2, 4, 7, 5, 0, 1, 3, 7, 3, 3, 3, 2, 4, 4, 4, 3, 4
 
 def randomiseWavePoints():
     global randomWavePoints, wavePointArray
-    for i in range(2, 24):
-        if i!=9:
+    for i in range(2, 33):
+        if i!=9 and i!=25:
             addWavePoint=0
             randomCheck=0
             while addWavePoint==0 and not randomCheck:
@@ -790,18 +796,24 @@ def convertToLevel(level):
 
 def randomiseStartingWave(startingWave):
     if startingWave=="Instant":
-        for i in range(0, 24):
+        for i in range(0, 33):
             WriteMemory("int", 1, 0x69DA90 + 0x1C*i)
     else:
-        for i in range(3, 24):
+        for i in range(3, 33):
             if i<7 and i!=5:
                 WriteMemory("int", random.randint(1,10), 0x69DA90 + 0x1C*i)
             elif i!=5:
                 WriteMemory("int", random.randint(4,10), 0x69DA90 + 0x1C*i)
 plants=[[100, 750], [50, 750], [150, 5000], [50, 3000], [25, 3000], [175, 750], [150, 750], [200, 750], [0, 750], [25, 750], [75, 750], [75, 750], [75, 3000], [25, 750], [75, 5000], [125, 5000], [25, 750], [50, 3000], [325, 750], [25, 3000], [125, 5000], [100, 750], [175, 750], [125, 5000], [0, 3000], [25, 3000], [125, 750], [100, 750], [125, 750], [125, 750], [125, 3000], [100, 750], [100, 750], [25, 750], [100, 750], [75, 750], [50, 750], [100, 750], [50, 3000], [300, 750], [250, 5000], [150, 5000], [150, 5000], [225, 5000], [200, 5000], [50, 5000], [125, 5000], [500, 5000]]
+zombies=[['Basic', 1, 4000, 1, 1], ['Flag (ignore)', 1, 0, 1, 1], ['Cone', 3, 4000, 2, 1], ['Vaulter', 6, 2000, 2, 5], ['Bucket', 8, 3000, 4, 1], ['Newspaper', 11, 1000, 2, 1], ['Screen-Door', 13, 3500, 4, 5], ['Footballer', 16, 2000, 7, 5], ['Dancer', 18, 1000000, 5, 5], ['Backup (ignore)', 18, 0, 1, 1], ['Ducky-Tube (ignore)', 21, 0, 1, 5], ['Snorkel', 23, 2000, 3, 10], ['Zomboni', 26, 10000, 7, 10], ['Bobsled', 26, 10000, 3, 10], ['Dolphin', 28, 1500, 3, 10], ['Jack', 31, 1000, 3, 10], ['Balloon', 33, 2000, 2, 10], ['Digger', 36, 10000, 4, 10], ['Pogo', 38, 1000, 4, 10], ['Yeti (ignore)', 40, 1, 4, 1], ['Bungee', 41, 1000, 3, 10], ['Ladder', 43, 1000, 4, 10], ['Catapult', 46, 1500, 5, 10], ['Gargantuar', 48, 10000, 1, 1], ['Imp', 1, 0, 10, 1], ['Zomboss', 50, 0, 10, 1], ['Peashooter', 99, 4000, 1, 1], ['Wall-Nut', 99, 3000, 4, 1], ['Jalapeno', 99, 1000, 3, 10], ['Gatling Pea', 99, 2000, 3, 10], ['Squash', 99, 2000, 3, 10], ['Tall Nut', 99, 2000, 7, 10], ['Giga Gargantuar', 48, 6000, 10, 15]]
 for i in range(0, 48):
     WriteMemory("int", plants[i][0], 0x69F2C0 + 0x24*i)
     WriteMemory("int", plants[i][1], 0x69F2C4 + 0x24*i)
+for i in range(0, 33):
+    WriteMemory("int", zombies[i][3], 0x69DA88 + 0x1C*i)
+    WriteMemory("int", zombies[i][2], 0x69DA94 + 0x1C*i)
+    WriteMemory("int", zombies[i][4], 0x69DA90 + 0x1C*i)
+    WriteMemory("int", zombies[i][1], 0x69DA8C + 0x1C*i)
     
 def randomiseCost():
     color_array = []
@@ -829,6 +841,60 @@ def randomiseCooldown():
         else:
             color_array.append(0)
     WriteMemory("unsigned char", color_array, 0x6512C2)
+
+def generateZombies(levels, level_plants):
+    zombiesToRandomise=[[]]
+    plantsInOrder=[]
+    for i in range(0, len(levels)):
+        plantsInOrder.append(level_plants[levels[i]])
+    for i in range(1, len(levels)):
+        has_lily              = 16 in plantsInOrder[0:i]
+        has_pool_shooter      = 29 in plantsInOrder[0:i] or 18 in plantsInOrder[0:i]
+        has_seapeater         = (24 in plantsInOrder[0:i] or 19 in plantsInOrder[0:i]) and has_pool_shooter #threepeater or starfruit + sea shroom or kelp
+        has_pot               = 33 in plantsInOrder[0:i]
+        has_doom              = 15 in plantsInOrder[0:i] and 35 in plantsInOrder[0:i]
+        has_instant           = 2 in plantsInOrder[0:i] or 17 in plantsInOrder[0:i] or 20 in plantsInOrder[0:i] or has_doom
+        balloon_check = 26 in plantsInOrder[0:i] or 27 in plantsInOrder[0:i] or (2 in plantsInOrder[0:i] and has_doom) or (2 in plantsInOrder[0:i] and 20 in plantsInOrder[0:i]) or (20 in plantsInOrder[0:i] and has_doom)
+        currentZombies=[]
+        if levels[i]!=50 and levels[i]!=15 and levels[i]!=35:
+            for j in range(2, 33):
+                if j!=9 and j!=10 and j!=24 and j!=25:
+                    if not random.randint(0, 14):
+                        if (j==11 or j==14) and (levels[i]<21 or levels[i]>40):
+                            continue
+                        elif zombies[j][1]==levels[i]:
+                            continue
+                        elif levels[i]==45 and j in [11, 12, 13, 14, 16, 17, 18, 20, 22, 23, 32]:
+                            continue
+                        elif noRestrictions.get():
+                            currentZombies.append(j)
+                        elif (j==11 or j==14) and not(has_lily or has_seapeater):
+                            continue
+                        elif j==16 and not balloon_check:
+                            continue
+                        elif j==16 and levels[i] in [5, 10, 20, 25, 30, 40]:
+                            continue
+                        elif j==17 and levels[i]>40 and not (has_pot):
+                            continue
+                        elif j==23 and not (has_instant):
+                            continue
+                        elif j==32 and not (has_instant):
+                            if random.randint(0, 7):
+                                continue
+                        else:
+                            currentZombies.append(j)
+        zombiesToRandomise.append(currentZombies)
+    return zombiesToRandomise
+
+def randomiseZombies(zombiesToRandomise, currentLevel, levels):
+    for i in range(0, 33):
+        WriteMemory("int", zombies[i][1], 0x69DA8C + 0x1C*i)
+    currentZombies=zombiesToRandomise[currentLevel]
+    for i in range(0, len(currentZombies)):
+        zombieState=ReadMemory("bool", 0x6A35B0 + 0xCC*currentZombies[i] + 0x4*levels[currentLevel])
+        WriteMemory("int", 1, 0x69DA8C + 0x1C*currentZombies[i])     
+        WriteMemory("bool", not zombieState, 0x6A35B0 + 0xCC*currentZombies[i] + 0x4*levels[currentLevel])
+
 #showAverage()
 #nightAverage()
 if randomisePlants.get():
@@ -836,7 +902,6 @@ if randomisePlants.get():
 else:
     levels = randomiseLevels(seed)
     level_plants = LEVEL_PLANTS
-
 plants_array  = [-1,0]
 plants_array2 = []
 for i in levels:
@@ -847,6 +912,8 @@ for i in levels:
         plants_array2.append(0x4b) #nothing plant, costs 6977196 sun
 for i in [40,41,42,43,44,45,46,47,48]:
     plants_array.append(i)
+if randomZombies:
+    zombiesToRandomise=generateZombies(levels, level_plants)
 
 SEED_STRINGS = [
     "Peashooter",   "Sunflower",      "Cherry Bomb",  "Wall-nut",     "Potato Mine",  "Snow Pea",       "Chomper",    "Repeater",
@@ -866,8 +933,8 @@ LEVEL_STRINGS = ["Not a level",
     "5-1", "5-2", "5-3", "5-4", "5-5", "5-6", "5-7", "5-8", "5-9", "5-10"
 ]
 
-##for i in levels:
-##    print(LEVEL_STRINGS[i], SEED_STRINGS[level_plants[i]])
+#for i in levels:
+    #print(LEVEL_STRINGS[i], SEED_STRINGS[level_plants[i]])
 
 #Seed packet rendering on the seed select screen
 
@@ -1625,7 +1692,6 @@ WriteMemory("int", plants_array, 0x651094)
 WriteMemory("int", plants_array2, 0x651194) #ends at 0x65125c
 WriteMemory("int",0,0x65115c)
 upgradePlants=[0x1C4, 0x1C2, 0x1C8, 0x1D4, 0x1CC, 0x1D8, 0x1E0, 0x1D0, 0x1DC, "nothing", "nothing2"] #twin, gatling, gloom, gold, cattail, spike, imitater, winter, cob
-zombies=["Basic", "Flag (ignore)", "Cone", "Vaulter", "Bucket", "Newspaper", "Screen-Door", "Footballer", "Dancer", "Backup (ignore)", "Ducky-Tube (ignore)", "Snorkel", "Zomboni", "Bobsled", "Dolphin", "Jack", "Balloon", "Digger", "Pogo", "Yeti (ignore)", "Bungee", "Ladder", "Catapult", "Gargantuar"]
 if startingWave.get()=="Instant":
     randomiseStartingWave(startingWave.get())
 if saved.get() and jumpLevel!="":
@@ -1637,7 +1703,7 @@ for i in range(50):
         if savePoint-1==i:
             saved.set(False)
     if not saved.get() and i!=0:
-        linesToWrite=[seed, (i+1), str(ReadMemory("int", 0x6A9EC0,0x82C,0x214)), str(ReadMemory("int",0x6A9EC0,0x82C, 0x28)), (challengeMode.get()), (shopless.get()), (noRestrictions.get()), (noAutoSlots.get()), (imitater.get()), (randomisePlants.get()), (seeded.get()), (upgradeRewards.get()), (randomWeights.get()), (randomWavePoints.get()), startingWave.get(), randomCost.get(), randomCooldowns.get(), costTextToggle.get()]
+        linesToWrite=[seed, (i+1), str(ReadMemory("int", 0x6A9EC0,0x82C,0x214)), str(ReadMemory("int",0x6A9EC0,0x82C, 0x28)), (challengeMode.get()), (shopless.get()), (noRestrictions.get()), (noAutoSlots.get()), (imitater.get()), (randomisePlants.get()), (seeded.get()), (upgradeRewards.get()), (randomWeights.get()), (randomWavePoints.get()), startingWave.get(), randomCost.get(), randomCooldowns.get(), costTextToggle.get(), randomZombies.get()]
         saveFile=open('saveFile.txt', 'w')
         for k in range(len(linesToWrite)):
             linesToWrite[k]=str(linesToWrite[k])
@@ -1649,9 +1715,9 @@ for i in range(50):
             print("Level:", convertToLevel(levels[i-1]))
             zombies_type_offset = ReadMemory("unsigned int", 0x6A9EC0, 0x768) + 0x54D4
             zombies_type = ReadMemory("bool",zombies_type_offset,array=33)
-            for j in range(0, 24):
+            for j in range(0, 33):
                 if(zombies_type[j]):
-                    print(zombies[j], str(ReadMemory("int", 0x69DA88 + 0x1C*j)), ReadMemory("int", 0x69DA94 + 0x1C*j),ReadMemory("int", 0x69DA90 + 0x1C*j))
+                    print(zombies[j][0], str(ReadMemory("int", 0x69DA88 + 0x1C*j)), ReadMemory("int", 0x69DA94 + 0x1C*j),ReadMemory("int", 0x69DA90 + 0x1C*j))
     print(str(i+1))
     WriteMemory("int",plants_unlocked,0x651090)
     if seeded.get() and not saved.get():
@@ -1666,6 +1732,8 @@ for i in range(50):
             print("oops")
     if not noAutoSlots.get() or shopless.get():
         WriteMemory("int",0,0x6A9EC0,0x82C, 0x28)
+    if randomZombies.get():
+        randomiseZombies(zombiesToRandomise, i, levels)
     if upgradeRewards.get():
         if i!=0:
             if(level_plants[lastlevel] == -1):
@@ -1732,6 +1800,15 @@ WriteMemory("int",0,0x651190)
 saveFile=open('saveFile.txt', 'w')
 saveFile.write("")
 saveFile.close()
+
+for i in range(0, 48):
+    WriteMemory("int", plants[i][0], 0x69F2C0 + 0x24*i)
+    WriteMemory("int", plants[i][1], 0x69F2C4 + 0x24*i)
+for i in range(0, 33):
+    WriteMemory("int", zombies[i][3], 0x69DA88 + 0x1C*i)
+    WriteMemory("int", zombies[i][2], 0x69DA94 + 0x1C*i)
+    WriteMemory("int", zombies[i][4], 0x69DA90 + 0x1C*i)
+    WriteMemory("int", zombies[i][1], 0x69DA8C + 0x1C*i)
 
 while True:
     Sleep(10)
