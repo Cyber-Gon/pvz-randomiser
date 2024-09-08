@@ -743,7 +743,7 @@ def randomiseWeights():
     WriteMemory("int", 0, 0x69DA94 + 0x1C*1)
     WriteMemory("int", 0, 0x69DA94 + 0x1C*9)
 
-wavePointArray=[1, 1, 2, 2, 4, 2, 4, 7, 5, 0, 1, 3, 7, 3, 3, 3, 2, 4, 4, 4, 3, 4, 5, 10, 0]
+wavePointArray=[1, 1, 2, 2, 4, 2, 4, 7, 5, 0, 1, 3, 7, 3, 3, 3, 2, 4, 4, 4, 3, 4, 5, 10, 10, 0, 1, 4, 3, 3, 3, 7, 10]
 
 def randomiseWavePoints():
     global randomWavePoints, wavePointArray
