@@ -2,7 +2,6 @@ from   tkinter import *
 from   tkinter import ttk
 import platform
 import locale
-print_levels=False
 try:
     if platform.system() == "Windows":
         WINDOWS = True
@@ -175,7 +174,6 @@ try:
         pvz_memfd = openPVZ()
 except:
     print("pvz not found!")
-    print_levels=True
 import random
     
 try:
@@ -434,15 +432,6 @@ LEVEL_PLANTS = [
 33, 34, 35, -1, 36, 37, 38, 39, -1, -1
 ]
 
-if upgradeRewards.get():
-    rewards = [40, 41, 42, 43, 44, 45, 46, 47, 48, -1, -1]
-    random.shuffle(rewards)
-    j = 0
-    for i in range(len(LEVEL_PLANTS)):
-        if LEVEL_PLANTS[i] == -1:
-            LEVEL_PLANTS[i] = rewards[j]
-            j += 1
-
 def randomiseLevels(seed):
     global noRestrictions
     random.seed(seed)
@@ -464,7 +453,7 @@ def randomiseLevelsAndPlants(seed):
     
     plants = [1]
     levels = [1]
-    unused_plants   = [i        for i in range(2,49 if upgradeRewards.get() else 40)]
+    unused_plants   = [i        for i in range(2,40)]
     if challengeMode.get() or noRestrictions.get():
         level_plants    = [(-1,1.0) for i in range(0,51)]
     else:
@@ -552,7 +541,7 @@ def getAvailableStages(plants, used_levels=[]):
         plant_set = set(plants)
         
         tough_check   = len(plant_set & {2, 6, 7, 15, 17, 20, 29, 31, 35, 39}) #cherry bomb, chomper, repeater, doom, squash, jalapeno, starfruit, magnet, coffee bean, melon pult
-        balloon_check = compute_balloon_check(plants)#len(plant_set & {2, 15, 20}) + 2 * len(plant_set & {26, 27, 43})
+        balloon_check = len(plant_set & {2, 15, 20}) + 2 * len(plant_set & {26, 27})
         
         if challengeMode.get():
             tough_check = 9999
@@ -675,10 +664,6 @@ def addLevel(levels, firstLevels):
     levels.remove(newLevel)
     return levels, firstLevels
 
-def compute_balloon_check(plants):
-    plant_set = set(plants)
-    return len(plant_set & {2, 15, 20}) + 2 * len(plant_set & ({26, 27, 43} if 16 in plant_set else {26, 27}))
-
 def addToLevelsList(levels, numberList):
     if type(numberList)==int:
         numberList=[numberList]
@@ -761,8 +746,6 @@ def randomiseWeights():
     WriteMemory("int", 0, 0x69DA94 + 0x1C*9)
 
 wavePointArray=[1, 1, 2, 2, 4, 2, 4, 7, 5, 0, 1, 3, 7, 3, 3, 3, 2, 4, 4, 4, 3, 4, 5, 10, 10, 0, 1, 4, 3, 3, 3, 7, 10]
-plants=[[100, 750], [50, 750], [150, 5000], [50, 3000], [25, 3000], [175, 750], [150, 750], [200, 750], [0, 750], [25, 750], [75, 750], [75, 750], [75, 3000], [25, 750], [75, 5000], [125, 5000], [25, 750], [50, 3000], [325, 750], [25, 3000], [125, 5000], [100, 750], [175, 750], [125, 5000], [0, 3000], [25, 3000], [125, 750], [100, 750], [125, 750], [125, 750], [125, 3000], [100, 750], [100, 750], [25, 750], [100, 750], [75, 750], [50, 750], [100, 750], [50, 3000], [300, 750], [250, 5000], [150, 5000], [150, 5000], [225, 5000], [200, 5000], [50, 5000], [125, 5000], [500, 5000]]
-zombies=[['Basic', 1, 4000, 1, 1], ['Flag (ignore)', 1, 0, 1, 1], ['Cone', 3, 4000, 2, 1], ['Vaulter', 6, 2000, 2, 5], ['Bucket', 8, 3000, 4, 1], ['Newspaper', 11, 1000, 2, 1], ['Screen-Door', 13, 3500, 4, 5], ['Footballer', 16, 2000, 7, 5], ['Dancer', 18, 1000000, 5, 5], ['Backup (ignore)', 18, 0, 1, 1], ['Ducky-Tube (ignore)', 21, 0, 1, 5], ['Snorkel', 23, 2000, 3, 10], ['Zomboni', 26, 10000, 7, 10], ['Bobsled', 26, 10000, 3, 10], ['Dolphin', 28, 1500, 3, 10], ['Jack', 31, 1000, 3, 10], ['Balloon', 33, 2000, 2, 10], ['Digger', 36, 10000, 4, 10], ['Pogo', 38, 1000, 4, 10], ['Yeti (ignore)', 40, 1, 4, 1], ['Bungee', 41, 1000, 3, 10], ['Ladder', 43, 1000, 4, 10], ['Catapult', 46, 1500, 5, 10], ['Gargantuar', 48, 10000, 1, 1], ['Imp', 1, 0, 10, 1], ['Zomboss', 50, 0, 10, 1], ['Peashooter', 99, 4000, 1, 1], ['Wall-Nut', 99, 3000, 4, 1], ['Jalapeno', 99, 1000, 3, 10], ['Gatling Pea', 99, 2000, 3, 10], ['Squash', 99, 2000, 3, 10], ['Tall Nut', 99, 2000, 7, 10], ['Giga Gargantuar', 48, 6000, 10, 15]]
 
 def randomiseWavePoints():
     global randomWavePoints, wavePointArray
@@ -823,6 +806,16 @@ def randomiseStartingWave(startingWave):
                 WriteMemory("int", random.randint(1,10), 0x69DA90 + 0x1C*i)
             elif i!=5:
                 WriteMemory("int", random.randint(4,10), 0x69DA90 + 0x1C*i)
+plants=[[100, 750], [50, 750], [150, 5000], [50, 3000], [25, 3000], [175, 750], [150, 750], [200, 750], [0, 750], [25, 750], [75, 750], [75, 750], [75, 3000], [25, 750], [75, 5000], [125, 5000], [25, 750], [50, 3000], [325, 750], [25, 3000], [125, 5000], [100, 750], [175, 750], [125, 5000], [0, 3000], [25, 3000], [125, 750], [100, 750], [125, 750], [125, 750], [125, 3000], [100, 750], [100, 750], [25, 750], [100, 750], [75, 750], [50, 750], [100, 750], [50, 3000], [300, 750], [250, 5000], [150, 5000], [150, 5000], [225, 5000], [200, 5000], [50, 5000], [125, 5000], [500, 5000]]
+zombies=[['Basic', 1, 4000, 1, 1], ['Flag (ignore)', 1, 0, 1, 1], ['Cone', 3, 4000, 2, 1], ['Vaulter', 6, 2000, 2, 5], ['Bucket', 8, 3000, 4, 1], ['Newspaper', 11, 1000, 2, 1], ['Screen-Door', 13, 3500, 4, 5], ['Footballer', 16, 2000, 7, 5], ['Dancer', 18, 1000000, 5, 5], ['Backup (ignore)', 18, 0, 1, 1], ['Ducky-Tube (ignore)', 21, 0, 1, 5], ['Snorkel', 23, 2000, 3, 10], ['Zomboni', 26, 10000, 7, 10], ['Bobsled', 26, 10000, 3, 10], ['Dolphin', 28, 1500, 3, 10], ['Jack', 31, 1000, 3, 10], ['Balloon', 33, 2000, 2, 10], ['Digger', 36, 10000, 4, 10], ['Pogo', 38, 1000, 4, 10], ['Yeti (ignore)', 40, 1, 4, 1], ['Bungee', 41, 1000, 3, 10], ['Ladder', 43, 1000, 4, 10], ['Catapult', 46, 1500, 5, 10], ['Gargantuar', 48, 10000, 1, 1], ['Imp', 1, 0, 10, 1], ['Zomboss', 50, 0, 10, 1], ['Peashooter', 99, 4000, 1, 1], ['Wall-Nut', 99, 3000, 4, 1], ['Jalapeno', 99, 1000, 3, 10], ['Gatling Pea', 99, 2000, 3, 10], ['Squash', 99, 2000, 3, 10], ['Tall Nut', 99, 2000, 7, 10], ['Giga Gargantuar', 48, 6000, 10, 15]]
+for i in range(0, 48):
+    WriteMemory("int", plants[i][0], 0x69F2C0 + 0x24*i)
+    WriteMemory("int", plants[i][1], 0x69F2C4 + 0x24*i)
+for i in range(0, 33):
+    WriteMemory("int", zombies[i][3], 0x69DA88 + 0x1C*i)
+    WriteMemory("int", zombies[i][2], 0x69DA94 + 0x1C*i)
+    WriteMemory("int", zombies[i][4], 0x69DA90 + 0x1C*i)
+    WriteMemory("int", zombies[i][1], 0x69DA8C + 0x1C*i)
     
 def randomiseCost():
     color_array = []
@@ -863,12 +856,12 @@ def generateZombies(levels, level_plants):
         has_pot               = 33 in plantsInOrder[0:i]
         has_doom              = 15 in plantsInOrder[0:i] and 35 in plantsInOrder[0:i]
         has_instant           = 2 in plantsInOrder[0:i] or 17 in plantsInOrder[0:i] or 20 in plantsInOrder[0:i] or has_doom
-        balloon_check = compute_balloon_check(plantsInOrder[0:i]) >= 2#26 in plantsInOrder[0:i] or 27 in plantsInOrder[0:i] or (2 in plantsInOrder[0:i] and has_doom) or (2 in plantsInOrder[0:i] and 20 in plantsInOrder[0:i]) or (20 in plantsInOrder[0:i] and has_doom)
+        balloon_check = 26 in plantsInOrder[0:i] or 27 in plantsInOrder[0:i] or (2 in plantsInOrder[0:i] and has_doom) or (2 in plantsInOrder[0:i] and 20 in plantsInOrder[0:i]) or (20 in plantsInOrder[0:i] and has_doom)
         currentZombies=[]
         if levels[i]!=50 and levels[i]!=15 and levels[i]!=35:
             for j in range(2, 33):
                 if j!=9 and j!=10 and j!=24 and j!=25:
-                    if not random.randint(0, 14):
+                    if not random.randint(0, 11):
                         if (j==11 or j==14) and (levels[i]<21 or levels[i]>40):
                             continue
                         elif zombies[j][1]==levels[i]:
@@ -917,7 +910,6 @@ def randomiseZombies(zombiesToRandomise, currentLevel, levels):
 
 #showAverage()
 #nightAverage()
-
 if randomisePlants.get():
     levels, level_plants = randomiseLevelsAndPlants(seed)
 else:
@@ -928,8 +920,7 @@ plants_array2 = []
 for i in levels:
     if level_plants[i] != -1:
         plants_array2.append(level_plants[i])
-        if level_plants[i] < 40:
-            plants_array.append(level_plants[i])
+        plants_array.append(level_plants[i])
     else:
         plants_array2.append(0x4b) #nothing plant, costs 6977196 sun
 for i in [40,41,42,43,44,45,46,47,48]:
@@ -955,18 +946,8 @@ LEVEL_STRINGS = ["Not a level",
     "5-1", "5-2", "5-3", "5-4", "5-5", "5-6", "5-7", "5-8", "5-9", "5-10"
 ]
 
-if print_levels:
-    for i in levels:
-        print(LEVEL_STRINGS[i], SEED_STRINGS[level_plants[i]])
-
-for i in range(0, 48):
-    WriteMemory("int", plants[i][0], 0x69F2C0 + 0x24*i)
-    WriteMemory("int", plants[i][1], 0x69F2C4 + 0x24*i)
-for i in range(0, 33):
-    WriteMemory("int", zombies[i][3], 0x69DA88 + 0x1C*i)
-    WriteMemory("int", zombies[i][2], 0x69DA94 + 0x1C*i)
-    WriteMemory("int", zombies[i][4], 0x69DA90 + 0x1C*i)
-    WriteMemory("int", zombies[i][1], 0x69DA8C + 0x1C*i)
+#for i in levels:
+    #print(LEVEL_STRINGS[i], SEED_STRINGS[level_plants[i]])
 
 #Seed packet rendering on the seed select screen
 
@@ -1148,13 +1129,13 @@ WriteMemory("unsigned char",[
 
 #Credits  (bugged right now)
 
-WriteMemory("unsigned char", [
-levels[-1],
-0x74 #je
-], 0x452551)
-WriteMemory("unsigned char", [
-levels[-1]
-], 0x452561)
+##WriteMemory("unsigned char", [
+##levels[-1],
+##0x74 #je
+##], 0x452551)
+##WriteMemory("unsigned char", [
+##levels[-1]
+##], 0x452561)
 
 
 
@@ -1741,8 +1722,7 @@ plants_unlocked = 1
 WriteMemory("int", plants_array, 0x651094)
 WriteMemory("int", plants_array2, 0x651194) #ends at 0x65125c
 WriteMemory("int",0,0x65115c)
-upgradePlants=[0x1C2, 0x1C4, 0x1C8, 0x1CC, 0x1D0, 0x1D4, 0x1D8, 0x1DC, 0x1E0, "nothing", "nothing2"] #gatling, twin, gloom, cattail, winter, gold, spike, cob, imitater
-lastlevel=0
+upgradePlants=[0x1C4, 0x1C2, 0x1C8, 0x1D4, 0x1CC, 0x1D8, 0x1E0, 0x1D0, 0x1DC, "nothing", "nothing2"] #twin, gatling, gloom, gold, cattail, spike, imitater, winter, cob
 if startingWave.get()=="Instant":
     randomiseStartingWave(startingWave.get())
 if saved.get() and jumpLevel!="":
@@ -1831,7 +1811,7 @@ for i in range(50):
         WriteMemory("bool",True,0x6A9EC0,0x82C,0x218)
     if(i != 0) and not saved.get(): 
         Sleep(1)
-    if(level_plants[newlevel] != -1 and level_plants[newlevel] < 40):
+    if(level_plants[newlevel] != -1):
         plants_unlocked += 1
     if(i >= 24 and plants_unlocked > 7 and not (shopless.get() or noAutoSlots.get())): # slots
         WriteMemory("int",2,0x6A9EC0,0x82C,0x214)
