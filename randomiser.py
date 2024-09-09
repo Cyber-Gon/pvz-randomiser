@@ -175,7 +175,7 @@ try:
 except:
     print("pvz not found!")
 import random
-
+    
 try:
     saveFile=open('saveFile.txt', 'r')
 except:
@@ -187,6 +187,8 @@ fileInfo=saveFile.readlines()
 if len(fileInfo)>0:
     hasSave=True
 saveFile.close()
+savePoint=-5
+
 window=Tk() #Creates a window object from the Tk class
 window.title("Randomiser settings")
 challengeMode    = BooleanVar(value=False)
@@ -890,13 +892,21 @@ def generateZombies(levels, level_plants):
     return zombiesToRandomise
 
 def randomiseZombies(zombiesToRandomise, currentLevel, levels):
-    for i in range(0, 33):
-        WriteMemory("int", zombies[i][1], 0x69DA8C + 0x1C*i)
-    currentZombies=zombiesToRandomise[currentLevel]
-    for i in range(0, len(currentZombies)):
-        zombieState=ReadMemory("bool", 0x6A35B0 + 0xCC*currentZombies[i] + 0x4*levels[currentLevel])
-        WriteMemory("int", 1, 0x69DA8C + 0x1C*currentZombies[i])     
-        WriteMemory("bool", not zombieState, 0x6A35B0 + 0xCC*currentZombies[i] + 0x4*levels[currentLevel])
+    if levels=="leftovers":
+        for i in range(0, len(zombiesToRandomise)):
+            zombieState=ReadMemory("bool", 0x6A35B0 + 0xCC*zombiesToRandomise[i] + 0x4*currentLevel)
+            WriteMemory("int", 1, 0x69DA8C + 0x1C*zombiesToRandomise[i])     
+            WriteMemory("bool", not zombieState, 0x6A35B0 + 0xCC*zombiesToRandomise[i] + 0x4*currentLevel)
+        return zombiesToRandomise
+    else:
+        for i in range(0, 33):
+            WriteMemory("int", zombies[i][1], 0x69DA8C + 0x1C*i)
+        currentZombies=zombiesToRandomise[currentLevel]
+        for i in range(0, len(currentZombies)):
+            zombieState=ReadMemory("bool", 0x6A35B0 + 0xCC*currentZombies[i] + 0x4*levels[currentLevel])
+            WriteMemory("int", 1, 0x69DA8C + 0x1C*currentZombies[i])     
+            WriteMemory("bool", not zombieState, 0x6A35B0 + 0xCC*currentZombies[i] + 0x4*levels[currentLevel])
+        return currentZombies
 
 #showAverage()
 #nightAverage()
@@ -1690,6 +1700,24 @@ WriteMemory("unsigned char", [
 0xeb, 0xee                    #jmp  0x40bded
 ], 0x40bdeb)
 
+try:
+    leftoverZombies=open('leftoverZombies.txt', 'r')
+except:
+    leftoverZombies=open('leftoverZombies.txt', 'w')
+    leftoverZombies.close()
+    leftoverZombies=open('leftoverZombies.txt', 'r')
+
+leftoverInfo=leftoverZombies.readlines()
+if len(leftoverInfo)>0:
+    currentZombies=[]
+    for i in range(1, len(leftoverInfo)):
+        currentZombies.append(int(leftoverInfo[i].strip()))
+    currentZombies=randomiseZombies(currentZombies, int(leftoverInfo[0]), "leftovers")
+leftoverZombies.close()
+leftoverZombies=open('leftoverZombies.txt', 'w')
+leftoverZombies.write("")
+leftoverZombies.close()
+
 plants_unlocked = 1
 WriteMemory("int", plants_array, 0x651094)
 WriteMemory("int", plants_array2, 0x651194) #ends at 0x65125c
@@ -1736,7 +1764,17 @@ for i in range(50):
     if not noAutoSlots.get() or shopless.get():
         WriteMemory("int",0,0x6A9EC0,0x82C, 0x28)
     if randomZombies.get():
-        randomiseZombies(zombiesToRandomise, i, levels)
+        if i!=0:
+            currentZombies=randomiseZombies(zombiesToRandomise, i-1, levels)
+        currentZombies=randomiseZombies(zombiesToRandomise, i, levels)
+        if len(currentZombies)>0 and not saved.get():
+            if savePoint-1!=i:
+                linesToWrite=[str(levels[i])+"\n"]
+                for i in range(0, len(currentZombies)):
+                    linesToWrite.append(str(currentZombies[i])+"\n")
+                leftoverZombies=open('leftoverZombies.txt', 'w')
+                leftoverZombies.writelines(linesToWrite)
+                leftoverZombies.close()
     if upgradeRewards.get():
         if i!=0:
             if(level_plants[lastlevel] == -1):
@@ -1803,6 +1841,9 @@ WriteMemory("int",0,0x651190)
 saveFile=open('saveFile.txt', 'w')
 saveFile.write("")
 saveFile.close()
+
+if randomZombies.get():
+    randomiseZombies(zombiesToRandomise, 49, levels)
 
 for i in range(0, 48):
     WriteMemory("int", plants[i][0], 0x69F2C0 + 0x24*i)
