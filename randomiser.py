@@ -1770,8 +1770,8 @@ for i in range(50):
         if len(currentZombies)>0 and not saved.get():
             if savePoint-1!=i:
                 linesToWrite=[str(levels[i])+"\n"]
-                for i in range(0, len(currentZombies)):
-                    linesToWrite.append(str(currentZombies[i])+"\n")
+                for j in range(0, len(currentZombies)):
+                    linesToWrite.append(str(currentZombies[j])+"\n")
                 leftoverZombies=open('leftoverZombies.txt', 'w')
                 leftoverZombies.writelines(linesToWrite)
                 leftoverZombies.close()
