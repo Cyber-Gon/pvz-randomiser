@@ -1051,37 +1051,43 @@ def randomiseConveyors(in_seed):
                     r_plant_set.add(r_nuts[i])
                     r_dict[r_nuts[i]]  = r_nut_weights[i]
             
-            if len(d_instas) > 0:
-                instas_weight  = 0.
-                allowed_instas = ([4,  19, 12, 14]  if has_water else [4,  12, 14]) if at_night else ([4,  19] if has_water else [4])
-                wmul           =  [2.0,2.0,1.4,1.0] if has_water else [2.0,1.4,1.0]
-                for i in d_instas:
-                    if i in allowed_instas:
-                        instas_weight += d_dict[i]/wmul[allowed_instas.index(i)]
-                    else:
-                        instas_weight += d_dict[i]/2.5
-                instas_weight     *= random.uniform(0.6,1.4)
-                r_instas           = random.sample(allowed_instas, k=len(d_instas))
-                r_instas_weights   = randspread(int(instas_weight),len(d_instas))
-                for i in range(len(d_instas)):
-                    r_plant_set.add(r_instas[i])
-                    r_dict[r_instas[i]] = int(r_instas_weights[i]*wmul[allowed_instas.index(r_instas[i])])
-            
-            if len(d_ginstas) > 0:
-                ginstas_weight  = 0.
-                allowed_ginstas = [2,  17, 20, 15, 31] if at_night else [2,  17, 20]
-                wmul            = [0.7,1.2,1.0,0.4,0.5]
-                for i in d_ginstas:
-                    if i in allowed_ginstas:
-                        ginstas_weight += d_dict[i]/wmul[allowed_ginstas.index(i)]
-                    else:
-                        ginstas_weight += d_dict[i]/2.5
-                ginstas_weight     *= random.uniform(0.9,1.3)
-                r_ginstas           = random.sample(allowed_ginstas, k=len(d_ginstas))
-                r_ginstas_weights   = randspread(int(ginstas_weight),len(d_ginstas))
-                for i in range(len(d_ginstas)):
-                    r_plant_set.add(r_ginstas[i])
-                    r_dict[r_ginstas[i]] = int(r_ginstas_weights[i]*wmul[allowed_ginstas.index(r_ginstas[i])])
+            if level != "5-10":
+                if len(d_instas) > 0:
+                    instas_weight  = 0.
+                    allowed_instas = ([4,  19, 12, 14]  if has_water else [4,  12, 14]) if at_night else ([4,  19] if has_water else [4])
+                    wmul           =  [2.0,2.0,1.4,1.0] if has_water else [2.0,1.4,1.0]
+                    for i in d_instas:
+                        if i in allowed_instas:
+                            instas_weight += d_dict[i]/wmul[allowed_instas.index(i)]
+                        else:
+                            instas_weight += d_dict[i]/2.5
+                    instas_weight     *= random.uniform(0.6,1.4)
+                    r_instas           = random.sample(allowed_instas, k=len(d_instas))
+                    r_instas_weights   = randspread(int(instas_weight),len(d_instas))
+                    for i in range(len(d_instas)):
+                        r_plant_set.add(r_instas[i])
+                        r_dict[r_instas[i]] = int(r_instas_weights[i]*wmul[allowed_instas.index(r_instas[i])])
+                
+                if len(d_ginstas) > 0:
+                    ginstas_weight  = 0.
+                    allowed_ginstas = [2,  17, 20, 15, 31] if at_night else [2,  17, 20]
+                    wmul            = [0.7,1.2,1.0,0.4,0.5]
+                    for i in d_ginstas:
+                        if i in allowed_ginstas:
+                            ginstas_weight += d_dict[i]/wmul[allowed_ginstas.index(i)]
+                        else:
+                            ginstas_weight += d_dict[i]/2.5
+                    ginstas_weight     *= random.uniform(0.9,1.3)
+                    r_ginstas           = random.sample(allowed_ginstas, k=len(d_ginstas))
+                    r_ginstas_weights   = randspread(int(ginstas_weight),len(d_ginstas))
+                    for i in range(len(d_ginstas)):
+                        r_plant_set.add(r_ginstas[i])
+                        r_dict[r_ginstas[i]] = int(r_ginstas_weights[i]*wmul[allowed_ginstas.index(r_ginstas[i])])
+            else:
+                r_plant_set.add(14)
+                r_dict[14]    =  8
+                r_plant_set.add(20)
+                r_dict[20]    = 12
             
             random_bs = random.sample([(36,10),(37,3),(25,4),(28,8),(21,8),(38, 8),(22, 8),(33, 8)], int((random.random()**2)*4)) #garlic, umbrella leaf, plantern, split pea, spikeweed, more marigolds, torchwood, pot
         else:
