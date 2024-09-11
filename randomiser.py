@@ -1041,7 +1041,7 @@ def randomiseConveyors(in_seed):
             
             if len(d_znuts) > 0:
                 nuts_weight  = 0.
-                allowed_nuts = [3,22,30]
+                allowed_nuts = [3,23,30]
                 for i in d_znuts:
                     nuts_weight += d_dict[i]
                 nuts_weight  *= random.uniform(0.6,1.4)
