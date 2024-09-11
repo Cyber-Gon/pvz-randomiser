@@ -989,7 +989,7 @@ def randomiseConveyors(in_seed):
         d_passthrough       = sorted(list(d_plant_set & {6, 11,16,22,33,49,50}))    #chomper, grave buster, lily, torchwood, pot, explode o nut, giant wallnut
         
         blackened_chance = random.choices([0.2,1.0],weights=[1,19])[0]
-        peter_chance     = random.choices([0.2,1.0],weights=[1,19])[0]
+        peter_chance     = random.choices([0.2,1.0],weights=[1,19])[0] if level=="3-10" else 1.0
         
         for i in d_passthrough: #keep a few plants the same
             r_plant_set.add(i)
