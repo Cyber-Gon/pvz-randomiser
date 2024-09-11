@@ -289,6 +289,7 @@ def continueButtonClick():
     randomCooldowns.set(eval(fileInfo[16].strip()))
     costTextToggle.set(eval(fileInfo[17].strip()))
     randomZombies.set(eval(fileInfo[18].strip()))
+    randomConveyors.set(eval(fileInfo[19].strip()))
     saved.set(True)
     jumpLevel=""
     window.destroy()
@@ -426,7 +427,7 @@ print("Random Cost:",        str(randomCost.get()))
 print("Coloured Cost:",      str(costTextToggle.get()))
 print("Random Cooldowns:",   str(randomCooldowns.get()))
 print("Random Zombies:",     str(randomZombies.get()))
-print("Random Conveyors:",   str(randomZombies.get()))
+print("Random Conveyors:",   str(randomConveyors.get()))
 
 LEVEL_PLANTS = [
     0,
@@ -972,6 +973,7 @@ def randomiseConveyors(in_seed):
         d_dict      = {}
         r_plant_set = {38}    #every level should have marigolds!
         r_dict      = {38: 2} #with a weight of like 2 tho
+
         for i in to_randomise:
             d_plant_set.add(i[0])
             d_dict[i[0]] = i[1]
@@ -983,14 +985,14 @@ def randomiseConveyors(in_seed):
         d_balloon_counters  = sorted(list(d_plant_set & {26,27,43}))                #cactus, blover, cattail
         d_pea_s_plants      = sorted(list(d_plant_set & {0, 5, 8, 13,24,28,32,34})) #peashooter, snow pea, puff, scaredy, seashroom, split pea, cabbage, kernel
         d_pea_s_high_plants = sorted(list(d_plant_set & {7, 10,18,29,39}))          #repeater, fume, threepeater, starfruit, melon
-        d_znuts             = sorted(list(d_plant_set & {3, 23,30}))                #wallnut, tallnut, pumpkin
+        d_znuts             = sorted(list(d_plant_set & {3, 23,30, 36}))                #wallnut, tallnut, pumpkin, garlic
         d_instas            = sorted(list(d_plant_set & {4, 12,14,19,21}))          #mine, hypno, ice, kelp, spikeweed
         d_ginstas           = sorted(list(d_plant_set & {2, 15,17,20,31}))          #cherry, doom, squash, jalapeno, magnet
         d_passthrough       = sorted(list(d_plant_set & {6, 11,16,22,33,49,50}))    #chomper, grave buster, lily, torchwood, pot, explode o nut, giant wallnut
         
         blackened_chance = random.choices([0.2,1.0],weights=[1,19])[0]
         peter_chance     = random.choices([0.2,1.0],weights=[1,19])[0]
-        
+
         for i in d_passthrough: #keep a few plants the same
             r_plant_set.add(i)
             r_dict[i] = int(d_dict[i] * random.uniform(0.7,1.3))
@@ -1041,7 +1043,7 @@ def randomiseConveyors(in_seed):
             
             if len(d_znuts) > 0:
                 nuts_weight  = 0.
-                allowed_nuts = [3,23,30]
+                allowed_nuts = [3,23,30,36]
                 for i in d_znuts:
                     nuts_weight += d_dict[i]
                 nuts_weight  *= random.uniform(0.6,1.4)
@@ -1109,10 +1111,10 @@ def randomiseConveyors(in_seed):
         
         writeConveyor(CONVEYOR_DEFAULTS[level][0], randomised)
         
-        print()
-        print(level+":")
-        for i in randomised:
-            print(SEED_STRINGS[i[0]]+": "+str(i[1]))
+##        print()
+##        print(level+":")
+##        for i in randomised:
+##            print(SEED_STRINGS[i[0]]+": "+str(i[1]))
     
     random.setstate(rng_state)
 
@@ -2056,7 +2058,7 @@ for i in range(50):
         if savePoint-1==i:
             saved.set(False)
     if not saved.get() and i!=0:
-        linesToWrite=[seed, (i+1), str(ReadMemory("int", 0x6A9EC0,0x82C,0x214)), str(ReadMemory("int",0x6A9EC0,0x82C, 0x28)), (challengeMode.get()), (shopless.get()), (noRestrictions.get()), (noAutoSlots.get()), (imitater.get()), (randomisePlants.get()), (seeded.get()), (upgradeRewards.get()), (randomWeights.get()), (randomWavePoints.get()), startingWave.get(), randomCost.get(), randomCooldowns.get(), costTextToggle.get(), randomZombies.get()]
+        linesToWrite=[seed, (i+1), str(ReadMemory("int", 0x6A9EC0,0x82C,0x214)), str(ReadMemory("int",0x6A9EC0,0x82C, 0x28)), (challengeMode.get()), (shopless.get()), (noRestrictions.get()), (noAutoSlots.get()), (imitater.get()), (randomisePlants.get()), (seeded.get()), (upgradeRewards.get()), (randomWeights.get()), (randomWavePoints.get()), startingWave.get(), randomCost.get(), randomCooldowns.get(), costTextToggle.get(), randomZombies.get(), randomConveyors.get()]
         saveFile=open('saveFile.txt', 'w')
         for k in range(len(linesToWrite)):
             linesToWrite[k]=str(linesToWrite[k])
