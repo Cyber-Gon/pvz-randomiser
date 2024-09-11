@@ -207,6 +207,7 @@ randomCost       = BooleanVar(value=False)
 randomCooldowns  = BooleanVar(value=False)
 costTextToggle   = BooleanVar(value=False)
 randomZombies    = BooleanVar(value=False)
+randomConveyors  = BooleanVar(value=False)
 seed=str(random.randint(1,999999999999))
 
 
@@ -391,6 +392,9 @@ cooldownButton.grid(row=4, column=1, sticky=W)
 zombiesButton=Checkbutton(window, text="RANDOM ZOMBIES", width=16, variable=randomZombies, anchor="w")#command=cooldownButtonClick)
 zombiesButton.grid(row=1, column=4, sticky=W)
 
+zombiesButton=Checkbutton(window, text="RANDOM CONVEYORS", width=16, variable=randomConveyors, anchor="w")#command=cooldownButtonClick)
+zombiesButton.grid(row=2, column=4, sticky=W)
+
 closeButton=Button(window, text="SUBMIT SETTINGS", width=16, command=closeButtonClick)
 closeButton.grid(row=0, column=6, sticky=W)
 
@@ -419,18 +423,57 @@ print("Random Weights:",     str(randomWeights.get()))
 print("Random Wave Points:", str(randomWavePoints.get()))
 print("Starting Wave:",          startingWave.get())
 print("Random Cost:",        str(randomCost.get()))
-print("Coloured Cost:",        str(costTextToggle.get()))
+print("Coloured Cost:",      str(costTextToggle.get()))
 print("Random Cooldowns:",   str(randomCooldowns.get()))
-print("Random Zombies:",   str(randomZombies.get()))
+print("Random Zombies:",     str(randomZombies.get()))
+print("Random Conveyors:",   str(randomZombies.get()))
 
 LEVEL_PLANTS = [
-0,
-1,  2,  3,  -1, 4,  5,  6,  7,  -1,  8,
-9,  10, 11, -1, 12, 13, 14, 15, -1, 16,
-17, 18, 19, -1, 20, 21, 22, 23, -1, 24,
-25, 26, 27, -1, 28, 29, 30, 31, -1, 32,
-33, 34, 35, -1, 36, 37, 38, 39, -1, -1
+    0,
+    1,  2,  3,  -1, 4,  5,  6,  7,  -1,  8,
+    9,  10, 11, -1, 12, 13, 14, 15, -1, 16,
+    17, 18, 19, -1, 20, 21, 22, 23, -1, 24,
+    25, 26, 27, -1, 28, 29, 30, 31, -1, 32,
+    33, 34, 35, -1, 36, 37, 38, 39, -1, -1
 ]
+
+CONVEYOR_DEFAULTS = {
+    "1-10": (0x422f60, [( 0, 20), ( 2, 20), ( 3, 15), ( 7, 20), ( 5, 10), ( 6,  5), ( 4, 10)]),
+    "2-10": (0x422f90, [(11, 20), (14, 15), (15, 15), (12, 10), (13, 15), (10, 15), ( 8, 10)]),
+    "3-10": (0x422fc0, [(16, 25), (17,  5), (18, 25), (19,  5), (20, 10), (21, 10), (22, 10), (23, 10)]),
+    "4-10": (0x422ff0, [(16, 25), (24, 10), (31,  5), (27,  5), (26, 15), (29, 25), (28,  5), (30, 10)]),
+    "5-10": (0x423020, [(33, 55), (39, 10), (20, 12), (32, 10), (34,  5), (14,  8)]),
+    "shov": (0x423050, [( 0,100)]),
+    "wnb2": (0x423080, [( 3, 85), (49, 15), (50, 15)]),
+    "wnb1": (0x4230b0, [( 3, 85), (49, 15)]),
+    "btlz": (0x4230e0, [(16, 25), ( 3, 15), ( 0, 25), ( 2, 35)]),
+    "strm": (0x423110, [(16, 30), (26, 10), ( 0, 20), ( 8, 15), ( 2, 25)]),
+    " 5-5": (0x423140, [(33, 50), ( 6, 25), (30, 15), ( 2, 10)]),
+    "prtl": (0x423170, [( 0, 25), ( 7, 20), (22, 10), (26, 15), ( 3, 15), ( 2, 15)]),
+    "clmn": (0x4231a0, [(33,155), (39,  5), ( 6,  5), (30, 15), (20, 10), (17, 10)]),
+    "invs": (0x4231d0, [( 0, 25), ( 3, 15), (34,  5), (17, 15), (16, 30), (14, 10)]),
+}
+
+SEED_STRINGS = [
+    "Peashooter",   "Sunflower",      "Cherry Bomb",   "Wall-nut",     "Potato Mine",  "Snow Pea",       "Chomper",    "Repeater",
+    "Puff-shroom",  "Sun-shroom",     "Fume-shroom",   "Grave Buster", "Hypno-shroom", "Scaredy-shroom", "Ice-shroom", "Doom-shroom",
+    "Lily Pad",     "Squash",         "Threepeater",   "Tangle Kelp",  "Jalapeno",     "Spikeweed",      "Torchwood",  "Tall-nut",
+    "Sea-shroom",   "Plantern",       "Cactus",        "Blover",       "Split Pea",    "Starfruit",      "Pumpkin",    "Magnet-shroom",
+    "Cabbage-pult", "Flower Pot",     "Kernel-pult",   "Coffee Bean",  "Garlic",       "Umbrella Leaf",  "Marigold",   "Melon-pult",
+    "Gatling Pea",  "Twin Sunflower", "Gloom-shroom",  "Cattail",      "Winter Melon", "Gold Magnet",    "Spikerock",  "Cob Cannon",
+    "Imitater",     "Explode-o-nut",  "Giant wallnut", "NONE"
+]
+
+LEVEL_STRINGS = ["Not a level",
+    "1-1", "1-2", "1-3", "1-4", "1-5", "1-6", "1-7", "1-8", "1-9", "1-10",
+    "2-1", "2-2", "2-3", "2-4", "2-5", "2-6", "2-7", "2-8", "2-9", "2-10",
+    "3-1", "3-2", "3-3", "3-4", "3-5", "3-6", "3-7", "3-8", "3-9", "3-10",
+    "4-1", "4-2", "4-3", "4-4", "4-5", "4-6", "4-7", "4-8", "4-9", "4-10",
+    "5-1", "5-2", "5-3", "5-4", "5-5", "5-6", "5-7", "5-8", "5-9", "5-10"
+]
+
+plants=[[100, 750], [50, 750], [150, 5000], [50, 3000], [25, 3000], [175, 750], [150, 750], [200, 750], [0, 750], [25, 750], [75, 750], [75, 750], [75, 3000], [25, 750], [75, 5000], [125, 5000], [25, 750], [50, 3000], [325, 750], [25, 3000], [125, 5000], [100, 750], [175, 750], [125, 5000], [0, 3000], [25, 3000], [125, 750], [100, 750], [125, 750], [125, 750], [125, 3000], [100, 750], [100, 750], [25, 750], [100, 750], [75, 750], [50, 750], [100, 750], [50, 3000], [300, 750], [250, 5000], [150, 5000], [150, 5000], [225, 5000], [200, 5000], [50, 5000], [125, 5000], [500, 5000]]
+zombies=[['Basic', 1, 4000, 1, 1], ['Flag (ignore)', 1, 0, 1, 1], ['Cone', 3, 4000, 2, 1], ['Vaulter', 6, 2000, 2, 5], ['Bucket', 8, 3000, 4, 1], ['Newspaper', 11, 1000, 2, 1], ['Screen-Door', 13, 3500, 4, 5], ['Footballer', 16, 2000, 7, 5], ['Dancer', 18, 1000000, 5, 5], ['Backup (ignore)', 18, 0, 1, 1], ['Ducky-Tube (ignore)', 21, 0, 1, 5], ['Snorkel', 23, 2000, 3, 10], ['Zomboni', 26, 10000, 7, 10], ['Bobsled', 26, 10000, 3, 10], ['Dolphin', 28, 1500, 3, 10], ['Jack', 31, 1000, 3, 10], ['Balloon', 33, 2000, 2, 10], ['Digger', 36, 10000, 4, 10], ['Pogo', 38, 1000, 4, 10], ['Yeti (ignore)', 40, 1, 4, 1], ['Bungee', 41, 1000, 3, 10], ['Ladder', 43, 1000, 4, 10], ['Catapult', 46, 1500, 5, 10], ['Gargantuar', 48, 10000, 1, 1], ['Imp', 1, 0, 10, 1], ['Zomboss', 50, 0, 10, 1], ['Peashooter', 99, 4000, 1, 1], ['Wall-Nut', 99, 3000, 4, 1], ['Jalapeno', 99, 1000, 3, 10], ['Gatling Pea', 99, 2000, 3, 10], ['Squash', 99, 2000, 3, 10], ['Tall Nut', 99, 2000, 7, 10], ['Giga Gargantuar', 48, 6000, 10, 15]]
 
 def randomiseLevels(seed):
     global noRestrictions
@@ -806,16 +849,6 @@ def randomiseStartingWave(startingWave):
                 WriteMemory("int", random.randint(1,10), 0x69DA90 + 0x1C*i)
             elif i!=5:
                 WriteMemory("int", random.randint(4,10), 0x69DA90 + 0x1C*i)
-plants=[[100, 750], [50, 750], [150, 5000], [50, 3000], [25, 3000], [175, 750], [150, 750], [200, 750], [0, 750], [25, 750], [75, 750], [75, 750], [75, 3000], [25, 750], [75, 5000], [125, 5000], [25, 750], [50, 3000], [325, 750], [25, 3000], [125, 5000], [100, 750], [175, 750], [125, 5000], [0, 3000], [25, 3000], [125, 750], [100, 750], [125, 750], [125, 750], [125, 3000], [100, 750], [100, 750], [25, 750], [100, 750], [75, 750], [50, 750], [100, 750], [50, 3000], [300, 750], [250, 5000], [150, 5000], [150, 5000], [225, 5000], [200, 5000], [50, 5000], [125, 5000], [500, 5000]]
-zombies=[['Basic', 1, 4000, 1, 1], ['Flag (ignore)', 1, 0, 1, 1], ['Cone', 3, 4000, 2, 1], ['Vaulter', 6, 2000, 2, 5], ['Bucket', 8, 3000, 4, 1], ['Newspaper', 11, 1000, 2, 1], ['Screen-Door', 13, 3500, 4, 5], ['Footballer', 16, 2000, 7, 5], ['Dancer', 18, 1000000, 5, 5], ['Backup (ignore)', 18, 0, 1, 1], ['Ducky-Tube (ignore)', 21, 0, 1, 5], ['Snorkel', 23, 2000, 3, 10], ['Zomboni', 26, 10000, 7, 10], ['Bobsled', 26, 10000, 3, 10], ['Dolphin', 28, 1500, 3, 10], ['Jack', 31, 1000, 3, 10], ['Balloon', 33, 2000, 2, 10], ['Digger', 36, 10000, 4, 10], ['Pogo', 38, 1000, 4, 10], ['Yeti (ignore)', 40, 1, 4, 1], ['Bungee', 41, 1000, 3, 10], ['Ladder', 43, 1000, 4, 10], ['Catapult', 46, 1500, 5, 10], ['Gargantuar', 48, 10000, 1, 1], ['Imp', 1, 0, 10, 1], ['Zomboss', 50, 0, 10, 1], ['Peashooter', 99, 4000, 1, 1], ['Wall-Nut', 99, 3000, 4, 1], ['Jalapeno', 99, 1000, 3, 10], ['Gatling Pea', 99, 2000, 3, 10], ['Squash', 99, 2000, 3, 10], ['Tall Nut', 99, 2000, 7, 10], ['Giga Gargantuar', 48, 6000, 10, 15]]
-for i in range(0, 48):
-    WriteMemory("int", plants[i][0], 0x69F2C0 + 0x24*i)
-    WriteMemory("int", plants[i][1], 0x69F2C4 + 0x24*i)
-for i in range(0, 33):
-    WriteMemory("int", zombies[i][3], 0x69DA88 + 0x1C*i)
-    WriteMemory("int", zombies[i][2], 0x69DA94 + 0x1C*i)
-    WriteMemory("int", zombies[i][4], 0x69DA90 + 0x1C*i)
-    WriteMemory("int", zombies[i][1], 0x69DA8C + 0x1C*i)
     
 def randomiseCost():
     color_array = []
@@ -908,6 +941,181 @@ def randomiseZombies(zombiesToRandomise, currentLevel, levels):
             WriteMemory("bool", not zombieState, 0x6A35B0 + 0xCC*currentZombies[i] + 0x4*levels[currentLevel])
         return currentZombies
 
+def writeConveyor(addr, conveyor_data):
+    out    = [0 for i in range(1+2*len(conveyor_data))]
+    out[0] = len(conveyor_data)
+    for i in range(len(conveyor_data)):
+        out[i*2+1] = conveyor_data[i][0]
+        out[i*2+2] = conveyor_data[i][1]
+    WriteMemory("unsigned char", out, addr)
+
+def randspread(n, k):
+    r          = [random.random() for i in range(k)]
+    m          = n / sum(r)
+    normalised = [i * m for i in r]
+    if isinstance(n, int):
+        normalised = [int(i) for i in normalised]
+        modify     = n-sum(normalised)
+        for i in range(modify):
+            normalised[random.randint(0,k-1)] += 1
+    return normalised
+
+def randomiseConveyors(in_seed):
+    seed      = in_seed + "conveyor"
+    rng_state = random.getstate() #save rng state
+    random.seed(seed)
+    
+    for level in CONVEYOR_DEFAULTS:
+        to_randomise = CONVEYOR_DEFAULTS[level][1]
+        
+        d_plant_set = set()
+        d_dict      = {}
+        r_plant_set = {38}    #every level should have marigolds!
+        r_dict      = {38: 2} #with a weight of like 2 tho
+        for i in to_randomise:
+            d_plant_set.add(i[0])
+            d_dict[i[0]] = i[1]
+        
+        has_water           = 16 in d_plant_set
+        on_roof             = 33 in d_plant_set
+        at_night            = len(d_plant_set & {8, 10,11,12,13,14,15,24,31}) > 0   #puff, fume, grave buster, hypno, scaredy, ice, doom, seashroom, magnet
+        
+        d_balloon_counters  = sorted(list(d_plant_set & {26,27,43}))                #cactus, blover, cattail
+        d_pea_s_plants      = sorted(list(d_plant_set & {0, 5, 8, 13,24,28,32,34})) #peashooter, snow pea, puff, scaredy, seashroom, split pea, cabbage, kernel
+        d_pea_s_high_plants = sorted(list(d_plant_set & {7, 10,18,29,39}))          #repeater, fume, threepeater, starfruit, melon
+        d_znuts             = sorted(list(d_plant_set & {3, 23,30}))                #wallnut, tallnut, pumpkin
+        d_instas            = sorted(list(d_plant_set & {4, 12,14,19,21}))          #mine, hypno, ice, kelp, spikeweed
+        d_ginstas           = sorted(list(d_plant_set & {2, 15,17,20,31}))          #cherry, doom, squash, jalapeno, magnet
+        d_passthrough       = sorted(list(d_plant_set & {6, 11,16,22,33,49,50}))    #chomper, grave buster, lily, torchwood, pot, explode o nut, giant wallnut
+        
+        blackened_chance = random.choices([0.2,1.0],weights=[1,19])[0]
+        peter_chance     = random.choices([0.2,1.0],weights=[1,19])[0]
+        
+        for i in d_passthrough: #keep a few plants the same
+            r_plant_set.add(i)
+            r_dict[i] = int(d_dict[i] * random.uniform(0.7,1.3))
+        
+        if level != "wnb1" and level != "wnb2":
+            if len(d_balloon_counters) > 0:
+                balloon_weights    = 0.
+                allowed_b_counters = [26,27,43] if has_water else [26,27]
+                wmul               = [1.0,2.0,0.4]
+                for i in d_balloon_counters:
+                    balloon_weights += d_dict[i]/wmul[allowed_b_counters.index(i)]
+                balloon_weights *= random.uniform(0.9,1.3) * blackened_chance
+                r_balloon_counters = random.sample(allowed_b_counters, k=len(d_balloon_counters))
+                r_balloon_weights  = randspread(int(balloon_weights),len(d_balloon_counters))
+                for i in range(len(d_balloon_counters)):
+                    r_plant_set.add(r_balloon_counters[i])
+                    r_dict[r_balloon_counters[i]] = int(r_balloon_weights[i]*wmul[allowed_b_counters.index(r_balloon_counters[i])])
+            
+            if len(d_pea_s_plants) > 0:
+                peas_weight  = 0.
+                allowed_peas = ([0, 5, 26,28,32,34,8, 13,24] if has_water else [0, 5, 26,28,32,34,8, 13]) if at_night else [0, 5, 26,28,32,34]
+                for i in d_pea_s_plants:
+                    peas_weight += d_dict[i]
+                if 26 in r_dict:
+                    peas_weight = max(0,peas_weight-r_dict[26])
+                peas_weight  *= random.uniform(0.6,1.4)
+                r_peas        = random.sample(allowed_peas, k=len(d_pea_s_plants))
+                r_pea_weights = randspread(int(peas_weight),len(d_pea_s_plants))
+                for i in range(len(d_pea_s_plants)):
+                    r_plant_set.add(r_peas[i])
+                    if r_peas[i] in r_dict:
+                        r_dict[r_peas[i]] += r_pea_weights[i]
+                    else:
+                        r_dict[r_peas[i]]  = r_pea_weights[i]
+            
+            if len(d_pea_s_high_plants) == 1:
+                allowed_hpeas = [7, 10,18,29,39]
+                weights       = [1.,1.,1.,1.,1.]
+                wmul          = [1.5,1.5,1.0,2.0,1.0]
+                weights[allowed_hpeas.index(d_pea_s_high_plants[0])] *= 3.
+                if d_pea_s_high_plants[0] == 39: #if melon is the strong dps plant, its probably a good idea to keep it that way
+                    weights = [0.,0.,0.,0.,1.]
+                if not at_night:
+                    weights[1] = 0.
+                d_pea_s_high_plant = random.choices(allowed_hpeas,weights=weights)[0]
+                r_plant_set.add(d_pea_s_high_plant)
+                r_dict[d_pea_s_high_plant] = int(d_dict[d_pea_s_high_plants[0]] * wmul[allowed_hpeas.index(d_pea_s_high_plant)] / wmul[allowed_hpeas.index(d_pea_s_high_plants[0])] * random.uniform(0.8,1.2) * peter_chance)
+            
+            if len(d_znuts) > 0:
+                nuts_weight  = 0.
+                allowed_nuts = [3,23,30]
+                for i in d_znuts:
+                    nuts_weight += d_dict[i]
+                nuts_weight  *= random.uniform(0.6,1.4)
+                r_nuts        = random.sample(allowed_nuts, k=len(d_znuts))
+                r_nut_weights = randspread(int(nuts_weight),len(d_znuts))
+                for i in range(len(d_znuts)):
+                    r_plant_set.add(r_nuts[i])
+                    r_dict[r_nuts[i]]  = r_nut_weights[i]
+            
+            if level != "5-10":
+                if len(d_instas) > 0:
+                    instas_weight  = 0.
+                    allowed_instas = ([4,  19, 12, 14]  if has_water else [4,  12, 14]) if at_night else ([4,  19] if has_water else [4])
+                    wmul           =  [2.0,2.0,1.4,1.0] if has_water else [2.0,1.4,1.0]
+                    for i in d_instas:
+                        if i in allowed_instas:
+                            instas_weight += d_dict[i]/wmul[allowed_instas.index(i)]
+                        else:
+                            instas_weight += d_dict[i]/2.5
+                    instas_weight     *= random.uniform(0.6,1.4)
+                    r_instas           = random.sample(allowed_instas, k=len(d_instas))
+                    r_instas_weights   = randspread(int(instas_weight),len(d_instas))
+                    for i in range(len(d_instas)):
+                        r_plant_set.add(r_instas[i])
+                        r_dict[r_instas[i]] = int(r_instas_weights[i]*wmul[allowed_instas.index(r_instas[i])])
+                
+                if len(d_ginstas) > 0:
+                    ginstas_weight  = 0.
+                    allowed_ginstas = [2,  17, 20, 15, 31] if at_night else [2,  17, 20]
+                    wmul            = [0.7,1.2,1.0,0.4,0.5]
+                    for i in d_ginstas:
+                        if i in allowed_ginstas:
+                            ginstas_weight += d_dict[i]/wmul[allowed_ginstas.index(i)]
+                        else:
+                            ginstas_weight += d_dict[i]/2.5
+                    ginstas_weight     *= random.uniform(0.9,1.3)
+                    r_ginstas           = random.sample(allowed_ginstas, k=len(d_ginstas))
+                    r_ginstas_weights   = randspread(int(ginstas_weight),len(d_ginstas))
+                    for i in range(len(d_ginstas)):
+                        r_plant_set.add(r_ginstas[i])
+                        r_dict[r_ginstas[i]] = int(r_ginstas_weights[i]*wmul[allowed_ginstas.index(r_ginstas[i])])
+            else:
+                r_plant_set.add(14)
+                r_dict[14]    =  8
+                r_plant_set.add(20)
+                r_dict[20]    = 12
+            
+            random_bs = random.sample([(36,10),(37,3),(25,4),(28,8),(21,8),(38, 8),(22, 8),(33, 8)], int((random.random()**2)*4)) #garlic, umbrella leaf, plantern, split pea, spikeweed, more marigolds, torchwood, pot
+        else:
+            random_bs = [(3,random.randint(60,90))]
+        
+        for i in random_bs:
+            r_plant_set.add(i[0])
+            if i[0] in r_dict:
+                r_dict[i[0]] += i[1]
+            else:
+                r_dict[i[0]]  = i[1]
+        
+        if on_roof and 21 in r_plant_set:
+            r_plant_set.remove(21)
+        if 22 in r_plant_set and len(r_plant_set & {0,5,7,18,28}) == 0:
+            r_plant_set.remove(22)
+        
+        randomised   = [(i, r_dict[i]) for i in sorted(list(r_plant_set))]
+        
+        writeConveyor(CONVEYOR_DEFAULTS[level][0], randomised)
+        
+        print()
+        print(level+":")
+        for i in randomised:
+            print(SEED_STRINGS[i[0]]+": "+str(i[1]))
+    
+    random.setstate(rng_state)
+
 #showAverage()
 #nightAverage()
 if randomisePlants.get():
@@ -928,26 +1136,23 @@ for i in [40,41,42,43,44,45,46,47,48]:
 if randomZombies:
     zombiesToRandomise=generateZombies(levels, level_plants)
 
-SEED_STRINGS = [
-    "Peashooter",   "Sunflower",      "Cherry Bomb",  "Wall-nut",     "Potato Mine",  "Snow Pea",       "Chomper",    "Repeater",
-    "Puff-shroom",  "Sun-shroom",     "Fume-shroom",  "Grave Buster", "Hypno-shroom", "Scaredy-shroom", "Ice-shroom", "Doom-shroom",
-    "Lily Pad",     "Squash",         "Threepeater",  "Tangle Kelp",  "Jalapeno",     "Spikeweed",      "Torchwood",  "Tall-nut",
-    "Sea-shroom",   "Plantern",       "Cactus",       "Blover",       "Split Pea",    "Starfruit",      "Pumpkin",    "Magnet-shroom",
-    "Cabbage-pult", "Flower Pot",     "Kernel-pult",  "Coffee Bean",  "Garlic",       "Umbrella Leaf",  "Marigold",   "Melon-pult",
-    "Gatling Pea",  "Twin Sunflower", "Gloom-shroom", "Cattail",      "Winter Melon", "Gold Magnet",    "Spikerock",  "Cob Cannon",
-    "Imitater",     "NONE"
-]
-
-LEVEL_STRINGS = ["Not a level",
-    "1-1", "1-2", "1-3", "1-4", "1-5", "1-6", "1-7", "1-8", "1-9", "1-10",
-    "2-1", "2-2", "2-3", "2-4", "2-5", "2-6", "2-7", "2-8", "2-9", "2-10",
-    "3-1", "3-2", "3-3", "3-4", "3-5", "3-6", "3-7", "3-8", "3-9", "3-10",
-    "4-1", "4-2", "4-3", "4-4", "4-5", "4-6", "4-7", "4-8", "4-9", "4-10",
-    "5-1", "5-2", "5-3", "5-4", "5-5", "5-6", "5-7", "5-8", "5-9", "5-10"
-]
+if randomConveyors.get():
+    randomiseConveyors(seed)
+else:
+    for i in CONVEYOR_DEFAULTS:
+        writeConveyor(CONVEYOR_DEFAULTS[i][0], CONVEYOR_DEFAULTS[i][1])
 
 #for i in levels:
     #print(LEVEL_STRINGS[i], SEED_STRINGS[level_plants[i]])
+
+for i in range(0, 48):
+    WriteMemory("int", plants[i][0], 0x69F2C0 + 0x24*i)
+    WriteMemory("int", plants[i][1], 0x69F2C4 + 0x24*i)
+for i in range(0, 33):
+    WriteMemory("int", zombies[i][3], 0x69DA88 + 0x1C*i)
+    WriteMemory("int", zombies[i][2], 0x69DA94 + 0x1C*i)
+    WriteMemory("int", zombies[i][4], 0x69DA90 + 0x1C*i)
+    WriteMemory("int", zombies[i][1], 0x69DA8C + 0x1C*i)
 
 #Seed packet rendering on the seed select screen
 
@@ -1671,6 +1876,123 @@ WriteMemory("unsigned char", [
 ], 0x452331)
 WriteMemory("unsigned char", 0, 0x452339)
 WriteMemory("unsigned char", 0, 0x452365)
+
+
+
+#Random conveyors
+
+WriteMemory("unsigned char", [
+0x75, 0x0a,                         #jne   conveyor.locB
+0xbf, 0x60, 0x2f, 0x42, 0x00,       #        movl $0x422f60, %edi #1-10
+0xe9, 0xef, 0x00, 0x00, 0x00,       #jmp  conveyor.locA #422e3b
+                                    #conveyor.locB:
+
+0x3b, 0xc6,                         #cmpl %esi, %eax
+0x75, 0x0a,                         #jne  conveyor.locC
+0xbf, 0x90, 0x2f, 0x42, 0x00,       #        movl $0x422f90, %edi #2-10
+0xe9, 0xe1, 0x00, 0x00, 0x00,       #jmp  conveyor.locA #422e49
+                                    #conveyor.locC:
+
+0x83, 0xf8, 0x1e,                   #cmpl $0x1e, %eax
+0x75, 0x0a,                         #jne  conveyor.locD
+0xbf, 0xc0, 0x2f, 0x42, 0x00,       #        movl $0x422fc0, %edi #3-10
+0xe9, 0xd2, 0x00, 0x00, 0x00,       #jmp  conveyor.locA #422e58
+                                    #conveyor.locD:
+
+0x83, 0xf8, 0x28,                   #cmpl $0x28, %eax
+0x75, 0x0a,                         #jne  conveyor.locE
+0xbf, 0xf0, 0x2f, 0x42, 0x00,       #        movl $0x422ff0, %edi #4-10
+0xe9, 0xc3, 0x00, 0x00, 0x00,       #jmp  conveyor.locA #422e67
+                                    #conveyor.locE:
+
+0x8b, 0x4c, 0x24, 0x10,             #movl  0x10(%esp), %ecx
+0xe8, 0x60, 0x0b, 0x03, 0x00,       #call  0x4539d0 #422e70
+0x84, 0xc0,                         #testb %al,         %al
+0x74, 0x0a,                         #je    conveyor.locF
+0xbf, 0x20, 0x30, 0x42, 0x00,       #        movl $0x423020, %edi #5-10
+0xe9, 0xac, 0x00, 0x00, 0x00,       #jmp   conveyor.locA #422e7e
+                                    #conveyor.locF:
+
+0x8b, 0xc1,                         #movl  %ecx, %eax
+0xe8, 0x9b, 0x09, 0x03, 0x00,       #call  0x453820 #422e85
+0x84, 0xc0,                         #testb %al,   %al
+0x74, 0x0a,                         #je    conveyor.locG
+0xbf, 0x50, 0x30, 0x42, 0x00,       #        movl $0x423050, %edi #shovel level????? wtf is that
+0xe9, 0x97, 0x00, 0x00, 0x00,       #jmp   conveyor.locA #422e93
+                                    #conveyor.locG:
+
+0x8b, 0x81, 0xf8, 0x07, 0x00, 0x00, #movl 0x7f8(%ecx), %eax
+0x83, 0xf8, 0x21,                   #cmpl $0x21,       %eax
+0x89, 0x44, 0x24, 0x14,             #movl %eax,  0x14(%esp)
+0x75, 0x0a,                         #jne  conveyor.locH
+0xbf, 0x80, 0x30, 0x42, 0x00,       #        movl $0x423080, %edi #wnb2
+0xe9, 0x7e, 0x00, 0x00, 0x00,       #jmp  conveyor.locA #422eac
+                                    #conveyor.locH:
+
+0xe8, 0x8f, 0x09, 0x03, 0x00,       #call  0x453840 #422eb1
+0x84, 0xc0,                         #testb %al, %al
+0x74, 0x0a,                         #je    conveyor.locI
+0xbf, 0xb0, 0x30, 0x42, 0x00,       #        movl $0x4230b0, %edi #wnb1 and 1-5
+0xe9, 0x6b, 0x00, 0x00, 0x00,       #jmp   conveyor.locA #422ebf
+                                    #conveyor.locI:
+
+0xe8, 0xfc, 0x09, 0x03, 0x00,       #call  0x4538c0 #422ec4
+0x84, 0xc0,                         #testb %al, %al
+0x74, 0x0a,                         #je    conveyor.locJ
+0xbf, 0xe0, 0x30, 0x42, 0x00,       #        movl $0x4230e0, %edi #btlz
+0xe9, 0x58, 0x00, 0x00, 0x00,       #jmp   conveyor.locA #422ed2
+                                    #conveyor.locJ:
+
+0xe8, 0x49, 0x0a, 0x03, 0x00,       #call  0x453920 #422ed7
+0x84, 0xc0,                         #testb %al, %al
+0x74, 0x0a,                         #je    conveyor.locK
+0xbf, 0x10, 0x31, 0x42, 0x00,       #        movl $0x423110, %edi #stormy night
+0xe9, 0x45, 0x00, 0x00, 0x00,       #jmp   conveyor.locA #422ee5
+                                    #conveyor.locK:
+
+0xe8, 0x66, 0x0a, 0x03, 0x00,       #call  0x453950 #422eea
+0x84, 0xc0,                         #testb %al, %al
+0x74, 0x0a,                         #je    conveyor.locL
+0xbf, 0x40, 0x31, 0x42, 0x00,       #        movl $0x423140, %edi #bungee blitz
+0xe9, 0x32, 0x00, 0x00, 0x00,       #jmp   conveyor.locA #422ef8
+                                    #conveyor.locL:
+
+0x8b, 0x44, 0x24, 0x14,             #movl 0x14(%esp), %eax
+0x83, 0xf8, 0x1a,                   #cmpl $0x1a,      %eax
+0x75, 0x0a,                         #jne  conveyor.locM
+0xbf, 0x70, 0x31, 0x42, 0x00,       #        movl $0x423170, %edi #portal
+0xe9, 0x1f, 0x00, 0x00, 0x00,       #jmp  conveyor.locA #422f0b
+                                    #conveyor.locM:
+
+0x83, 0xf8, 0x1b,                   #cmpl $0x1b, %eax
+0x75, 0x0a,                         #jne  conveyor.locN
+0xbf, 0xa0, 0x31, 0x42, 0x00,       #        movl $0x4231a0, %edi #column
+0xe9, 0x10, 0x00, 0x00, 0x00,       #jmp  conveyor.locA #422f1a
+                                    #conveyor.locN:
+
+0x83, 0xf8, 0x15,                   #cmpl $0x15, %eax
+0x75, 0x0a,                         #jne  conveyor.locO
+0xbf, 0xd0, 0x31, 0x42, 0x00,       #        movl $0x4231d0, %edi #invisighoul
+0xe9, 0x01, 0x00, 0x00, 0x00,       #jmp  conveyor.locA #422f29
+                                    #conveyor.locO:
+
+0xcc,                               #int3 #code execution should never reach here
+
+                                    #conveyor.locA: #422f2a
+0x0f, 0xb6, 0x0f,                   #movzbl (%edi), %ecx
+0xe3, 0x13,                         #jecxz  conveyor.exloopA
+                                    #conveyor.loopA:
+0x0f, 0xb6, 0x44, 0x4f, 0xff,       #        movzbl -1(%edi,%ecx,2),   %eax
+0x0f, 0xb6, 0x14, 0x4f,             #        movzbl (%edi,%ecx,2),     %edx
+0x89, 0x44, 0xcc, 0x10,             #        movl   %eax, 0x10(%esp,%ecx,8)
+0x89, 0x54, 0xcc, 0x14,             #        movl   %edx, 0x14(%esp,%ecx,8)
+0xe2, 0xed,                         #loop conveyor.loopA
+                                    #conveyor.exloopA:
+0x0f, 0xb6, 0x3f,                   #movzbl (%edi), %edi
+0xe9, 0x61, 0x03, 0x00, 0x00        #jmp    0x4232ab #422f4a
+], 0x422e2f)
+
+
 
 #I haven't been bothered to label these yet
 
