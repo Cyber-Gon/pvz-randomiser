@@ -988,8 +988,8 @@ def randomiseConveyors(in_seed):
         d_znuts             = sorted(list(d_plant_set & {3, 23,30, 36}))                #wallnut, tallnut, pumpkin, garlic
         d_instas            = sorted(list(d_plant_set & {4, 12,14,19,21}))          #mine, hypno, ice, kelp, spikeweed
         d_ginstas           = sorted(list(d_plant_set & {2, 15,17,20,31}))          #cherry, doom, squash, jalapeno, magnet
-        d_passthrough       = sorted(list(d_plant_set & {6, 11,16,22,33,49,50}))    #chomper, grave buster, lily, torchwood, pot, explode o nut, giant wallnut
-        
+        #d_zomboss           = sorted(list(d_plant_set & {2, 10, 15, 30}))
+        d_passthrough       = sorted(list(d_plant_set & {6, 11,16,22,32, 33,49,50}))    #chomper, grave buster, lily, torchwood, cabbage, pot, explode o nut, giant wallnut        
         blackened_chance = random.choices([0.2,1.0],weights=[1,19])[0]
         peter_chance     = random.choices([0.2,1.0],weights=[1,19])[0]
 
@@ -1085,13 +1085,16 @@ def randomiseConveyors(in_seed):
                     for i in range(len(d_ginstas)):
                         r_plant_set.add(r_ginstas[i])
                         r_dict[r_ginstas[i]] = int(r_ginstas_weights[i]*wmul[allowed_ginstas.index(r_ginstas[i])])
+                random_bs = random.sample([(36,10),(37,3),(25,4),(28,8),(21,8),(38, 8),(22, 8),(33, 8)], int((random.random()**2)*4)) #garlic, umbrella leaf, plantern, split pea, spikeweed, more marigolds, torchwood, pot
+
             else:
+                random_bs = random.sample([(36,10),(37,3),(25,4),(28,8),(21,8),(38, 8),(22, 8),(33, 8)], int((random.random()**2)*4)) #garlic, umbrella leaf, plantern, split pea, spikeweed, more marigolds, torchwood, pot
                 r_plant_set.add(14)
-                r_dict[14]    =  8
+                r_dict[14]    =  8*(len(r_plant_set)-5)
                 r_plant_set.add(20)
-                r_dict[20]    = 12
-            
-            random_bs = random.sample([(36,10),(37,3),(25,4),(28,8),(21,8),(38, 8),(22, 8),(33, 8)], int((random.random()**2)*4)) #garlic, umbrella leaf, plantern, split pea, spikeweed, more marigolds, torchwood, pot
+                r_dict[20]    = 10*(len(r_plant_set)-6)
+                r_dict[39]    = 10*(len(r_plant_set)-6)
+
         else:
             random_bs = [(3,random.randint(60,90))]
         
