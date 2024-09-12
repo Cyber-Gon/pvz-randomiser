@@ -874,7 +874,7 @@ def randomiseStartingWave(startingWave):
 def randomiseCost():
     color_array = []
     for i in range(0, 48):
-        if i!=1 and i!=8 and i!=16: #sunflower, puff, seashroom are exceptions
+        if i!=1 and i!=8 and i!=24: #sunflower, puff, seashroom are exceptions
             divider=random.uniform(1,2)
             power=random.choice([-1, 1])
             color_array.append(round(((divider-1.0)**0.5)*127) + ((1-power)<<6))
