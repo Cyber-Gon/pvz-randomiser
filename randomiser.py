@@ -903,7 +903,7 @@ def randomiseCooldown():
             newCooldown=round(plants[i][1] * x)
             min_green_blue_value = 110 # the smaller, the redder plants will be, 0#255 range
             # color has less green and blue components the bigger cooldown relative to base cooldown is. But also, bigger default cooldowns become redder a little bit faster
-            color = clamp(1 - ((max(x, 0.6) - 0.6) / 1.4)**1.5 * (plants[i][1] * 0.00004 + 0.9), 0, 1) \
+            color = clamp(1 - ((max(x, 0.5) - 0.5) / 1.5), 0, 1) \
                     * (255 - min_green_blue_value) + min_green_blue_value
             color_array.append(round(clamp(color, 0, 255)))
             WriteMemory("int", newCooldown , 0x69F2C4 + 0x24*i)
@@ -1466,7 +1466,7 @@ if randomCooldowns.get():
         0xDA,0x35,0xD0,0x54,0x65,0x00,      # fidiv dword ptr [popcapgame1.exe+2554D0] // div by 100
         0x51,                               # push ecx // temp storage for double
         0x51,                               # push ecx // temp storage for double
-        0xDD,0x14,0x24,                     # fst qword ptr [esp] // store cooldown in seconds
+        0xDD,0x1C,0x24,                     # fstp qword ptr [esp] // store cooldown in seconds
         0x68,0xDC,0x7D,0x46,0x00,           # push popcapgame1.exe+67DDC // format string
         0xE8,0xCA,0x8E,0x14,0x00,           # call popcapgame1.exe+1B0CA0 // StrFormat
         0x83,0xC4,0x0C,                     # add esp,0C // flush params
@@ -1524,7 +1524,7 @@ WriteMemory("unsigned char", [
     0xDA,0x35,0xB0,0xEC,0x75,0x00,      # fidiv dword ptr [popcapgame1.exe+35ECB0]
     0xDA,0x4E,0x34,                     # fimul [esi+34] // adjust already set green\blue values, so greyed out plants are still dark, but reddish. Red stays the same
     0xDB,0x56,0x34,                     # fist dword ptr [esi+34] // green
-    0xDB,0x56,0x38,                     # fist dword ptr [esi+38] // blue
+    0xDB,0x5E,0x38,                     # fistp dword ptr [esi+38] // blue
     0x58,                               # pop eax // restore stack
     0xEB,0x11,                          # jmp popcapgame1.exe+251CD9 // continue normal code
     0xC6,0x46,0x48,0x01,                # mov byte ptr [esi+48],01 // set ColorizeImage
