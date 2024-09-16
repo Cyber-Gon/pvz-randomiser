@@ -211,6 +211,26 @@ randomZombies    = BooleanVar(value=False)
 randomConveyors  = StringVar(value="False")
 seed=str(random.randint(1,999999999999))
 
+if hasSave:
+    challengeMode.set(  eval(fileInfo[4].strip()))
+    shopless.set(       eval(fileInfo[5].strip()))
+    noRestrictions.set( eval(fileInfo[6].strip()))
+    noAutoSlots.set(    eval(fileInfo[7].strip()))
+    imitater.set(       eval(fileInfo[8].strip()))
+    randomisePlants.set(eval(fileInfo[9].strip()))
+    seeded.set(         eval(fileInfo[10].strip()))
+    upgradeRewards.set( eval(fileInfo[11].strip()))
+    randomWeights.set(  eval(fileInfo[12].strip()))
+    randomWavePoints.set(    fileInfo[13].strip())
+    startingWave.set(        fileInfo[14].strip())
+    randomCost.set(     eval(fileInfo[15].strip()))
+    randomCooldowns.set(eval(fileInfo[16].strip()))
+    costTextToggle.set(eval(fileInfo[17].strip()))
+    randomZombies.set(eval(fileInfo[18].strip()))
+    randomConveyors.set(str(fileInfo[19].strip()))
+    cooldownColoring.set(str(fileInfo[20].strip()))
+    if fileInfo[1]=="finished\n":
+        hasSave=False
 
 def clamp(n, smallest, largest): return max(smallest, min(n, largest))
 
@@ -259,6 +279,7 @@ def cooldownButtonClick():
     else:
         randomCooldowns.set("False")
         cooldownColoringToggle.config(state=DISABLED)
+
 
 def noRestrictionsButtonClick():
     global noRestrictions, challengeMode, challengeButton
@@ -436,6 +457,16 @@ entry.grid(row=0, column=1, sticky=W) #positioning this widget on the screen
 #create a text box widget
 outputText=Text(window, width=120, height=15, wrap=WORD, background="yellow")
 outputText.grid(row=5, column=0, columnspan=10, sticky=W)
+
+if randomCost.get():
+    costTextButton.config(state=NORMAL)
+if randomCooldowns.get():
+    cooldownColoringToggle.config(state=NORMAL)
+if noRestrictions.get():
+    challengeButton.config(state=DISABLED)
+if shopless.get():
+    manualMoneyButton.config(state=DISABLED)
+    
 
 window.mainloop() #Run the event loop
 print(seed)
@@ -1149,7 +1180,7 @@ def randomiseConveyors(in_seed):
         else:
             if level!= "5-10" and level!="wnb1" and level!="wnb2":
                 r_plant_set={0,2,3,4,5,6,7,8,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,26,27,28,29,30,31,32,33,34,36,37,38,39} #no sunflower, sun shroom, plantern, or coffee bean
-                r_dict={0:5, 2:6, 3:5, 4:5, 5:5, 6:5, 7:5, 8:0, 10:0, 11:0, 12:0, 13:0, 14:0, 15:0, 16:0, 17:5, 18:6, 19:0, 20:6, 21:5, 22:5, 23:5, 24:0, 26:5, 27:0, 28:5, 29:6, 30:5, 31:0, 32:5, 33:0, 34:5, 36:5, 37:5, 38:5, 39:6}
+                r_dict={0:5, 2:5, 3:5, 4:5, 5:5, 6:5, 7:5, 8:0, 10:0, 11:0, 12:0, 13:0, 14:0, 15:0, 16:0, 17:5, 18:5, 19:0, 20:6, 21:5, 22:5, 23:5, 24:0, 26:5, 27:0, 28:5, 29:5, 30:5, 31:0, 32:5, 33:0, 34:5, 36:5, 37:5, 38:5, 39:5}
                 if has_water:
                     r_dict[16]=60
                     r_dict[19]=5
@@ -1168,6 +1199,7 @@ def randomiseConveyors(in_seed):
                     r_dict[32]=20
                     r_dict[34]=20
                     r_dict[39]=20
+                    r_dict[21]=0
                 if level=="4-10":
                     r_dict[26]=30
                     r_dict[27]=20
@@ -2227,8 +2259,12 @@ for i in range(50):
 
 WriteMemory("int",0,0x651190)
 
+linesToWrite=[seed, "finished", str(ReadMemory("int", 0x6A9EC0,0x82C,0x214)), str(ReadMemory("int",0x6A9EC0,0x82C, 0x28)), (challengeMode.get()), (shopless.get()), (noRestrictions.get()), (noAutoSlots.get()), (imitater.get()), (randomisePlants.get()), (seeded.get()), (upgradeRewards.get()), (randomWeights.get()), (randomWavePoints.get()), startingWave.get(), randomCost.get(), randomCooldowns.get(), costTextToggle.get(), randomZombies.get(), randomConveyors.get(), cooldownColoring.get()]
 saveFile=open('saveFile.txt', 'w')
-saveFile.write("")
+for k in range(len(linesToWrite)):
+    linesToWrite[k]=str(linesToWrite[k])
+    linesToWrite[k]=linesToWrite[k]+"\n"
+saveFile.writelines(linesToWrite)
 saveFile.close()
 
 if randomZombies.get():
