@@ -212,6 +212,9 @@ randomConveyors  = StringVar(value="False")
 seed=str(random.randint(1,999999999999))
 
 if hasSave:
+    if len(fileInfo)<21:
+        for i in range(0, 21-len(fileInfo)):
+            fileInfo.append("False\n")
     challengeMode.set(  eval(fileInfo[4].strip()))
     shopless.set(       eval(fileInfo[5].strip()))
     noRestrictions.set( eval(fileInfo[6].strip()))
