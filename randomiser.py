@@ -2059,6 +2059,87 @@ WriteMemory("unsigned char", [
 0xab, 0x2f, 0xc4, 0x7f, 0xfd
 ], 0x423491)
 
+WriteMemory("unsigned char", [
+0x7e, 0x32,                               #jle  0x42344f <.text+0x2244f>
+0x8b, 0x44, 0x24, 0x10,                   #movl 0x10(%esp), %eax
+0x83, 0xf8, 0x04,                         #cmpl $0x4,       %eax
+0x7c, 0x09,                               #jl   0x42342f <.text+0x2242f>
+0xc7, 0x46, 0x04, 0x01, 0x00, 0x00, 0x00, #movl $0x1,  0x4(%esi)
+0xeb, 0x20,                               #jmp  0x42344f <.text+0x2244f>
+0x83, 0xf8, 0x03,                         #cmpl $0x3,       %eax
+0x7c, 0x09,                               #jl   0x42343d <.text+0x2243d>
+0xc7, 0x46, 0x04, 0x05, 0x00, 0x00, 0x00, #movl $0x5,  0x4(%esi)
+0xeb, 0x12,                               #jmp  0x42344f <.text+0x2244f>
+0x8b, 0x8c, 0x24, 0xbc, 0x00, 0x00, 0x00, #movl 0xbc(%esp), %ecx
+0x8b, 0xd7,                               #movl %edi,       %edx
+0x3b, 0x4a, 0x68,                         #cmpl 0x68(%edx), %ecx
+0x75, 0x04,                               #jne  0x42344f <.text+0x2244f>
+0xd1, 0x6e, 0x04,                         #shrl $1,    0x4(%esi)
+0x90,                                     #nop  (1 byte)
+0x8b, 0x06,                               #movl (%esi), %eax
+0xe8, 0xaa, 0xe7, 0x22, 0x00              #call 0x651c00 #-0x423456
+], 0x42341b)
+WriteMemory("unsigned char", [ #upgrade plant + bean weight logic
+0x53,                                     #pushl %ebx
+0x2c, 0x28,                               #subb  $40,  %al
+0x72, 0x26,                               #jc    weightLogic.locA
+0x38, 0x07,                               #cmpb  $7,   %al
+0x77, 0x24,                               #ja    weightLogic.locA
+0x9c,                                     #        pushfd
+0x8b, 0x45, 0x08,                         #        movl   0x8(%ebp), %eax
+0x8b, 0x50, 0x04,                         #        movl   0x4(%eax), %edx
+0x0f, 0xb6, 0x98, 0x00, 0x13, 0x65, 0x00, #        movzbl 0x651300(%eax), %ebx
+0xe8, 0xd4, 0xb7, 0xdb, 0xff,             #        call   0x40d3f0 #-0x651c1c
+0x9d,                                     #        popfd
+0x75, 0x02,                               #        jne    weightLogic.locB
+0xd1, 0xe8,                               #                shrl $0x1, %eax
+                                          #        weightLogic.locB:
+0x3b, 0x44, 0x24, 0x18,                   #        cmpl   0x18(%esp), %eax
+0x77, 0x04,                               #        ja     weightLogic.locC
+0xc6, 0x46, 0x04, 0x00,                   #                movb $0, 0x4(%esi)
+                                          #        weightLogic.locC:
+0x5b,                                     #popl  %ebx
+0xc3,                                     #retl
+
+                                          #weightLogic.locA:
+0x04, 0x05,                               #addb $5, %al
+0x75, 0xfa,                               #jne  weightLogic.locC
+0x8b, 0x45, 0x08,                         #        movl  0x8(%ebp), %eax
+0x8b, 0x50, 0x04,                         #        movl  0x4(%eax), %edx
+0x33, 0xdb,                               #        xorl  %ebx,      %ebx
+0x56,                                     #        pushl %esi
+0x53,                                     #        pushl %ebx
+0x89, 0xe6,                               #        movl  %esp,      %esi
+0x89, 0x1c, 0x24,                         #        movl  %ebx,    (%esp)
+0xe8, 0x0b, 0xad, 0xdc, 0xff,             #        call  0x41c950 #-0x651c45
+0x84, 0xc0,                               #        testb %al,        %al
+0x74, 0x19,                               #        je    weightLogic.exloopA:
+                                          #        weightLogic.loopA:
+0x8b, 0x04, 0x24,                         #                movl  (%esp),      %eax
+0x80, 0xb8, 0x43, 0x01, 0x00, 0x00, 0x01, #                cmpl  $0x1, 0x143(%eax)
+0xf5,                                     #                cmc
+0x83, 0xd3, 0x00,                         #                adcl  $0x0,        %ebx
+0x89, 0xe6,                               #                movl  %esp,        %esi
+0xe8, 0xf2, 0xac, 0xdc, 0xff,             #                call  0x41c950 #-0x651c5e
+0x84, 0xc0,                               #                testb %al, %al
+0x75, 0xe7,                               #        jne   weightLogic.loopA
+                                          #        weightLogic.exloopA:
+0x85, 0xdb,                               #        testl %ebx, %ebx
+0x5b,                                     #        popl  %ebx
+0x5e,                                     #        popl  %esi
+0x75, 0x04,                               #        jne   weightLogic.locD
+0xc6, 0x46, 0x04, 0x00,                   #                movb $0, 0x4(%esi)
+                                          #        weightLogic.locD:
+0x5b,                                     #popl  %ebx
+0xc3                                      #retl
+
+], 0x651c00)
+WriteMemory("unsigned char", [ #upgrade plant table
+ 7,  1, 10, 16, 39, 31, 21, 34 #repeater, sunflower, fume, lily, melon, magnet, spikeweed, kernel
+], 0x651300)
+
+
+
 #I haven't been bothered to label these yet
 
 WriteMemory("unsigned char", [
