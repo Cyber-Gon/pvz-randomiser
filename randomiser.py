@@ -209,12 +209,17 @@ costTextToggle   = BooleanVar(value=False)
 cooldownColoring = StringVar(value="False")
 randomZombies    = BooleanVar(value=False)
 randomConveyors  = StringVar(value="False")
+enableDave       = StringVar(value="False")
+davePlantsCount  = IntVar(value=3)
 seed=str(random.randint(1,999999999999))
 
 if hasSave:
     if len(fileInfo)<21:
-        for i in range(0, 21-len(fileInfo)):
-            fileInfo.append("False\n")
+        fileInfo.append("False") # cooldownColoring
+    if len(fileInfo)<22:
+        fileInfo.append("False") # enableDave
+    if len(fileInfo)<23:
+        fileInfo.append("3") #davePlantsCount
     challengeMode.set(  eval(fileInfo[4].strip()))
     shopless.set(       eval(fileInfo[5].strip()))
     noRestrictions.set( eval(fileInfo[6].strip()))
@@ -232,6 +237,8 @@ if hasSave:
     randomZombies.set(eval(fileInfo[18].strip()))
     randomConveyors.set(str(fileInfo[19].strip()))
     cooldownColoring.set(str(fileInfo[20].strip()))
+    enableDave.set(str(fileInfo[21].strip()))
+    davePlantsCount.set(str(fileInfo[22].strip()))
     if fileInfo[1]=="finished\n":
         hasSave=False
 
@@ -279,8 +286,8 @@ def cooldownButtonClick():
     global cooldownColoringToggle, randomCooldowns
     if randomCooldowns.get():
         cooldownColoringToggle.config(state=NORMAL)
+        cooldownColoringToggle.state(["readonly"])
     else:
-        randomCooldowns.set("False")
         cooldownColoringToggle.config(state=DISABLED)
 
 
@@ -301,7 +308,7 @@ def shoplessButtonClick():
         manualMoneyButton.config(state=NORMAL)
 
 def continueButtonClick():
-    global seed, challengeMode, shopless, noRestrictions, noAutoSlots, imitater, randomisePlants, seeded, upgradeRewards, randomWeights, randomWavePoints, startingWave, randomCost, randomCooldowns, costTextToggle, randomZombies, randomConveyors, cooldownColoring, saved, savePoint, fileInfo, jumpLevel
+    global seed, challengeMode, shopless, noRestrictions, noAutoSlots, imitater, randomisePlants, seeded, upgradeRewards, randomWeights, randomWavePoints, startingWave, randomCost, randomCooldowns, costTextToggle, randomZombies, randomConveyors, cooldownColoring, enableDave, davePlantsCount, saved, savePoint, fileInfo, jumpLevel
     seed=fileInfo[0].strip()
     savePoint=int(fileInfo[1].strip())
     WriteMemory("int", int(fileInfo[2].strip()), 0x6A9EC0,0x82C,0x214) #slots
@@ -324,6 +331,8 @@ def continueButtonClick():
     randomZombies.set(eval(fileInfo[18].strip()))
     randomConveyors.set(str(fileInfo[19].strip()))
     cooldownColoring.set(str(fileInfo[20].strip()))
+    enableDave.set(str(fileInfo[21].strip()))
+    davePlantsCount.set(str(fileInfo[22].strip()))
     saved.set(True)
     jumpLevel=""
     window.destroy()
@@ -447,6 +456,41 @@ conveyorButton.state(["readonly"])
 conveyorButton.bind('<<ComboboxSelected>>', lambda e: conveyorButton.selection_clear())
 conveyorButton.grid(row=2, column=5, sticky=W)
 
+enableDaveLabel=Label(window, text="CRAZY DAVE:")
+enableDaveLabel.grid(row=3, column=5, sticky=W)
+enableDaveButton=ttk.Combobox(window, text="CRAZY DAVE", width=16, textvariable=enableDave)
+enableDaveButton["values"] = ["False", "On", "On + plant upgrades"]
+enableDaveButton.state(["readonly"])
+
+enableDaveButton.bind('<<ComboboxSelected>>', lambda e: enableDaveChanged(enableDaveButton))
+enableDaveButton.grid(row=4, column=5, sticky=W)
+
+daveAmountLabel=Label(window, text="DAVE PLANTS COUNT:")
+daveAmountLabel.grid(row=1, column=6, sticky=W)
+daveAmountButton=ttk.Combobox(window, text="DAVE PLANTS COUNT", width=16 )#command=randomConveyorButtonClick)
+daveAmountButton["values"] = [1, 2, 3, 4, 5]
+daveAmountButton.state(["readonly"])
+daveAmountButton.bind('<<ComboboxSelected>>', lambda e: daveAmountChanged(daveAmountButton))
+daveAmountButton.current(davePlantsCount.get() - 1) # index of 2 means 3 plants
+daveAmountButton.grid(row=2, column=6, sticky=W)
+if (enableDave.get() == 'False'):
+    daveAmountButton.config(state=DISABLED)
+
+def daveAmountChanged(button):
+    global davePlantsCount
+    n = int(button.get())
+    davePlantsCount.set(n)
+    button.selection_clear()
+
+def enableDaveChanged(button):
+    global daveAmountButton, enableDave
+    if enableDave.get() != 'False':
+        daveAmountButton.config(state=NORMAL)
+        daveAmountButton.state(["readonly"])
+    else:
+        daveAmountButton.config(state=DISABLED)
+    button.selection_clear()
+
 closeButton=Button(window, text="SUBMIT SETTINGS", width=16, command=closeButtonClick)
 closeButton.grid(row=0, column=6, sticky=W)
 
@@ -490,6 +534,8 @@ print("Random Cooldowns:",   str(randomCooldowns.get()))
 print("Cooldown seed coloring:",   str(cooldownColoring.get()))
 print("Random Zombies:",     str(randomZombies.get()))
 print("Random Conveyors:",   str(randomConveyors.get()))
+print("Crazy Dave:",         str(enableDave.get()))
+print("Dave Plants Count:",  str(davePlantsCount.get()))
 
 LEVEL_PLANTS = [
     0,
@@ -1588,7 +1634,7 @@ if randomCooldowns.get() and cooldownColoring.get() != 'False':
 
 
 WriteMemory("unsigned char", [
-0xe8, 0x1a, 0x9a, 0x1c, 0x00, #call  0x651bc0
+0xe8, 0x1a, 0x9a, 0x1c, 0x00, #call  0x651be0
 0x8d, 0x54, 0x24, 0x3c,       #leal  0x3c(%esp), %edx
 0x52,                         #pushl %edx
 0x50,                         #pushl %eax
@@ -2203,6 +2249,143 @@ WriteMemory("unsigned char", [
 0xeb, 0xee                    #jmp  0x40bded
 ], 0x40bdeb)
 
+
+# Crazy Dave stuff
+# I know this is a lot of code, but I'm not sure how to make it better - a lot of it is for umbrella/blover/torchwood.
+# We need a lot of bytes to check whether umbrella/blover/torchwood are unlocked to make it work like in vanilla,
+# and vanilla assumes these plants are unlocked already
+WriteMemory("unsigned char", [
+0x56,                    # push esi // store original index
+0x8B,0x34,0xB5,0x98,0x10,0x65,0x00,     # mov esi,[esi*4+popcapgame1.exe+251098] // load real plant
+0xE8,0x03,0xB1,0xDC,0xFF,               # call popcapgame1.exe+1CC60 
+0xE9,0x31,0x24,0xE3,0xFF,               # jmp popcapgame1.exe+83F93
+0xC7,0x44,0xF4,0x14,0x00,0x00,0x00,0x00, # mov [esp+esi*8+14],00000000 // store 0 for weight
+0xE9,0x14,0x25,0xE3,0xFF,               # jmp popcapgame1.exe+84083
+0xC7,0x44,0xF4,0x14,0x01,0x00,0x00,0x00, # mov [esp+esi*8+14],00000001 // store 1 for weight
+0xE9,0xFD,0x24,0xE3,0xFF,               # jmp popcapgame1.exe+84079
+0x83,0x3D,0x90,0x10,0x65,0x00,(plants_array.index(37)-1),     # cmp dword ptr [popcapgame1.exe+251090],umbrella // umbrella workaround
+0x0F,0x8E,0x2C,0x25,0xE3,0xFF,          # jng popcapgame1.exe+840B5
+0x80,0xB8,0xEA,0x54,0x00,0x00,0x00,     # cmp byte ptr [eax+000054EA],00
+0xE9,0x0A,0x25,0xE3,0xFF,               # jmp popcapgame1.exe+8409F
+0x83,0x3D,0x90,0x10,0x65,0x00,(plants_array.index(27)-1),     # cmp dword ptr [popcapgame1.exe+251090],blover // blover workaround
+0x0F,0x8E,0x63,0x25,0xE3,0xFF,          # jng popcapgame1.exe+84105
+0x80,0xB8,0xE4,0x54,0x00,0x00,0x00,     # cmp byte ptr [eax+000054E4],00
+0xE9,0x0E,0x25,0xE3,0xFF,               # jmp popcapgame1.exe+840BC
+0x83,0x3D,0x90,0x10,0x65,0x00,(plants_array.index(22)-1),     # cmp dword ptr [popcapgame1.exe+251090],torchwood // torchwood workaround
+0x0F,0x8E,0x65,0x25,0xE3,0xFF,          # jng popcapgame1.exe+84120
+0x8B,0x88,0x4C,0x55,0x00,0x00,          # mov ecx,[eax+0000554C]
+0xE9,0x45,0x25,0xE3,0xFF,               # jmp popcapgame1.exe+8410B
+0x83,0xF9,0x31,                         # cmp ecx,31 // fix for when Dave is unable to pick any more plants - terminate iteration
+0x75,0x0A,                              # jne popcapgame1.exe+251BD5
+0xB9,0x01,0x00,0x00,0x00,               # mov ecx,00000001
+0xE9,0x32,0x26,0xE3,0xFF,               # jmp popcapgame1.exe+84207
+0x8B,0x45,0x08,                         # mov eax,[ebp+08]
+0x8B,0xCB,                              # mov ecx,ebx
+0xE9,0xDC,0x25,0xE3,0xFF,               # jmp popcapgame1.exe+841BB
+], 
+0x651b50)
+
+if enableDave.get() != 'False':
+    def remove_dave_on_exit():
+        WriteMemory("unsigned char", [
+            0x7e, 0x06, # original code  
+            ],
+            0x483F2A)
+    atexit.register(remove_dave_on_exit) # easy to do, so will give player an option to forget that they chose crazy dave
+
+    WriteMemory("unsigned char", [
+        0x66, 0x90, # nop 2 // removes jump if this is first adventure  
+        ], 
+        0x483F2A)
+    WriteMemory("unsigned char", [
+        0xE9,0xBD,0xDB,0x1C,0x00  # jmp popcapgame1.exe+251B50
+        ], 
+        0x483F8E)
+    WriteMemory("unsigned char", [
+        0xE9,0x0B,0xDA,0x1C,0x00  # jmp popcapgame1.exe+251BC6
+        ], 
+        0x4841B6)
+    WriteMemory("unsigned char", [
+        0x8B,0x5C,0x24,0x04       # mov ebx,[esp+04]
+        ], 
+        0x453b1c)
+    WriteMemory("unsigned char", [
+        0x89,0x5C,0x24,0x10       # mov [esp+10],ebx // stack adjustment
+        ], 
+        0x483f98)
+    WriteMemory("unsigned char", [
+        0x89,0x5C,0x24,0x10       # mov [esp+10],ebx // stack adjustment
+        ], 
+        0x483fd8)
+    WriteMemory("unsigned char", [
+        0x8B,0x5C,0x24,0x10       # mov ebx,[esp+10] // stack adjustment
+        ], 
+        0x484003)
+    WriteMemory("unsigned char", [
+        0xE8,0x19,0xFB,0xFC,0xFF  # call popcapgame1.exe+53B1C
+        ], 
+        0x483ffe)
+    WriteMemory("unsigned char", [
+        0x5E,                     # pop esi
+        0xE9,0xF8,0xDA,0x1C,0x00, # jmp popcapgame1.exe+251B6F
+        0x66,0x90                 # nop 2
+        ], 
+        0x484071)
+    WriteMemory("unsigned char", [
+        0x5E,                     # pop esi
+        0xE9,0xE1,0xDA,0x1C,0x00, # jmp popcapgame1.exe+251B62
+        0x66,0x90                 # nop 2
+        ], 
+        0x48407B)
+    WriteMemory("unsigned char", [
+        0xE9,0xDF,0xDA,0x1C,0x00, # jmp popcapgame1.exe+251B7C
+        0x66,0x90                 # nop 2
+        ], 
+        0x484098)
+    WriteMemory("unsigned char", [
+        0xE9,0xDB,0xDA,0x1C,0x00, # jmp popcapgame1.exe+251B95
+        0x66,0x90                 # nop 2
+        ], 
+        0x4840b5)
+    WriteMemory("unsigned char", [
+        0xE9,0xA4,0xDA,0x1C,0x00, # jmp popcapgame1.exe+251BAE
+        0x90                      # nop
+        ], 
+        0x484105)
+    WriteMemory("unsigned char", [
+        0xE9,0xF3,0x2C,0x00,0x00, # jmp popcapgame1.exe+86F10 // jump to UpdateAfterPurchase function to enable start button if needed,
+        0x90                      # nop                       // stack is aligned in exact way needed to jump to that function as if it's the call
+        ], 
+        0x484218)
+    WriteMemory("unsigned char", [
+        davePlantsCount.get()     # max amount of iterations to pick a plant
+        ], 
+        0x48420B)
+    WriteMemory("unsigned int", [
+        (plants_array.index(37)-1)*8+20 # umbrella position on stack of weights
+        ], 
+        0x4840ad)
+    WriteMemory("unsigned int", [
+        (plants_array.index(27)-1)*8+20 # blover position on stack of weights
+        ], 
+        0x4840fd)
+    WriteMemory("unsigned int", [
+        (plants_array.index(22)-1)*8+20 # torchwood position on stack of weights
+        ], 
+        0x484118)
+    
+    if enableDave.get() == 'On + plant upgrades':
+        WriteMemory("unsigned char", [
+            0x83,0x3D,0x90,0x10,0x65,0x00,(davePlantsCount.get()),     # cmp dword ptr [popcapgame1.exe+251090],picks_count
+            0x7F,0x1F,                 # jg popcapgame1.exe+84062 // if we have unlocked > n_of_picks base plants, we skip checks for upgrade, jump to imi/umb/blover
+            0x83,0xFE,0x28,              # cmp esi,28 // if we haven't unlocked enough plants, still don't pick upgrades
+            0x7D,0x33,                 # jnl popcapgame1.exe+8407B // this is upgrade and it's too early, don't pick it
+            0xEB,0x18,                 # jmp popcapgame1.exe+84062 // this is normal plant, jump to imi/umb/blover check
+            ], 
+            0x48403A)
+    
+
+
 try:
     leftoverZombies=open('leftoverZombies.txt', 'r')
 except:
@@ -2239,7 +2422,7 @@ for i in range(50):
         if savePoint-1==i:
             saved.set(False)
     if not saved.get() and i!=0:
-        linesToWrite=[seed, (i+1), str(ReadMemory("int", 0x6A9EC0,0x82C,0x214)), str(ReadMemory("int",0x6A9EC0,0x82C, 0x28)), (challengeMode.get()), (shopless.get()), (noRestrictions.get()), (noAutoSlots.get()), (imitater.get()), (randomisePlants.get()), (seeded.get()), (upgradeRewards.get()), (randomWeights.get()), (randomWavePoints.get()), startingWave.get(), randomCost.get(), randomCooldowns.get(), costTextToggle.get(), randomZombies.get(), randomConveyors.get(), cooldownColoring.get()]
+        linesToWrite=[seed, (i+1), str(ReadMemory("int", 0x6A9EC0,0x82C,0x214)), str(ReadMemory("int",0x6A9EC0,0x82C, 0x28)), (challengeMode.get()), (shopless.get()), (noRestrictions.get()), (noAutoSlots.get()), (imitater.get()), (randomisePlants.get()), (seeded.get()), (upgradeRewards.get()), (randomWeights.get()), (randomWavePoints.get()), startingWave.get(), randomCost.get(), randomCooldowns.get(), costTextToggle.get(), randomZombies.get(), randomConveyors.get(), cooldownColoring.get(), enableDave.get(), davePlantsCount.get()]
         saveFile=open('saveFile.txt', 'w')
         for k in range(len(linesToWrite)):
             linesToWrite[k]=str(linesToWrite[k])
@@ -2343,7 +2526,7 @@ for i in range(50):
 
 WriteMemory("int",0,0x651190)
 
-linesToWrite=[seed, "finished", str(ReadMemory("int", 0x6A9EC0,0x82C,0x214)), str(ReadMemory("int",0x6A9EC0,0x82C, 0x28)), (challengeMode.get()), (shopless.get()), (noRestrictions.get()), (noAutoSlots.get()), (imitater.get()), (randomisePlants.get()), (seeded.get()), (upgradeRewards.get()), (randomWeights.get()), (randomWavePoints.get()), startingWave.get(), randomCost.get(), randomCooldowns.get(), costTextToggle.get(), randomZombies.get(), randomConveyors.get(), cooldownColoring.get()]
+linesToWrite=[seed, "finished", str(ReadMemory("int", 0x6A9EC0,0x82C,0x214)), str(ReadMemory("int",0x6A9EC0,0x82C, 0x28)), (challengeMode.get()), (shopless.get()), (noRestrictions.get()), (noAutoSlots.get()), (imitater.get()), (randomisePlants.get()), (seeded.get()), (upgradeRewards.get()), (randomWeights.get()), (randomWavePoints.get()), startingWave.get(), randomCost.get(), randomCooldowns.get(), costTextToggle.get(), randomZombies.get(), randomConveyors.get(), cooldownColoring.get(), enableDave.get(), davePlantsCount.get()]
 saveFile=open('saveFile.txt', 'w')
 for k in range(len(linesToWrite)):
     linesToWrite[k]=str(linesToWrite[k])
