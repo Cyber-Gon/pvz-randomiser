@@ -2255,7 +2255,7 @@ WriteMemory("unsigned char", [
 # We need a lot of bytes to check whether umbrella/blover/torchwood are unlocked to make it work like in vanilla,
 # and vanilla assumes these plants are unlocked already
 WriteMemory("unsigned char", [
-0x56,                    # push esi // store original index
+0x56,                                   # push esi // store original index
 0x8B,0x34,0xB5,0x98,0x10,0x65,0x00,     # mov esi,[esi*4+popcapgame1.exe+251098] // load real plant
 0xE8,0x03,0xB1,0xDC,0xFF,               # call popcapgame1.exe+1CC60 
 0xE9,0x31,0x24,0xE3,0xFF,               # jmp popcapgame1.exe+83F93
@@ -2271,10 +2271,13 @@ WriteMemory("unsigned char", [
 0x0F,0x8E,0x63,0x25,0xE3,0xFF,          # jng popcapgame1.exe+84105
 0x80,0xB8,0xE4,0x54,0x00,0x00,0x00,     # cmp byte ptr [eax+000054E4],00
 0xE9,0x0E,0x25,0xE3,0xFF,               # jmp popcapgame1.exe+840BC
-0x83,0x3D,0x90,0x10,0x65,0x00,(plants_array.index(22)-1),     # cmp dword ptr [popcapgame1.exe+251090],torchwood // torchwood workaround
-0x0F,0x8E,0x65,0x25,0xE3,0xFF,          # jng popcapgame1.exe+84120
-0x8B,0x88,0x4C,0x55,0x00,0x00,          # mov ecx,[eax+0000554C]
-0xE9,0x45,0x25,0xE3,0xFF,               # jmp popcapgame1.exe+8410B
+0xA1,0x90,0x10,0x65,0x00,               # mov eax,[651090] // check for whether we're leaving at least 1 slot free
+0x48,                                   # dec eax
+0x39,0xC7,                              # cmp edi,eax
+0x0F,0x8C,0xC2,0x25,0xE3,0xFF,          # jl 0048417E // next iteration
+0x5f,                                   # pop edi // original code
+0xE9,0x51,0x26,0xE3,0xFF,               # jmp 00484213 // terminate picking plants
+0x90,0x90,0x90,0x90,                    # nops // before rework, there were instructions
 0x83,0xF9,0x31,                         # cmp ecx,31 // fix for when Dave is unable to pick any more plants - terminate iteration
 0x75,0x0A,                              # jne popcapgame1.exe+251BD5
 0xB9,0x01,0x00,0x00,0x00,               # mov ecx,00000001
@@ -2291,7 +2294,7 @@ if enableDave.get() != 'False':
             0x7e, 0x06, # original code  
             ],
             0x483F2A)
-    atexit.register(remove_dave_on_exit) # easy to do, so will give player an option to forget that they chose crazy dave
+    atexit.register(remove_dave_on_exit) # easy to do, so will give player on option to forget that they chose crazy dave
 
     WriteMemory("unsigned char", [
         0x66, 0x90, # nop 2 // removes jump if this is first adventure  
@@ -2347,11 +2350,11 @@ if enableDave.get() != 'False':
         0x66,0x90                 # nop 2
         ], 
         0x4840b5)
-    WriteMemory("unsigned char", [
-        0xE9,0xA4,0xDA,0x1C,0x00, # jmp popcapgame1.exe+251BAE
-        0x90                      # nop
-        ], 
-        0x484105)
+    # WriteMemory("unsigned char", [
+    #     0xE9,0xA4,0xDA,0x1C,0x00, # jmp popcapgame1.exe+251BAE
+    #     0x90                      # nop
+    #     ], 
+    #     0x484105)
     WriteMemory("unsigned char", [
         0xE9,0xF3,0x2C,0x00,0x00, # jmp popcapgame1.exe+86F10 // jump to UpdateAfterPurchase function to enable start button if needed,
         0x90                      # nop                       // stack is aligned in exact way needed to jump to that function as if it's the call
@@ -2361,6 +2364,11 @@ if enableDave.get() != 'False':
         davePlantsCount.get()     # max amount of iterations to pick a plant
         ], 
         0x48420B)
+    WriteMemory("unsigned char", [
+        0x7D,0x05,                # jnl 484213 // picked max allowed count of plants
+        0xE9,0x9B,0xD9,0x1C,0x00, # jmp 651BAE // check if we're leaving at least 1 slot free
+        ], 
+        0x48420C)
     WriteMemory("unsigned int", [
         (plants_array.index(37)-1)*8+20 # umbrella position on stack of weights
         ], 
@@ -2376,11 +2384,23 @@ if enableDave.get() != 'False':
     
     if enableDave.get() == 'On + plant upgrades':
         WriteMemory("unsigned char", [
-            0x83,0x3D,0x90,0x10,0x65,0x00,(davePlantsCount.get()),     # cmp dword ptr [popcapgame1.exe+251090],picks_count
-            0x7F,0x1F,                 # jg popcapgame1.exe+84062 // if we have unlocked > n_of_picks base plants, we skip checks for upgrade, jump to imi/umb/blover
-            0x83,0xFE,0x28,              # cmp esi,28 // if we haven't unlocked enough plants, still don't pick upgrades
-            0x7D,0x33,                 # jnl popcapgame1.exe+8407B // this is upgrade and it's too early, don't pick it
-            0xEB,0x18,                 # jmp popcapgame1.exe+84062 // this is normal plant, jump to imi/umb/blover check
+            0x83,0xFE,0x28,                     # cmp esi,28
+            0x7C,0x23,                          # jl 00484062
+            0x83,0x3D,0x90,0x10,0x65,0x00,(davePlantsCount.get() + 1 - davePlantsCount.get() // 5), # cmp dword ptr [00651090],picks_count
+            0x7E,0x33,                          # jle 0048407B
+            0x0F,0xB6,0x9E,0x32,0x40,0x48,0x00, # movzx ebx,byte ptr [esi+00484032]
+            0xE8,0xCC,0xFA,0xFC,0xFF,           # call 00453B20
+            0x84,0xC0,                          # test al,al
+            0x74,0x23,                          # je 0048407B
+            0xEB,0x08,                          # jmp 00484062
+            (plants_array.index(7)-1),
+            (plants_array.index(1)-1),
+            (plants_array.index(10)-1),
+            (plants_array.index(16)-1),
+            (plants_array.index(39)-1),
+            (plants_array.index(31)-1),
+            (plants_array.index(21)-1),
+            (plants_array.index(34)-1),
             ], 
             0x48403A)
     
