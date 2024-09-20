@@ -548,19 +548,19 @@ LEVEL_PLANTS = [
 
 CONVEYOR_DEFAULTS = {
     "1-10": (0x422f60, [( 0, 20), ( 2, 20), ( 3, 15), ( 7, 20), ( 5, 10), ( 6,  5), ( 4, 10)]),
-    "2-10": (0x422f90, [(11, 20), (14, 15), (15, 15), (12, 10), (13, 15), (10, 15), ( 8, 10)]),
-    "3-10": (0x422fc0, [(16, 25), (17,  5), (18, 25), (19,  5), (20, 10), (21, 10), (22, 10), (23, 10)]),
-    "4-10": (0x422ff0, [(16, 25), (24, 10), (31,  5), (27,  5), (26, 15), (29, 25), (28,  5), (30, 10)]),
-    "5-10": (0x423020, [(33, 55), (39, 10), (20, 12), (32, 10), (34,  5), (14,  8)]),
-    "shov": (0x423050, [( 0,100)]),
-    "wnb2": (0x423080, [( 3, 85), (49, 15), (50, 15)]),
-    "wnb1": (0x4230b0, [( 3, 85), (49, 15)]),
-    "btlz": (0x4230e0, [(16, 25), ( 3, 15), ( 0, 25), ( 2, 35)]),
-    "strm": (0x423110, [(16, 30), (26, 10), ( 0, 20), ( 8, 15), ( 2, 25)]),
-    " 5-5": (0x423140, [(33, 50), ( 6, 25), (30, 15), ( 2, 10)]),
-    "prtl": (0x423170, [( 0, 25), ( 7, 20), (22, 10), (26, 15), ( 3, 15), ( 2, 15)]),
-    "clmn": (0x4231a0, [(33,155), (39,  5), ( 6,  5), (30, 15), (20, 10), (17, 10)]),
-    "invs": (0x4231d0, [( 0, 25), ( 3, 15), (34,  5), (17, 15), (16, 30), (14, 10)]),
+    "2-10": (0x422f98, [(11, 20), (14, 15), (15, 15), (12, 10), (13, 15), (10, 15), ( 8, 10)]),
+    "3-10": (0x422fd0, [(16, 25), (17,  5), (18, 25), (19,  5), (20, 10), (21, 10), (22, 10), (23, 10)]),
+    "4-10": (0x423008, [(16, 25), (24, 10), (31,  5), (27,  5), (26, 15), (29, 25), (28,  5), (30, 10)]),
+    "5-10": (0x423040, [(33, 55), (39, 10), (20, 12), (32, 10), (34,  5), (14,  8)]),
+    "shov": (0x423078, [( 0,100)]),
+    "wnb2": (0x4230b0, [( 3, 85), (49, 15), (50, 15)]),
+    "wnb1": (0x4230e8, [( 3, 85), (49, 15)]),
+    "btlz": (0x423120, [(16, 25), ( 3, 15), ( 0, 25), ( 2, 35)]),
+    "strm": (0x423158, [(16, 30), (26, 10), ( 0, 20), ( 8, 15), ( 2, 25)]),
+    " 5-5": (0x423190, [(33, 50), ( 6, 25), (30, 15), ( 2, 10)]),
+    "prtl": (0x4231c8, [( 0, 25), ( 7, 20), (22, 10), (26, 15), ( 3, 15), ( 2, 15)]),
+    "clmn": (0x423200, [(33,155), (39,  5), ( 6,  5), (30, 15), (20, 10), (17, 10)]),
+    "invs": (0x423238, [( 0, 25), ( 3, 15), (34,  5), (17, 15), (16, 30), (14, 10)]),
 }
 
 SEED_STRINGS = [
@@ -1056,11 +1056,9 @@ def randomiseZombies(zombiesToRandomise, currentLevel, levels):
         return currentZombies
 
 def writeConveyor(addr, conveyor_data):
-    out    = [0 for i in range(1+2*len(conveyor_data))]
-    out[0] = len(conveyor_data)
-    for i in range(len(conveyor_data)):
-        out[i*2+1] = conveyor_data[i][0]
-        out[i*2+2] = conveyor_data[i][1]
+    out    = [0 for i in range(56)]
+    for i in conveyor_data:
+        out[i[0]] = i[1]
     WriteMemory("unsigned char", out, addr)
 
 def randspread(n, k):
@@ -1265,13 +1263,13 @@ def randomiseConveyors(in_seed):
         else:           
             randomised   = [(i, r_dict[i]) for i in sorted(list(r_plant_set))]
 
-        if len(randomised)>20: #21 is a hard limit for how many plants can be on the conveyor (for some reason)
-            itemsToDelete=len(randomised)-20
-            while itemsToDelete>0:
-                item=random.randint(0, len(randomised)-1)
-                if randomised[item][1]==5:
-                    randomised.pop(item)
-                    itemsToDelete -= 1                    
+        #if len(randomised)>20: #21 is a hard limit for how many plants can be on the conveyor (for some reason)
+        #    itemsToDelete=len(randomised)-20
+        #    while itemsToDelete>0:
+        #        item=random.randint(0, len(randomised)-1)
+        #        if randomised[item][1]==5:
+        #            randomised.pop(item)
+        #            itemsToDelete -= 1                    
             
         writeConveyor(CONVEYOR_DEFAULTS[level][0], randomised)
         
@@ -2020,19 +2018,19 @@ WriteMemory("unsigned char", [
 
 0x3b, 0xc6,                         #cmpl %esi, %eax
 0x75, 0x0a,                         #jne  conveyor.locC
-0xbf, 0x90, 0x2f, 0x42, 0x00,       #        movl $0x422f90, %edi #2-10
+0xbf, 0x98, 0x2f, 0x42, 0x00,       #        movl $0x422f98, %edi #2-10
 0xe9, 0xe1, 0x00, 0x00, 0x00,       #jmp  conveyor.locA #422e49
                                     #conveyor.locC:
 
 0x83, 0xf8, 0x1e,                   #cmpl $0x1e, %eax
 0x75, 0x0a,                         #jne  conveyor.locD
-0xbf, 0xc0, 0x2f, 0x42, 0x00,       #        movl $0x422fc0, %edi #3-10
+0xbf, 0xd0, 0x2f, 0x42, 0x00,       #        movl $0x422fd0, %edi #3-10
 0xe9, 0xd2, 0x00, 0x00, 0x00,       #jmp  conveyor.locA #422e58
                                     #conveyor.locD:
 
 0x83, 0xf8, 0x28,                   #cmpl $0x28, %eax
 0x75, 0x0a,                         #jne  conveyor.locE
-0xbf, 0xf0, 0x2f, 0x42, 0x00,       #        movl $0x422ff0, %edi #4-10
+0xbf, 0x08, 0x30, 0x42, 0x00,       #        movl $0x423008, %edi #4-10
 0xe9, 0xc3, 0x00, 0x00, 0x00,       #jmp  conveyor.locA #422e67
                                     #conveyor.locE:
 
@@ -2040,7 +2038,7 @@ WriteMemory("unsigned char", [
 0xe8, 0x60, 0x0b, 0x03, 0x00,       #call  0x4539d0 #422e70
 0x84, 0xc0,                         #testb %al,         %al
 0x74, 0x0a,                         #je    conveyor.locF
-0xbf, 0x20, 0x30, 0x42, 0x00,       #        movl $0x423020, %edi #5-10
+0xbf, 0x40, 0x30, 0x42, 0x00,       #        movl $0x423040, %edi #5-10
 0xe9, 0xac, 0x00, 0x00, 0x00,       #jmp   conveyor.locA #422e7e
                                     #conveyor.locF:
 
@@ -2048,7 +2046,7 @@ WriteMemory("unsigned char", [
 0xe8, 0x9b, 0x09, 0x03, 0x00,       #call  0x453820 #422e85
 0x84, 0xc0,                         #testb %al,   %al
 0x74, 0x0a,                         #je    conveyor.locG
-0xbf, 0x50, 0x30, 0x42, 0x00,       #        movl $0x423050, %edi #shovel level????? wtf is that
+0xbf, 0x78, 0x30, 0x42, 0x00,       #        movl $0x423078, %edi #shovel level????? wtf is that
 0xe9, 0x97, 0x00, 0x00, 0x00,       #jmp   conveyor.locA #422e93
                                     #conveyor.locG:
 
@@ -2056,72 +2054,75 @@ WriteMemory("unsigned char", [
 0x83, 0xf8, 0x21,                   #cmpl $0x21,       %eax
 0x89, 0x44, 0x24, 0x14,             #movl %eax,  0x14(%esp)
 0x75, 0x0a,                         #jne  conveyor.locH
-0xbf, 0x80, 0x30, 0x42, 0x00,       #        movl $0x423080, %edi #wnb2
+0xbf, 0xb0, 0x30, 0x42, 0x00,       #        movl $0x4230b0, %edi #wnb2
 0xe9, 0x7e, 0x00, 0x00, 0x00,       #jmp  conveyor.locA #422eac
                                     #conveyor.locH:
 
 0xe8, 0x8f, 0x09, 0x03, 0x00,       #call  0x453840 #422eb1
 0x84, 0xc0,                         #testb %al, %al
 0x74, 0x0a,                         #je    conveyor.locI
-0xbf, 0xb0, 0x30, 0x42, 0x00,       #        movl $0x4230b0, %edi #wnb1 and 1-5
+0xbf, 0xe8, 0x30, 0x42, 0x00,       #        movl $0x4230e8, %edi #wnb1 and 1-5
 0xe9, 0x6b, 0x00, 0x00, 0x00,       #jmp   conveyor.locA #422ebf
                                     #conveyor.locI:
 
 0xe8, 0xfc, 0x09, 0x03, 0x00,       #call  0x4538c0 #422ec4
 0x84, 0xc0,                         #testb %al, %al
 0x74, 0x0a,                         #je    conveyor.locJ
-0xbf, 0xe0, 0x30, 0x42, 0x00,       #        movl $0x4230e0, %edi #btlz
+0xbf, 0x20, 0x31, 0x42, 0x00,       #        movl $0x423120, %edi #btlz
 0xe9, 0x58, 0x00, 0x00, 0x00,       #jmp   conveyor.locA #422ed2
                                     #conveyor.locJ:
 
 0xe8, 0x49, 0x0a, 0x03, 0x00,       #call  0x453920 #422ed7
 0x84, 0xc0,                         #testb %al, %al
 0x74, 0x0a,                         #je    conveyor.locK
-0xbf, 0x10, 0x31, 0x42, 0x00,       #        movl $0x423110, %edi #stormy night
+0xbf, 0x58, 0x31, 0x42, 0x00,       #        movl $0x423158, %edi #stormy night
 0xe9, 0x45, 0x00, 0x00, 0x00,       #jmp   conveyor.locA #422ee5
                                     #conveyor.locK:
 
 0xe8, 0x66, 0x0a, 0x03, 0x00,       #call  0x453950 #422eea
 0x84, 0xc0,                         #testb %al, %al
 0x74, 0x0a,                         #je    conveyor.locL
-0xbf, 0x40, 0x31, 0x42, 0x00,       #        movl $0x423140, %edi #bungee blitz
+0xbf, 0x90, 0x31, 0x42, 0x00,       #        movl $0x423190, %edi #bungee blitz
 0xe9, 0x32, 0x00, 0x00, 0x00,       #jmp   conveyor.locA #422ef8
                                     #conveyor.locL:
 
 0x8b, 0x44, 0x24, 0x14,             #movl 0x14(%esp), %eax
 0x83, 0xf8, 0x1a,                   #cmpl $0x1a,      %eax
 0x75, 0x0a,                         #jne  conveyor.locM
-0xbf, 0x70, 0x31, 0x42, 0x00,       #        movl $0x423170, %edi #portal
+0xbf, 0xc8, 0x31, 0x42, 0x00,       #        movl $0x4231c8, %edi #portal
 0xe9, 0x1f, 0x00, 0x00, 0x00,       #jmp  conveyor.locA #422f0b
                                     #conveyor.locM:
 
 0x83, 0xf8, 0x1b,                   #cmpl $0x1b, %eax
 0x75, 0x0a,                         #jne  conveyor.locN
-0xbf, 0xa0, 0x31, 0x42, 0x00,       #        movl $0x4231a0, %edi #column
+0xbf, 0x00, 0x32, 0x42, 0x00,       #        movl $0x423200, %edi #column
 0xe9, 0x10, 0x00, 0x00, 0x00,       #jmp  conveyor.locA #422f1a
                                     #conveyor.locN:
 
 0x83, 0xf8, 0x15,                   #cmpl $0x15, %eax
 0x75, 0x0a,                         #jne  conveyor.locO
-0xbf, 0xd0, 0x31, 0x42, 0x00,       #        movl $0x4231d0, %edi #invisighoul
+0xbf, 0x38, 0x32, 0x42, 0x00,       #        movl $0x423238, %edi #invisighoul
 0xe9, 0x01, 0x00, 0x00, 0x00,       #jmp  conveyor.locA #422f29
                                     #conveyor.locO:
 
 0xcc,                               #int3 #code execution should never reach here
 
                                     #conveyor.locA: #422f2a
-0x0f, 0xb6, 0x0f,                   #movzbl (%edi), %ecx
-0xe3, 0x13,                         #jecxz  conveyor.exloopA
+0xb9, 0x38, 0x00, 0x00, 0x00,       #movl $56, %ecx
                                     #conveyor.loopA:
-0x0f, 0xb6, 0x44, 0x4f, 0xff,       #        movzbl -1(%edi,%ecx,2),   %eax
-0x0f, 0xb6, 0x14, 0x4f,             #        movzbl (%edi,%ecx,2),     %edx
-0x89, 0x44, 0xcc, 0x10,             #        movl   %eax, 0x10(%esp,%ecx,8)
-0x89, 0x54, 0xcc, 0x14,             #        movl   %edx, 0x14(%esp,%ecx,8)
+0x0f, 0xb6, 0x44, 0x0f, 0xff,       #        movzbl -1(%edi,%ecx),     %eax
+0x8d, 0x51, 0xff,                   #        leal   -1(%ecx),          %edx
+0x89, 0x54, 0xcc, 0x10,             #        movl   %edx, 0x10(%esp,%ecx,8)
+0x89, 0x44, 0xcc, 0x14,             #        movl   %eax, 0x14(%esp,%ecx,8)
+0x90,                               #        nop (1 byte)
 0xe2, 0xed,                         #loop conveyor.loopA
                                     #conveyor.exloopA:
-0x0f, 0xb6, 0x3f,                   #movzbl (%edi), %edi
-0xe9, 0x61, 0x03, 0x00, 0x00        #jmp    0x4232ab #422f4a
+0x8d, 0x79, 0x38,                   #leal 56(%ecx), %edi
+0xe9, 0x61, 0x03, 0x00, 0x00        #jmp  0x4232ab #422f4a
 ], 0x422e2f)
+for i in [0x422cd8, 0x4232d8, 0x4233a9, 0x423440]:
+    tmp = ReadMemory("unsigned int", i) + 0x120
+    WriteMemory("unsigned int", tmp, i)
 
 WriteMemory("unsigned char", [
 0x66, 0x90,                               #nop  (2 bytes)
@@ -2129,7 +2130,7 @@ WriteMemory("unsigned char", [
 0x8b, 0x80, 0x2c, 0x08, 0x00, 0x00,       #movl 0x82c(%eax),    %eax
 0x83, 0x78, 0x24, 0x32,                   #cmpl $0x32,    0x24(%eax)
 0x75, 0x72,                               #jne  0x423416
-0x8b, 0x9c, 0x24, 0xbc, 0x00, 0x00, 0x00, #movl 0xbc(%esp),     %ebx
+0x8b, 0x9c, 0x24, 0xdc, 0x01, 0x00, 0x00, #movl 0x1dc(%esp),    %ebx
 0x8b, 0xc3,                               #movl %ebx,           %eax
 0x83, 0xe3, 0x07,                         #andl $0x7,           %ebx
 0xc1, 0xe8, 0x03,                         #shrl $0x3,           %eax
@@ -2142,22 +2143,22 @@ WriteMemory("unsigned char", [
 
 WriteMemory("unsigned char", [
 0x7e, 0x32,                               #jle  0x42344f <.text+0x2244f>
-0x8b, 0x44, 0x24, 0x10,                   #movl 0x10(%esp), %eax
-0x83, 0xf8, 0x04,                         #cmpl $0x4,       %eax
+0x8b, 0x44, 0x24, 0x10,                   #movl 0x10(%esp),  %eax
+0x83, 0xf8, 0x04,                         #cmpl $0x4,        %eax
 0x7c, 0x09,                               #jl   0x42342f <.text+0x2242f>
-0xc7, 0x46, 0x04, 0x01, 0x00, 0x00, 0x00, #movl $0x1,  0x4(%esi)
+0xc7, 0x46, 0x04, 0x01, 0x00, 0x00, 0x00, #movl $0x1,   0x4(%esi)
 0xeb, 0x20,                               #jmp  0x42344f <.text+0x2244f>
-0x83, 0xf8, 0x03,                         #cmpl $0x3,       %eax
+0x83, 0xf8, 0x03,                         #cmpl $0x3,        %eax
 0x7c, 0x09,                               #jl   0x42343d <.text+0x2243d>
-0xc7, 0x46, 0x04, 0x05, 0x00, 0x00, 0x00, #movl $0x5,  0x4(%esi)
+0xc7, 0x46, 0x04, 0x05, 0x00, 0x00, 0x00, #movl $0x5,   0x4(%esi)
 0xeb, 0x12,                               #jmp  0x42344f <.text+0x2244f>
-0x8b, 0x8c, 0x24, 0xbc, 0x00, 0x00, 0x00, #movl 0xbc(%esp), %ecx
-0x8b, 0xd7,                               #movl %edi,       %edx
-0x3b, 0x4a, 0x68,                         #cmpl 0x68(%edx), %ecx
+0x8b, 0x8c, 0x24, 0xdc, 0x01, 0x00, 0x00, #movl 0x1dc(%esp), %ecx
+0x8b, 0xd7,                               #movl %edi,        %edx
+0x3b, 0x4a, 0x68,                         #cmpl 0x68(%edx),  %ecx
 0x75, 0x04,                               #jne  0x42344f <.text+0x2244f>
-0xd1, 0x6e, 0x04,                         #shrl $1,    0x4(%esi)
+0xd1, 0x6e, 0x04,                         #shrl $1,     0x4(%esi)
 0x90,                                     #nop  (1 byte)
-0x8b, 0x06,                               #movl (%esi), %eax
+0x8b, 0x06,                               #movl (%esi),      %eax
 0xe8, 0xaa, 0xe7, 0x22, 0x00              #call 0x651c00 #-0x423456
 ], 0x42341b)
 WriteMemory("unsigned char", [ #upgrade plant + bean weight logic
