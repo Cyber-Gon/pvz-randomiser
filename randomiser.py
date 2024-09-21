@@ -210,7 +210,7 @@ cooldownColoring = StringVar(value="False")
 randomZombies    = BooleanVar(value=False)
 randomConveyors  = StringVar(value="False")
 enableDave       = StringVar(value="False")
-davePlantsCount  = IntVar(value=3)
+davePlantsCount  = StringVar(value="3")
 seed=str(random.randint(1,999999999999))
 
 if hasSave:
@@ -467,20 +467,13 @@ enableDaveButton.grid(row=4, column=5, sticky=W)
 
 daveAmountLabel=Label(window, text="DAVE PLANTS COUNT:")
 daveAmountLabel.grid(row=1, column=6, sticky=W)
-daveAmountButton=ttk.Combobox(window, text="DAVE PLANTS COUNT", width=16 )#command=randomConveyorButtonClick)
-daveAmountButton["values"] = [1, 2, 3, 4, 5]
+daveAmountButton=ttk.Combobox(window, text="DAVE PLANTS COUNT", width=16, textvariable=davePlantsCount )#command=randomConveyorButtonClick)
+daveAmountButton["values"] = ["1", "2", "3", "4", "5", "random(1-5)"]
 daveAmountButton.state(["readonly"])
-daveAmountButton.bind('<<ComboboxSelected>>', lambda e: daveAmountChanged(daveAmountButton))
-daveAmountButton.current(davePlantsCount.get() - 1) # index of 2 means 3 plants
+daveAmountButton.bind('<<ComboboxSelected>>', lambda e: daveAmountButton.selection_clear())
 daveAmountButton.grid(row=2, column=6, sticky=W)
 if (enableDave.get() == 'False'):
     daveAmountButton.config(state=DISABLED)
-
-def daveAmountChanged(button):
-    global davePlantsCount
-    n = int(button.get())
-    davePlantsCount.set(n)
-    button.selection_clear()
 
 def enableDaveChanged(button):
     global daveAmountButton, enableDave
@@ -536,6 +529,8 @@ print("Random Zombies:",     str(randomZombies.get()))
 print("Random Conveyors:",   str(randomConveyors.get()))
 print("Crazy Dave:",         str(enableDave.get()))
 print("Dave Plants Count:",  str(davePlantsCount.get()))
+
+daveActualPlantCount = 3 if davePlantsCount.get() == "random(1-5)" else int(davePlantsCount.get())
 
 LEVEL_PLANTS = [
     0,
@@ -990,6 +985,20 @@ def randomiseCooldown():
         else:
             color_array.append(255)
     WriteMemory("unsigned char", color_array, 0x6512C2)
+
+def randomiseDavePlantCount():
+    global daveActualPlantCount
+    daveActualPlantCount = random.randint(1,5)
+    WriteMemory("unsigned char", [
+        daveActualPlantCount    # max amount of iterations to pick a plant
+        ], 
+        0x48420B)
+    if enableDave.get() == "On + plant upgrades":
+        WriteMemory("unsigned char", [
+            daveActualPlantCount + 1 - daveActualPlantCount // 5
+            ], 
+            0x484045)
+
 
 def generateZombies(levels, level_plants):
     zombiesToRandomise=[[]]
@@ -2362,7 +2371,7 @@ if enableDave.get() != 'False':
         ], 
         0x484218)
     WriteMemory("unsigned char", [
-        davePlantsCount.get()     # max amount of iterations to pick a plant
+        daveActualPlantCount    # max amount of iterations to pick a plant
         ], 
         0x48420B)
     WriteMemory("unsigned char", [
@@ -2387,7 +2396,7 @@ if enableDave.get() != 'False':
         WriteMemory("unsigned char", [
             0x83,0xFE,0x28,                     # cmp esi,28
             0x7C,0x23,                          # jl 00484062
-            0x83,0x3D,0x90,0x10,0x65,0x00,(davePlantsCount.get() + 1 - davePlantsCount.get() // 5), # cmp dword ptr [00651090],picks_count
+            0x83,0x3D,0x90,0x10,0x65,0x00,(daveActualPlantCount + 1 - daveActualPlantCount // 5), # cmp dword ptr [00651090],picks_count
             0x7E,0x33,                          # jle 0048407B
             0x0F,0xB6,0x9E,0x32,0x40,0x48,0x00, # movzx ebx,byte ptr [esi+00484032]
             0xE8,0xCC,0xFA,0xFC,0xFF,           # call 00453B20
@@ -2511,6 +2520,8 @@ for i in range(50):
             randomiseCost()
         if randomCooldowns.get():
             randomiseCooldown()
+        if enableDave.get() != "False" and davePlantsCount.get() == "random(1-5)":
+            randomiseDavePlantCount()
     if startingWave.get()=="Random":
         randomiseStartingWave(startingWave)
     if not saved.get():
