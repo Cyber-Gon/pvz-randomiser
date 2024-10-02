@@ -2,6 +2,8 @@ from   tkinter import *
 from   tkinter import ttk
 import platform
 import locale
+import math
+import atexit
 try:
     if platform.system() == "Windows":
         WINDOWS = True
@@ -9,7 +11,6 @@ try:
         
         from   pvz import *
         from   pvz.extra import *
-        import atexit
         
         def dealloc_rngmem():
             try:
@@ -1067,7 +1068,8 @@ def randomiseZombies(zombiesToRandomise, currentLevel, levels):
 def writeConveyor(addr, conveyor_data):
     out    = [0 for i in range(56)]
     for i in conveyor_data:
-        out[i[0]] = i[1]
+        scale     = max(int(math.log2(max(i[1],1)))-5,0)
+        out[i[0]] = (scale<<6) + (i[1]>>scale)
     WriteMemory("unsigned char", out, addr)
 
 def randspread(n, k):
@@ -1235,8 +1237,8 @@ def randomiseConveyors(in_seed):
             
         else:
             if level!= "5-10" and level!="wnb1" and level!="wnb2":
-                r_plant_set={0,2,3,4,5,6,7,8,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,26,27,28,29,30,31,32,33,34,36,37,38,39} #no sunflower, sun shroom, plantern, or coffee bean
-                r_dict={0:5, 2:5, 3:5, 4:5, 5:5, 6:5, 7:5, 8:0, 10:0, 11:0, 12:0, 13:0, 14:0, 15:0, 16:0, 17:5, 18:5, 19:0, 20:6, 21:5, 22:5, 23:5, 24:0, 26:5, 27:0, 28:5, 29:5, 30:5, 31:0, 32:5, 33:0, 34:5, 36:5, 37:5, 38:5, 39:5}
+                r_plant_set={0,2,3,4,5,6,7,8,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,42,43,44,46,47} #no sunflower, sun shroom, plantern, twin sun, or gold magnet
+                r_dict={0:5, 2:5, 3:5, 4:5, 5:5, 6:5, 7:5, 8:2, 10:2, 11:2, 12:2, 13:2, 14:2, 15:2, 16:0, 17:5, 18:5, 19:0, 20:6, 21:5, 22:5, 23:5, 24:0, 26:5, 27:0, 28:5, 29:5, 30:5, 31:5, 32:5, 33:0, 34:5, 35:80, 36:5, 37:5, 38:5, 39:5, 40:3, 42:3, 43:3, 44:3, 46:3, 47:2}
                 if has_water:
                     r_dict[16]=60
                     r_dict[19]=5
@@ -1259,26 +1261,14 @@ def randomiseConveyors(in_seed):
                 if level=="4-10":
                     r_dict[26]=30
                     r_dict[27]=20
-            itemsToPop=[]
-            for i in r_dict:
-                if r_dict[i]==0:
-                    itemsToPop.append(i)
-            for i in itemsToPop:
-                r_dict.pop(i)
-                r_plant_set.remove(i)                
+            elif level == "5-10":
+                r_plant_set={0,2,3,5,6,7,8,10,12,13,14,15,17,18,20,23,26,28,29,30,31,32,33,34,36,37,38,39,40,44,47}
+                r_dict={0:1, 2:5, 3:1, 5:4, 6:1, 7:8, 8:1, 10:10, 12:1, 13:4, 14:50, 15:10, 17:1, 18:3, 20:70, 23:1, 26:1, 28:1, 29:1, 30:3, 31:1, 32:21, 33:504, 34:37, 36:1, 37:2, 38:2, 39:40, 40:80, 44:15, 47:160} #garbage:22, semi-garbage:26, ice:80, other instas:120, pot:255, cabbage:42, kernel:75, melon:80, total:700
 
-        if (level=="5-10" or level=="wnb1" or level=="wnb2") and randomConveyors.get()=="It's Raining Seeds":            
+        if (level=="wnb1" or level=="wnb2") and randomConveyors.get()=="It's Raining Seeds":            
             randomised=CONVEYOR_DEFAULTS[level][1]
         else:           
-            randomised   = [(i, r_dict[i]) for i in sorted(list(r_plant_set))]
-
-        #if len(randomised)>20: #21 is a hard limit for how many plants can be on the conveyor (for some reason)
-        #    itemsToDelete=len(randomised)-20
-        #    while itemsToDelete>0:
-        #        item=random.randint(0, len(randomised)-1)
-        #        if randomised[item][1]==5:
-        #            randomised.pop(item)
-        #            itemsToDelete -= 1                    
+            randomised   = [(i, r_dict[i]) for i in sorted(list(r_plant_set))]                  
             
         writeConveyor(CONVEYOR_DEFAULTS[level][0], randomised)
         
@@ -2120,14 +2110,19 @@ WriteMemory("unsigned char", [
 0xb9, 0x38, 0x00, 0x00, 0x00,       #movl $56, %ecx
                                     #conveyor.loopA:
 0x0f, 0xb6, 0x44, 0x0f, 0xff,       #        movzbl -1(%edi,%ecx),     %eax
+0x51,                               #        pushl  %ecx
+0x88, 0xc1,                         #        movb   %al,                %cl
+0xc0, 0xe9, 0x06,                   #        shrb   $6,                 %cl
+0x24, 0x3f,                         #        andb   $0x3f,              %al
+0xd3, 0xe0,                         #        shll   %cl,               %eax
+0x59,                               #        popl   %ecx
 0x8d, 0x51, 0xff,                   #        leal   -1(%ecx),          %edx
 0x89, 0x54, 0xcc, 0x10,             #        movl   %edx, 0x10(%esp,%ecx,8)
 0x89, 0x44, 0xcc, 0x14,             #        movl   %eax, 0x14(%esp,%ecx,8)
-0x90,                               #        nop (1 byte)
-0xe2, 0xed,                         #loop conveyor.loopA
+0xe2, 0xe3,                         #loop conveyor.loopA
                                     #conveyor.exloopA:
 0x8d, 0x79, 0x38,                   #leal 56(%ecx), %edi
-0xe9, 0x61, 0x03, 0x00, 0x00        #jmp  0x4232ab #422f4a
+0xe9, 0x57, 0x03, 0x00, 0x00        #jmp  0x4232ab #422f54
 ], 0x422e2f)
 for i in [0x422cd8, 0x4232d8, 0x4233a9, 0x423440]:
     tmp = ReadMemory("unsigned int", i) + 0x120
@@ -2147,7 +2142,7 @@ WriteMemory("unsigned char", [
 0x73, 0x40                                #jnc  0x4233fc
 ], 0x423394)
 WriteMemory("unsigned char", [
-0xab, 0x2f, 0xc4, 0x7f, 0xfd
+0xab, 0x2f, 0xc4, 0x7f, 0xfd, 0x00
 ], 0x423491)
 
 WriteMemory("unsigned char", [
