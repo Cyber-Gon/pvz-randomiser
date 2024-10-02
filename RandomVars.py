@@ -4,6 +4,7 @@ import copy
 from dataclasses import dataclass
 from inspect import signature
 from time import perf_counter_ns
+from statistics import mean
 
 FORMAT_ACTUAL_VALUE = 0
 FORMAT_DELTA_CHANGE = 1
@@ -68,25 +69,28 @@ class RandomVariable(abc.ABC):
     def is_default(self):
         return self.default == self.value
     
-    def get_str_value(self, format_type, modify_value_func = None):
+    def get_str_value(self, format_type, more_less_words, modify_value_func = None) -> dict:
         val = self.value[0] if self.multivar else self.value
         default = self.default[0] if self.multivar else self.default
         if modify_value_func:
             val = modify_value_func(val)
             default = modify_value_func(default)
         try:
+            sign = val >= default
+            word = more_less_words[int(not sign)] # first word is increase, second is decrease
             if format_type == FORMAT_ACTUAL_VALUE:
-                return str(val)
-            if format_type == FORMAT_DELTA_CHANGE:
-                delta = val - default
-                return f"{abs(delta)} {'more' if delta >= 0 else 'less'}"
-            if format_type == FORMAT_PERCENT_CHANGE:
-                return f"{val/default-1:.0%} {'more' if val >= default else 'less'}"
-            if format_type == FORMAT_PERCENT_OF_DEFAULT_VALUE:
-                return F"{val/default:.0%}"
-            return f"error in get_str_value for {self.name}, unknown format {format_type}"
+                value_str = str(abs(val))
+            elif format_type == FORMAT_DELTA_CHANGE:
+                value_str = str(abs(val - default))
+            elif format_type == FORMAT_PERCENT_CHANGE:
+                value_str = f"{abs(val/default-1):.0%}"
+            elif format_type == FORMAT_PERCENT_OF_DEFAULT_VALUE:
+                value_str = F"{val/default:.0%}"
+            else:
+                value_str = "unknown"
+            return {'value': value_str, 'sign': '+' if sign else '-', 'change_word': word} 
         except:
-            return f"error in get_str_value for {self.name}, {format_type}"
+            return {'value': f"error in get_str_value for {self.name}, {format_type}", 'sign': '', 'change_word': ''}
 
 
     def randomize(self, random, level, WriteMemory, do_write):
@@ -130,10 +134,10 @@ class OnOffVar(RandomVariable):
     def get_randomized_value(self, random: random.Random, level):
         return self.onValue
     
-    def get_str_value(self, format_type, modify_value_func = None):
+    def get_str_value(self, format_type, more_less_words, modify_value_func = None):
         if self.is_default():
-            return 'Off'
-        return 'On'
+            return {'value': 'Off', 'sign': '', 'change_word': ''}
+        return {'value': 'On', 'sign': '', 'change_word': ''}
 
 
 class OutputStringBase(abc.ABC):
@@ -166,21 +170,27 @@ class SimpleOutputString(OutputStringBase):
                 value = self.modify_value_func(value)
             except:
                 print("Error in modify_func_value, value_container = " + self.value_container)
-        return self.format_str.format(value)
+        try:
+            return self.format_str.format(value)
+        except:
+            return f"error in SimpleOutputString format_str.format, format={self.format_str}"
 
 
 class VarStr(OutputStringBase):
-    def __init__(self, var: RandomVariable, format_str: str, format_value_type: int = FORMAT_ACTUAL_VALUE, modify_value_func = None):
+    def __init__(self, var: RandomVariable, format_str: str, format_value_type: int = FORMAT_ACTUAL_VALUE, format_more_less_words=['more', 'less'], modify_value_func = None):
         super().__init__(format_str, modify_value_func)
         self.var = var
         self.format_value_type = format_value_type
+        self.format_more_less_words = format_more_less_words
 
     def is_active(self):
         return not self.var.is_default()
     
     def __str__(self) -> str:
-        return self.format_str.format(self.var.get_str_value(self.format_value_type, self.modify_value_func))
-    
+        try:
+            return self.format_str.format(**self.var.get_str_value(self.format_value_type, self.format_more_less_words, self.modify_value_func))
+        except: 
+            return f"error in VarStr format_str.format, format={self.format_str}"
 
 class IndexedStrContainer:
     def __init__(self, name: str, address: int, max_bytes_per_string: int, string_count: int):
@@ -296,12 +306,14 @@ class RandomVars:
         self.vars: list[VarWithStrIndices] = []
         self.cat1 = cat1
         self.cat2 = cat2
+        self.any_category_enabled = cat1 or cat2 # use to make sure that this object is enabled not just for string rendering
         # we can add categories check here before adding vars, also can adjust their chances
         self.vars.append(VarWithStrIndices(
             VarStr(
-                var=DiscreteVar("starting sun", 0x0040b09b, chance=50, datatype="int", default=50, choices=[75, 100]),
-                format_str="Start level with {} sun",
-                format_value_type=FORMAT_ACTUAL_VALUE),
+                var=ContinuousVar("starting sun", 0x0040b09b, chance=self.chance(150, mean([cat1, cat2])), datatype="int", default=50, min=90, max=110),
+                format_str="Starting sun amount is {change_word} to {value}",
+                format_value_type=FORMAT_ACTUAL_VALUE,
+                format_more_less_words=['increased', 'decreased']),
             affects_game_str=True
         ))
         if do_activate_strings:
@@ -315,6 +327,10 @@ class RandomVars:
                     self.plant_strings.add_var(v.var_str, v.plant_indices)
                 if v.zombie_indices:
                     self.zombie_strings.add_var(v.var_str, v.zombie_indices)
+
+    def chance(self, base: float, modifier: float):
+        # modifier of 5 means use base chance; below 5, chance is decreased
+        return base / (1.4 ** (5 - modifier))
 
     def randomize(self, level, do_write):
         for v in self.vars:
