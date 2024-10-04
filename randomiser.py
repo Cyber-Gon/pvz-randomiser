@@ -2,7 +2,6 @@ from   tkinter import *
 from   tkinter import ttk
 import platform
 import math
-from time import perf_counter_ns
 try:
     if platform.system() == "Windows":
         WINDOWS = True
@@ -214,8 +213,8 @@ randomZombies    = BooleanVar(value=False)
 randomConveyors  = StringVar(value="False")
 enableDave       = StringVar(value="False")
 davePlantsCount  = StringVar(value="3")
-randomVarsCat1   = StringVar(value="0")
-randomVarsCat2   = StringVar(value="0")
+randomVarsCatZombieHealth = StringVar(value="Off")
+randomVarsCat2   = StringVar(value="Off")
 
 seed=str(random.randint(1,999999999999))
 
@@ -227,9 +226,9 @@ if hasSave:
     if len(fileInfo)<23:
         fileInfo.append("3") #davePlantsCount
     if len(fileInfo)<24:
-        fileInfo.append("0") #randomVarsCat1
+        fileInfo.append("Off") #randomVarsCatZombieHealth
     if len(fileInfo)<25:
-        fileInfo.append("0") #randomVarsCat2
+        fileInfo.append("Off") #randomVarsCat2
     if len(fileInfo)<26:
         fileInfo.append("False") #renderWeights
     if len(fileInfo)<27:
@@ -253,7 +252,7 @@ if hasSave:
     cooldownColoring.set(str(fileInfo[20].strip()))
     enableDave.set(str(fileInfo[21].strip()))
     davePlantsCount.set(str(fileInfo[22].strip()))
-    randomVarsCat1.set(str(fileInfo[23].strip()))
+    randomVarsCatZombieHealth.set(str(fileInfo[23].strip()))
     randomVarsCat2.set(str(fileInfo[24].strip()))
     renderWeights.set(str(fileInfo[25].strip()))
     renderWavePoints.set(str(fileInfo[26].strip()))
@@ -340,7 +339,7 @@ def shoplessButtonClick():
         manualMoneyButton.config(state=NORMAL)
 
 def continueButtonClick():
-    global seed, challengeMode, shopless, noRestrictions, noAutoSlots, imitater, randomisePlants, seeded, upgradeRewards, randomWeights, randomWavePoints, startingWave, randomCost, randomCooldowns, costTextToggle, randomZombies, randomConveyors, cooldownColoring, enableDave, davePlantsCount, randomVarsCat1, randomVarsCat2, renderWeights, renderWavePoints, saved, savePoint, fileInfo, jumpLevel
+    global seed, challengeMode, shopless, noRestrictions, noAutoSlots, imitater, randomisePlants, seeded, upgradeRewards, randomWeights, randomWavePoints, startingWave, randomCost, randomCooldowns, costTextToggle, randomZombies, randomConveyors, cooldownColoring, enableDave, davePlantsCount, randomVarsCatZombieHealth, randomVarsCat2, renderWeights, renderWavePoints, saved, savePoint, fileInfo, jumpLevel
     seed=fileInfo[0].strip()
     savePoint=int(fileInfo[1].strip())
     WriteMemory("int", int(fileInfo[2].strip()), 0x6A9EC0,0x82C,0x214) #slots
@@ -365,7 +364,7 @@ def continueButtonClick():
     cooldownColoring.set(str(fileInfo[20].strip()))
     enableDave.set(str(fileInfo[21].strip()))
     davePlantsCount.set(str(fileInfo[22].strip()))
-    randomVarsCat1.set(str(fileInfo[23].strip()))
+    randomVarsCatZombieHealth.set(str(fileInfo[23].strip()))
     randomVarsCat2.set(str(fileInfo[24].strip()))
     renderWeights.set(str(fileInfo[25].strip()))
     renderWavePoints.set(str(fileInfo[26].strip()))
@@ -530,18 +529,18 @@ def enableDaveChanged(button):
         daveAmountButton.config(state=DISABLED)
     button.selection_clear()
 
-randomVars1Label=Label(window, text="VARS CAT 1:")
-randomVars1Label.grid(row=5, column=0, sticky=W)
-randomVar1Button=ttk.Combobox(window, text="VARS CAT 1", width=16, textvariable=randomVarsCat1 )#command=randomConveyorButtonClick)
-randomVar1Button["values"] = ["0", "1", "2", "3", "4", "5"] # how strong randomness is
-randomVar1Button.state(["readonly"])
-randomVar1Button.bind('<<ComboboxSelected>>', lambda e: randomVar1Button.selection_clear())
-randomVar1Button.grid(row=6, column=0, sticky=W)
+randomVarsCatZombieHealthLabel=Label(window, text="ZOMBIE HEALTH RANDO:")
+randomVarsCatZombieHealthLabel.grid(row=5, column=0, sticky=W)
+randomVarsCatZombieHealthButton=ttk.Combobox(window, text="ZOMBIE HEALTH", width=16, textvariable=randomVarsCatZombieHealth )#command=randomConveyorButtonClick)
+randomVarsCatZombieHealthButton["values"] = ["Off", "Very weak", "Weak", "Average", "Strong", "Very Strong"] # how strong randomness is
+randomVarsCatZombieHealthButton.state(["readonly"])
+randomVarsCatZombieHealthButton.bind('<<ComboboxSelected>>', lambda e: randomVarsCatZombieHealthButton.selection_clear())
+randomVarsCatZombieHealthButton.grid(row=6, column=0, sticky=W)
 
 randomVars2Label=Label(window, text="VARS CAT 2:")
 randomVars2Label.grid(row=5, column=1, sticky=W)
 randomVar2Button=ttk.Combobox(window, text="VARS CAT 2", width=16, textvariable=randomVarsCat2 )#command=randomConveyorButtonClick)
-randomVar2Button["values"] = ["0", "1", "2", "3", "4", "5"] # how strong randomness is
+randomVar2Button["values"] = ["Off", "Very weak", "Weak", "Average", "Strong", "Very Strong"] # how strong randomness is
 randomVar2Button.state(["readonly"])
 randomVar2Button.bind('<<ComboboxSelected>>', lambda e: randomVar2Button.selection_clear())
 randomVar2Button.grid(row=6, column=1, sticky=W)
@@ -593,11 +592,13 @@ print("Random Zombies:",     str(randomZombies.get()))
 print("Random Conveyors:",   str(randomConveyors.get()))
 print("Crazy Dave:",         str(enableDave.get()))
 print("Dave Plants Count:",  str(davePlantsCount.get()))
-print("Random vars 1:",      str(randomVarsCat1.get()))
+print("Zombie Health Random:",str(randomVarsCatZombieHealth.get()))
 print("Random vars 2:",      str(randomVarsCat2.get()))
 
 daveActualPlantCount = 3 if davePlantsCount.get() == "random(1-5)" else int(davePlantsCount.get())
-randomVarsSystemEnabled = randomVarsCat1.get() != '0' or randomVarsCat2.get() != '0' or renderWeights.get() or renderWavePoints.get()
+actualRandomVarsZombieHealth = ["Off", "Very weak", "Weak", "Average", "Strong", "Very Strong"].index(randomVarsCatZombieHealth.get())
+actualRandomVarsCat2 = ["Off", "Very weak", "Weak", "Average", "Strong", "Very Strong"].index(randomVarsCat2.get())
+randomVarsSystemEnabled = actualRandomVarsZombieHealth != 0 or actualRandomVarsCat2 != 0 or renderWeights.get() or renderWavePoints.get()
 
 LEVEL_PLANTS = [
     0,
@@ -968,7 +969,7 @@ def randomiseWeights():
                 weight=weight*10
             else:
                 weight=weight*100
-            if i < len(zombie_weight_container):
+            if i in zombie_weight_container:
                 zombie_weight_container[i][0] = weight
             WriteMemory("int", weight, 0x69DA94 + 0x1C*i)
     WriteMemory("int", 0, 0x69DA94 + 0x1C*1)
@@ -1013,7 +1014,7 @@ def randomiseWavePoints():
                 randomCheck=random.randint(0,2)
                 if i==2:
                     randomCheck=1
-            if i < len(wavepoints_container):
+            if i in wavepoints_container:
                 wavepoints_container[i][0] = wavePoint
             WriteMemory("int", wavePoint, 0x69DA88 + 0x1C*i)
 
@@ -1060,7 +1061,7 @@ def randomiseCooldown():
             power=random.choice([1, -1])
             x = divider**power
             newCooldown=round(plants[i][1] * x)
-            if i < len(plant_cooldowns_container):
+            if i in plant_cooldowns_container:
                 plant_cooldowns_container[i][0] = newCooldown
             min_green_blue_value = 110 # the smaller, the redder plants will be, 0#255 range
             # color has less green and blue components the bigger cooldown relative to base cooldown is. But also, bigger default cooldowns become redder a little bit faster
@@ -2529,9 +2530,13 @@ if randomVarsSystemEnabled:
                 plants_string_container.add_var(SimpleOutputString(el, "cd: {:.1f} sec", modify_value_func=lambda cd: cd / 100), [index])
         if randomWavePoints.get() != 'False' and renderWavePoints.get():
             for index, el in enumerate(wavepoints_container):
+                if index == 10: #ducky
+                    continue
                 zombies_string_container.add_var(SimpleOutputString(el, "Wave points: {}"), [index])
         if randomWeights.get() and renderWeights.get():
             for index, el in enumerate(zombie_weight_container):
+                if index == 10: # ducky
+                    continue
                 zombies_string_container.add_var(SimpleOutputString(el, "Weight: {}"), [index])
         # Plant tooltip
         WriteMemory("unsigned char", [
@@ -2554,6 +2559,11 @@ if randomVarsSystemEnabled:
             0x0F, 0x1F, 0x44, 0x00, 0x00, # nop 5 instead of call
             ],
             0x40f0d2)
+        # enable tooltip for zombotany guys
+        WriteMemory("unsigned char", [
+            0xEB, # nop 5 instead of call
+            ],
+            0x40E7E8)
         # Rendering strings on board
         WriteMemory("unsigned char", [
             0xA1,*list(string_stuff_address.to_bytes(4,"little")),0x85,0xC0,0x74,0x79,0x8B,0x4C,0x24,0x08,0xA1,0x30,
@@ -2589,7 +2599,7 @@ if randomVarsSystemEnabled:
     else:
         plants_string_container = zombies_string_container = game_string_container = None
     random_vars = RandomVars(seed, WriteMemory, WINDOWS, plants_string_container, zombies_string_container, game_string_container,
-                             cat1=int(randomVarsCat1.get()), cat2=int(randomVarsCat2.get()))
+                             catZombieHealth=actualRandomVarsZombieHealth, cat2=actualRandomVarsCat2)
 
 try:
     leftoverZombies=open('leftoverZombies.txt', 'r')
@@ -2623,12 +2633,11 @@ if saved.get() and jumpLevel!="":
         if levels[a]==jumpLevel:
             savePoint=a+1
 for i in range(50):
-    start = perf_counter_ns()
     if saved.get():
         if savePoint-1==i:
             saved.set(False)
     if not saved.get() and i!=0:
-        linesToWrite=[seed, (i+1), str(ReadMemory("int", 0x6A9EC0,0x82C,0x214)), str(ReadMemory("int",0x6A9EC0,0x82C, 0x28)), (challengeMode.get()), (shopless.get()), (noRestrictions.get()), (noAutoSlots.get()), (imitater.get()), (randomisePlants.get()), (seeded.get()), (upgradeRewards.get()), (randomWeights.get()), (randomWavePoints.get()), startingWave.get(), randomCost.get(), randomCooldowns.get(), costTextToggle.get(), randomZombies.get(), randomConveyors.get(), cooldownColoring.get(), enableDave.get(), davePlantsCount.get(), randomVarsCat1.get(), randomVarsCat2.get(), renderWeights.get(), renderWavePoints.get()]
+        linesToWrite=[seed, (i+1), str(ReadMemory("int", 0x6A9EC0,0x82C,0x214)), str(ReadMemory("int",0x6A9EC0,0x82C, 0x28)), (challengeMode.get()), (shopless.get()), (noRestrictions.get()), (noAutoSlots.get()), (imitater.get()), (randomisePlants.get()), (seeded.get()), (upgradeRewards.get()), (randomWeights.get()), (randomWavePoints.get()), startingWave.get(), randomCost.get(), randomCooldowns.get(), costTextToggle.get(), randomZombies.get(), randomConveyors.get(), cooldownColoring.get(), enableDave.get(), davePlantsCount.get(), randomVarsCatZombieHealth.get(), randomVarsCat2.get(), renderWeights.get(), renderWavePoints.get()]
         saveFile=open('saveFile.txt', 'w')
         for k in range(len(linesToWrite)):
             linesToWrite[k]=str(linesToWrite[k])
@@ -2708,8 +2717,6 @@ for i in range(50):
     if not shopless.get():
         WriteMemory("bool",True,0x6A9EC0,0x82C,0x21C)
         WriteMemory("bool",True,0x6A9EC0,0x82C,0x218)
-    end = perf_counter_ns()
-    print((end - start) / 1000000, ' ms')
     if(i != 0) and not saved.get(): 
         Sleep(1)
     if(level_plants[newlevel] != -1):
@@ -2739,7 +2746,7 @@ for i in range(50):
 
 WriteMemory("int",0,0x651190)
 
-linesToWrite=[seed, "finished", str(ReadMemory("int", 0x6A9EC0,0x82C,0x214)), str(ReadMemory("int",0x6A9EC0,0x82C, 0x28)), (challengeMode.get()), (shopless.get()), (noRestrictions.get()), (noAutoSlots.get()), (imitater.get()), (randomisePlants.get()), (seeded.get()), (upgradeRewards.get()), (randomWeights.get()), (randomWavePoints.get()), startingWave.get(), randomCost.get(), randomCooldowns.get(), costTextToggle.get(), randomZombies.get(), randomConveyors.get(), cooldownColoring.get(), enableDave.get(), davePlantsCount.get(), randomVarsCat1.get(), randomVarsCat2.get(), renderWeights.get(), renderWavePoints.get()]
+linesToWrite=[seed, "finished", str(ReadMemory("int", 0x6A9EC0,0x82C,0x214)), str(ReadMemory("int",0x6A9EC0,0x82C, 0x28)), (challengeMode.get()), (shopless.get()), (noRestrictions.get()), (noAutoSlots.get()), (imitater.get()), (randomisePlants.get()), (seeded.get()), (upgradeRewards.get()), (randomWeights.get()), (randomWavePoints.get()), startingWave.get(), randomCost.get(), randomCooldowns.get(), costTextToggle.get(), randomZombies.get(), randomConveyors.get(), cooldownColoring.get(), enableDave.get(), davePlantsCount.get(), randomVarsCatZombieHealth.get(), randomVarsCat2.get(), renderWeights.get(), renderWavePoints.get()]
 saveFile=open('saveFile.txt', 'w')
 for k in range(len(linesToWrite)):
     linesToWrite[k]=str(linesToWrite[k])

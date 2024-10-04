@@ -60,11 +60,17 @@ class RandomVariable(abc.ABC):
         return values
 
     def write_single_value(self, address, value, datatype, WriteMemory):
-        WriteMemory(datatype, value, address)
+        try:
+            WriteMemory(datatype, value, address)
+        except:
+            print("error in write_single_value, name=" + str(self.name) + ", value=" + str(value))
 
     def write_multivar_value(self, addresses, values, datatypes, WriteMemory):
         for i in range(len(addresses)):
-            WriteMemory(datatypes[i], values[i], addresses[i])
+            try:
+                WriteMemory(datatypes[i], values[i], addresses[i])
+            except:
+                print("error in write_multivar_value, name=" + str(self.name) + ", value=" + str(values[i]))
 
     def is_default(self):
         return self.default == self.value
@@ -107,6 +113,8 @@ class RandomVariable(abc.ABC):
 class ContinuousVar(RandomVariable):
     def __init__(self, name, address, chance, datatype, default, min, max, enabled_on_levels = None, multivar_functions=None):
         super().__init__(name, address, chance, datatype, default, enabled_on_levels, multivar_functions)
+        if min > max:
+            (min,max) = (max,min)
         self.min = min
         self.max = max
 
@@ -114,7 +122,7 @@ class ContinuousVar(RandomVariable):
         datatype = self.datatype[0] if self.multivar else self.datatype
         if datatype == 'float' or datatype == 'double':
             return random.uniform(self.min, self.max)
-        return random.randint(self.min, self.max)
+        return random.randint(int(self.min), int(self.max))
 
 
 class DiscreteVar(RandomVariable):
@@ -299,23 +307,81 @@ class VarWithStrIndices:
 
 class RandomVars:
     def __init__(self, seed, write_memory_func, do_activate_strings, plants_container: IndexedStrContainer, 
-                 zombies_container: IndexedStrContainer, game_container: NonIndexedStrContainer, cat1: int, cat2: int):
+                 zombies_container: IndexedStrContainer, game_container: NonIndexedStrContainer, catZombieHealth: int, cat2: int):
+        assert (do_activate_strings and plants_container and zombies_container and game_container) or not do_activate_strings
         self.WriteMemory = write_memory_func
         self.random = random.Random(seed)
         self.do_activate_strings = do_activate_strings
         self.vars: list[VarWithStrIndices] = []
-        self.cat1 = cat1
+        self.catZombieHealth = catZombieHealth
         self.cat2 = cat2
-        self.any_category_enabled = cat1 or cat2 # use to make sure that this object is enabled not just for string rendering
+        self.any_category_enabled = catZombieHealth or cat2 # use to make sure that this object is enabled not just for string rendering
         # we can add categories check here before adding vars, also can adjust their chances
-        self.vars.append(VarWithStrIndices(
-            VarStr(
-                var=ContinuousVar("starting sun", 0x0040b09b, chance=self.chance(150, mean([cat1, cat2])), datatype="int", default=50, min=90, max=110),
-                format_str="Starting sun amount is {change_word} to {value}",
-                format_value_type=FORMAT_ACTUAL_VALUE,
-                format_more_less_words=['increased', 'decreased']),
-            affects_game_str=True
-        ))
+        if self.any_category_enabled:
+            self.vars.append(VarWithStrIndices(
+                VarStr(
+                    var=DiscreteVar("starting sun", 0x0040b09b, chance=self.chance(80, mean([catZombieHealth, cat2])), datatype="int",
+                                     default=50, choices=[75, 75, 100], enabled_on_levels=lambda l: l % 5 != 0),
+                    format_str="Starting sun amount is {change_word} to {value}",
+                    format_value_type=FORMAT_ACTUAL_VALUE,
+                    format_more_less_words=['increased', 'decreased']),
+                affects_game_str=True
+            ))
+        if catZombieHealth:
+            # special cases are balloon, zomboss. Doesn't change default body health (270), so normals, snorkels, backups, peashooter, squash are untouched
+            indices =           [2,   4,   6,   19,   20,   7,   17,  3,    14,   23,   32,   12,   22,   15,   18,   5,   8,    24,   21,   27,  28,   31]
+            defaults =          [370, 1100,1100,1350, 450,  1400,100, 500,  500,  3000, 6000, 1350, 850,  500,  500,  150, 500,  70,   500,  1100,500,  2200]
+            isArmorHP =         [True,True,True,False,False,True,True,False,False,False,False,False,False,False,False,True,False,False,False,True,False,True]
+            changeMultipliers = [1,   0.75,0.75,0.75, 1,    0.75,0.2, 1,    1,    0.5,  0.25, 0.75, 1,    1,    1,    1,   1,    2.75, 0.9,    0.9,   1,    0.6]
+            addresses = [0x00522892,0x0052292B,0x00522949,0x0052296E,0x00522A1B,0x00522BB0,0x00522BEF,0x00522CBF,0x00522D64,0x00523D26,0x00523E4A,
+                         0x00522DE1,0x00522E8D,0x00522FC7,0x00523300,0x0052337D,0x00523530,0x005235AC,0x0052299C,0x0052382B,0x00523A87,0x0052395D]
+            # changeMultipliers modify only 'catZombieHealth*0.05*m' part of calculation, so even with changeMultipliers = 0
+            # there still be randomization, just not growing with category change
+            assert len(indices) == len(defaults) == len(isArmorHP) == len(changeMultipliers)
+            for i in range(len(indices)):
+                if isArmorHP[i]:
+                    min_m = (0.25 + 0.03 * catZombieHealth) / (defaults[i] / (270 + defaults[i])) * changeMultipliers[i]**0.75
+                    max_m = (0.3 + 0.06 * catZombieHealth) / (defaults[i] / (270 + defaults[i])) * changeMultipliers[i]
+                else:
+                    min_m = (0.25 + 0.03 * catZombieHealth) * changeMultipliers[i]**0.75
+                    max_m = (0.3 + 0.06 * catZombieHealth) * changeMultipliers[i]
+                args = { 'var': ContinuousVar("zombie health "+str(indices[i]), address=addresses[i], chance=self.chance(120, catZombieHealth), datatype="int",
+                                        default=defaults[i], min=max(defaults[i]*(1-min_m), 5), # min has a min value of 5, so it doesn't go negative
+                                        max=defaults[i]*(1+max_m)),
+                         'format_str': "Health change: {sign}{value}",
+                         'format_value_type': FORMAT_PERCENT_CHANGE
+                }
+                if isArmorHP[i]:
+                    args['modify_value_func'] = lambda h:h+270 # body health for zombies with armor
+                self.vars.append(VarWithStrIndices(
+                    VarStr(**args),
+                    zombie_indices=[indices[i]]
+                ))
+            # ballon has special formatting
+            balloon_choices = [40, 60]
+            if catZombieHealth > 1:
+                balloon_choices.extend([40,60,80])
+            if catZombieHealth > 3:
+                balloon_choices.extend([60,80,100,100])
+            self.vars.append(VarWithStrIndices(
+                    VarStr(var=DiscreteVar("zombie health "+str(16), address=0x005234BF, chance=self.chance(120, catZombieHealth), datatype="int",
+                                        default=20, choices=balloon_choices),
+                            format_str="Balloon requires extra {value} hits to pop",
+                            format_value_type=FORMAT_DELTA_CHANGE,
+                            modify_value_func=lambda h:h//20 # modify_value_func changes value (and default) before formatting, it doesn't affect actual randomization
+                    ),
+                    zombie_indices=[16]
+            ))
+            # dr zomboss has a some chance to just have less hp, and it's printed on screen instead of his tooltip (since he never shows one)
+            self.vars.append(VarWithStrIndices(
+                    VarStr(var=ContinuousVar("zombie health "+str(25), address=0x00523624, chance=25+catZombieHealth*20, datatype="int",
+                                        default=40000, min=27000, max=36000,
+                                        enabled_on_levels=lambda l:l==50), # triggered only on 5-10
+                            format_str="Zomboss has just {value} of his normal hp",
+                            format_value_type=FORMAT_PERCENT_OF_DEFAULT_VALUE,
+                    ),
+                    affects_game_str=True
+            ))
         if do_activate_strings:
             self.plant_strings = plants_container
             self.zombie_strings = zombies_container
@@ -328,8 +394,12 @@ class RandomVars:
                 if v.zombie_indices:
                     self.zombie_strings.add_var(v.var_str, v.zombie_indices)
 
-    def chance(self, base: float, modifier: float):
-        # modifier of 5 means use base chance; below 5, chance is decreased
+    def chance(self, base: float, modifier: float) -> float:
+        if modifier == 0:
+            return 0
+        if modifier == 5:
+            return base
+        # modifier of 5 means use base chance; below 5, chance is decreased exponentially
         return base / (1.4 ** (5 - modifier))
 
     def randomize(self, level, do_write):
