@@ -943,11 +943,11 @@ class RandomVars:
             assert len(indices) == len(defaults) == len(isArmorHP) == len(changeMultipliers) == len(addresses)
             for i in range(len(indices)):
                 if isArmorHP[i]:
-                    min_m = (0.25 + 0.03 * catZombieHealth) / (defaults[i] / (270 + defaults[i])) * changeMultipliers[i]**0.75
-                    max_m = (0.3 + 0.06 * catZombieHealth) / (defaults[i] / (270 + defaults[i])) * changeMultipliers[i]
+                    min_m = (0.25 + 0.03 * catZombieHealth) / (defaults[i] / (270 + defaults[i])) * changeMultipliers[i]**0.8
+                    max_m = (0.3 + 0.05 * catZombieHealth) / (defaults[i] / (270 + defaults[i])) * changeMultipliers[i]
                 else:
-                    min_m = (0.25 + 0.03 * catZombieHealth) * changeMultipliers[i]**0.75
-                    max_m = (0.3 + 0.06 * catZombieHealth) * changeMultipliers[i]
+                    min_m = (0.25 + 0.03 * catZombieHealth) * changeMultipliers[i]**0.8
+                    max_m = (0.3 + 0.05 * catZombieHealth) * changeMultipliers[i]
                 args = { 'var': ContinuousVar("zombie health "+str(indices[i]), address=addresses[i], chance=self.chance(120, catZombieHealth), datatype="int",
                                         default=defaults[i], min=max(defaults[i]*(1-min_m), 5), # min has a min value of 5, so it doesn't go negative
                                         max=defaults[i]*(1+max_m)),
