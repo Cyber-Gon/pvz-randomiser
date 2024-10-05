@@ -1,8 +1,12 @@
 from   tkinter import *
 from   tkinter import ttk
 import platform
-import locale
 import math
+import abc
+import copy
+from dataclasses import dataclass
+from inspect import signature
+from statistics import mean
 import atexit
 try:
     if platform.system() == "Windows":
@@ -201,7 +205,9 @@ randomisePlants  = BooleanVar(value=False)
 seeded           = BooleanVar(value=False)
 upgradeRewards   = BooleanVar(value=False)
 randomWeights    = BooleanVar(value=False)
+renderWeights    = BooleanVar(value=False)
 randomWavePoints = StringVar(value="False")
+renderWavePoints = BooleanVar(value=False)
 saved            = BooleanVar(value=False)
 startingWave     = StringVar(value="False")
 randomCost       = BooleanVar(value=False)
@@ -212,6 +218,9 @@ randomZombies    = BooleanVar(value=False)
 randomConveyors  = StringVar(value="False")
 enableDave       = StringVar(value="False")
 davePlantsCount  = StringVar(value="3")
+randomVarsCatZombieHealth = StringVar(value="Off")
+randomVarsCatFireRate = StringVar(value="Off")
+
 seed=str(random.randint(1,999999999999))
 
 if hasSave:
@@ -221,6 +230,14 @@ if hasSave:
         fileInfo.append("False") # enableDave
     if len(fileInfo)<23:
         fileInfo.append("3") #davePlantsCount
+    if len(fileInfo)<24:
+        fileInfo.append("Off") #randomVarsCatZombieHealth
+    if len(fileInfo)<25:
+        fileInfo.append("Off") #randomVarsCatFireRate
+    if len(fileInfo)<26:
+        fileInfo.append("False") #renderWeights
+    if len(fileInfo)<27:
+        fileInfo.append("False") #renderWavePoints
     challengeMode.set(  eval(fileInfo[4].strip()))
     shopless.set(       eval(fileInfo[5].strip()))
     noRestrictions.set( eval(fileInfo[6].strip()))
@@ -240,6 +257,10 @@ if hasSave:
     cooldownColoring.set(str(fileInfo[20].strip()))
     enableDave.set(str(fileInfo[21].strip()))
     davePlantsCount.set(str(fileInfo[22].strip()))
+    randomVarsCatZombieHealth.set(str(fileInfo[23].strip()))
+    randomVarsCatFireRate.set(str(fileInfo[24].strip()))
+    renderWeights.set(str(fileInfo[25].strip()))
+    renderWavePoints.set(str(fileInfo[26].strip()))
     if fileInfo[1]=="finished\n":
         hasSave=False
 
@@ -292,8 +313,23 @@ def cooldownButtonClick():
         cooldownColoringToggle.config(state=DISABLED)
 
 
+def randomWeightsButtonClick():
+    if randomWeights.get():
+        renderWeightsButton.config(state=NORMAL)
+    else:
+        renderWeights.set(False)
+        renderWeightsButton.config(state=DISABLED)
+
+def randomWavePointsChanged():
+    randWavePointsButton.selection_clear()
+    if randomWavePoints.get() != 'False':
+        renderWavePointsButton.config(state=NORMAL)
+    else:
+        renderWavePoints.set(False)
+        renderWavePointsButton.config(state=DISABLED)
+
+
 def noRestrictionsButtonClick():
-    global noRestrictions, challengeMode, challengeButton
     if noRestrictions.get():
         challengeMode.set(True)
         challengeButton.config(state=DISABLED)
@@ -301,7 +337,6 @@ def noRestrictionsButtonClick():
         challengeButton.config(state=NORMAL)
 
 def shoplessButtonClick():
-    global shopless, noAutoSlots, manualMoneyButton
     if shopless.get():
         noAutoSlots.set(False)
         manualMoneyButton.config(state=DISABLED)
@@ -309,7 +344,7 @@ def shoplessButtonClick():
         manualMoneyButton.config(state=NORMAL)
 
 def continueButtonClick():
-    global seed, challengeMode, shopless, noRestrictions, noAutoSlots, imitater, randomisePlants, seeded, upgradeRewards, randomWeights, randomWavePoints, startingWave, randomCost, randomCooldowns, costTextToggle, randomZombies, randomConveyors, cooldownColoring, enableDave, davePlantsCount, saved, savePoint, fileInfo, jumpLevel
+    global seed, challengeMode, shopless, noRestrictions, noAutoSlots, imitater, randomisePlants, seeded, upgradeRewards, randomWeights, randomWavePoints, startingWave, randomCost, randomCooldowns, costTextToggle, randomZombies, randomConveyors, cooldownColoring, enableDave, davePlantsCount, randomVarsCatZombieHealth, randomVarsCatFireRate, renderWeights, renderWavePoints, saved, savePoint, fileInfo, jumpLevel
     seed=fileInfo[0].strip()
     savePoint=int(fileInfo[1].strip())
     WriteMemory("int", int(fileInfo[2].strip()), 0x6A9EC0,0x82C,0x214) #slots
@@ -334,6 +369,10 @@ def continueButtonClick():
     cooldownColoring.set(str(fileInfo[20].strip()))
     enableDave.set(str(fileInfo[21].strip()))
     davePlantsCount.set(str(fileInfo[22].strip()))
+    randomVarsCatZombieHealth.set(str(fileInfo[23].strip()))
+    randomVarsCatFireRate.set(str(fileInfo[24].strip()))
+    renderWeights.set(str(fileInfo[25].strip()))
+    renderWavePoints.set(str(fileInfo[26].strip()))
     saved.set(True)
     jumpLevel=""
     window.destroy()
@@ -405,16 +444,26 @@ seededButton.grid(row=1, column=4, sticky=W)
 upgradeButton=Checkbutton(window, text="UPGRADE REWARDS", width=16, variable=upgradeRewards, anchor="w")#command=upgradeButtonClick)
 upgradeButton.grid(row=4, column=3, sticky=W)
 
-randWeightsButton=Checkbutton(window, text="RANDOM WEIGHTS", width=16, variable=randomWeights, anchor="w")#command=randomWeightsButtonClick)
+randWeightsButton=Checkbutton(window, text="RANDOM WEIGHTS", width=16, variable=randomWeights, anchor="w", command=randomWeightsButtonClick)
 randWeightsButton.grid(row=1, column=1, sticky=W)
 
+renderWeightsButton=Checkbutton(window, text="SHOW WEIGHT", width=16, variable=renderWeights, anchor="w")#command=randomWeightsButtonClick)
+renderWeightsButton.grid(row=2, column=1, sticky=W)
+if not randomWeights.get():
+    renderWeightsButton.config(state=DISABLED)
+
 randWavePointsLabel=Label(window, text="RAND WAVE POINTS:")
-randWavePointsLabel.grid(row=3, column=2, sticky=W)
+randWavePointsLabel.grid(row=4, column=2, sticky=W)
 randWavePointsButton=ttk.Combobox(window, text="RAND WAVE POINTS", width=16, textvariable=randomWavePoints)#command=randomWavePointsButtonClick)
 randWavePointsButton["values"] = ["False", "Normal", "EXTREME"]
 randWavePointsButton.state(["readonly"])
-randWavePointsButton.bind('<<ComboboxSelected>>', lambda e: randWavePointsButton.selection_clear())
-randWavePointsButton.grid(row=4, column=2, sticky=W)
+randWavePointsButton.bind('<<ComboboxSelected>>', lambda e: randomWavePointsChanged())
+randWavePointsButton.grid(row=5, column=2, sticky=W)
+
+renderWavePointsButton=Checkbutton(window, text="SHOW WAVEPOINTS", width=16, variable=renderWavePoints, anchor="w")#command=randomWeightsButtonClick)
+renderWavePointsButton.grid(row=6, column=2, sticky=W)
+if randomWavePoints.get == 'False':
+    renderWavePointsButton.config(state=DISABLED)
 
 waveStartLabel=Label(window, text="STARTING WAVE:")
 waveStartLabel.grid(row=1, column=3, sticky=W)
@@ -425,22 +474,22 @@ waveStartButton.bind('<<ComboboxSelected>>', lambda e: waveStartButton.selection
 waveStartButton.grid(row=2, column=3, sticky=W)
 
 costButton=Checkbutton(window, text="RANDOM COST", width=16, variable=randomCost, anchor="w", command=costButtonClick)
-costButton.grid(row=2, column=1, sticky=W)
+costButton.grid(row=3, column=1, sticky=W)
 
 costTextButton=Checkbutton(window, text="COLOURED COST", width=16, variable=costTextToggle, anchor="w")#command=costTextButtonClick)
-costTextButton.grid(row=3, column=1, sticky=W)
+costTextButton.grid(row=4, column=1, sticky=W)
 costTextButton.config(state=DISABLED)
 
 cooldownButton=Checkbutton(window, text="RAND COOLDOWNS", width=16, variable=randomCooldowns, anchor="w", command=cooldownButtonClick)
-cooldownButton.grid(row=4, column=1, sticky=W)
+cooldownButton.grid(row=1, column=2, sticky=W)
 
 cooldownColoringLabel=Label(window, text="COOLDOWN SEED COLORS:")
-cooldownColoringLabel.grid(row=1, column=2, sticky=W)
+cooldownColoringLabel.grid(row=2, column=2, sticky=W)
 cooldownColoringToggle=ttk.Combobox(window, text="COOLDOWN SEED COLORS", width=16, textvariable=cooldownColoring)
 cooldownColoringToggle["values"] = ["False", "Selection only", "Always on"]
 cooldownColoringToggle.state(["readonly"])
 cooldownColoringToggle.bind('<<ComboboxSelected>>', lambda e: cooldownColoringToggle.selection_clear())
-cooldownColoringToggle.grid(row=2, column=2, sticky=W)
+cooldownColoringToggle.grid(row=3, column=2, sticky=W)
 cooldownColoringToggle.config(state=DISABLED)
 
 zombiesButton=Checkbutton(window, text="RANDOM ZOMBIES", width=16, variable=randomZombies, anchor="w")#command=cooldownButtonClick)
@@ -485,6 +534,22 @@ def enableDaveChanged(button):
         daveAmountButton.config(state=DISABLED)
     button.selection_clear()
 
+randomVarsCatZombieHealthLabel=Label(window, text="ZOMBIE HEALTH RANDO:")
+randomVarsCatZombieHealthLabel.grid(row=5, column=0, sticky=W)
+randomVarsCatZombieHealthButton=ttk.Combobox(window, text="ZOMBIE HEALTH", width=16, textvariable=randomVarsCatZombieHealth )#command=randomConveyorButtonClick)
+randomVarsCatZombieHealthButton["values"] = ["Off", "Very weak", "Weak", "Average", "Strong", "Very Strong"] # how strong randomness is
+randomVarsCatZombieHealthButton.state(["readonly"])
+randomVarsCatZombieHealthButton.bind('<<ComboboxSelected>>', lambda e: randomVarsCatZombieHealthButton.selection_clear())
+randomVarsCatZombieHealthButton.grid(row=6, column=0, sticky=W)
+
+randomVarsCatFireRateLabel=Label(window, text="FIRE RATE RANDO:")
+randomVarsCatFireRateLabel.grid(row=5, column=1, sticky=W)
+randomVarsCatFireRateButton=ttk.Combobox(window, text="FIRE RATE RANDO", width=16, textvariable=randomVarsCatFireRate )#command=randomConveyorButtonClick)
+randomVarsCatFireRateButton["values"] = ["Off", "Very weak", "Weak", "Average", "Strong", "Very Strong"] # how strong randomness is
+randomVarsCatFireRateButton.state(["readonly"])
+randomVarsCatFireRateButton.bind('<<ComboboxSelected>>', lambda e: randomVarsCatFireRateButton.selection_clear())
+randomVarsCatFireRateButton.grid(row=6, column=1, sticky=W)
+
 closeButton=Button(window, text="SUBMIT SETTINGS", width=16, command=closeButtonClick)
 closeButton.grid(row=0, column=6, sticky=W)
 
@@ -497,7 +562,7 @@ entry.grid(row=0, column=1, sticky=W) #positioning this widget on the screen
 
 #create a text box widget
 outputText=Text(window, width=120, height=15, wrap=WORD, background="yellow")
-outputText.grid(row=5, column=0, columnspan=10, sticky=W)
+outputText.grid(row=7, column=0, columnspan=10, sticky=W)
 
 if randomCost.get():
     costTextButton.config(state=NORMAL)
@@ -520,7 +585,9 @@ print("Random Plants:",      str(randomisePlants.get()))
 print("Seeded:",             str(seeded.get()))
 print("Upgrade Rewards:",    str(upgradeRewards.get()))
 print("Random Weights:",     str(randomWeights.get()))
+print("Show Random Weights:",str(renderWeights.get()))
 print("Random Wave Points:", str(randomWavePoints.get()))
+print("Show Random Wave Points:", str(renderWavePoints.get()))
 print("Starting Wave:",          startingWave.get())
 print("Random Cost:",        str(randomCost.get()))
 print("Coloured Cost:",      str(costTextToggle.get()))
@@ -530,8 +597,483 @@ print("Random Zombies:",     str(randomZombies.get()))
 print("Random Conveyors:",   str(randomConveyors.get()))
 print("Crazy Dave:",         str(enableDave.get()))
 print("Dave Plants Count:",  str(davePlantsCount.get()))
+print("Zombie Health Random:",str(randomVarsCatZombieHealth.get()))
+print("Fire Rate Random:",   str(randomVarsCatFireRate.get()))
+
+
+######### RANDOM VARS SYSTEM ########
+#region
+
+FORMAT_ACTUAL_VALUE = 0
+FORMAT_DELTA_CHANGE = 1
+FORMAT_PERCENT_CHANGE = 2
+FORMAT_PERCENT_OF_DEFAULT_VALUE = 3
+
+class RandomVariable(abc.ABC):
+    def __init__(self, name, address, chance, datatype, default, enabled_on_levels = None, multivar_functions=None):
+        # default can always be a list
+        if any(type(x) == list for x in [address, datatype]) and not all(type(x) == list for x in [address, datatype, default, multivar_functions]):
+            raise TypeError(f'incompatible types of arguments in constructor for {name}')
+        if any(type(x) == list for x in [address, datatype]) and \
+        not all(x == len(address) for x in [len(address), len(datatype), len(default), len(multivar_functions) + 1]):
+            raise ValueError(f'different list lengths in constructor of {name}')
+        self.name = name
+        self.address = address
+        self.default = default
+        self.chance = chance
+        self.datatype = datatype
+        self.value = copy.deepcopy(default)
+        self.enabled_on_levels = enabled_on_levels
+        self.multivar_functions = multivar_functions
+        if type(address) == list:
+            self.multivar = True
+            self.calculate_value = self.calculate_multivar_value
+            self.write_value = self.write_multivar_value
+        else:
+            self.multivar = False
+            self.calculate_value = self.get_randomized_value
+            self.write_value = self.write_single_value
+
+    def should_try_to_test(self, level):
+        if self.enabled_on_levels:
+            return self.enabled_on_levels(level)
+        return True
+    
+    def test(self, random: random.Random, chance, level):
+        return random.randint(1, 100) <= chance
+    
+    @abc.abstractmethod
+    def get_randomized_value(self, random: random.Random, level):
+        pass
+
+    def calculate_multivar_value(self, random: random.Random, level):
+        main_value = self.get_randomized_value(random, level)
+        values = [main_value]
+        for f in self.multivar_functions:
+            sig = signature(f)
+            if len(sig.parameters) > 1: # deciding how many params to pass
+                values.append(f(main_value, level))
+            else:
+                values.append(f(main_value))
+        return values
+
+    def write_single_value(self, address, value, datatype, WriteMemory):
+        try:
+            WriteMemory(datatype, value, address)
+        except:
+            print("error in write_single_value, name=" + str(self.name) + ", value=" + str(value))
+
+    def write_multivar_value(self, addresses, values, datatypes, WriteMemory):
+        for i in range(len(addresses)):
+            try:
+                WriteMemory(datatypes[i], values[i], addresses[i])
+            except:
+                print("error in write_multivar_value, name=" + str(self.name) + ", value=" + str(values[i]))
+
+    def is_default(self):
+        return self.default == self.value
+    
+    def get_str_value(self, format_type, more_less_words, modify_value_func = None) -> dict:
+        val = self.value[0] if self.multivar else self.value
+        default = self.default[0] if self.multivar else self.default
+        if modify_value_func:
+            val = modify_value_func(val)
+            default = modify_value_func(default)
+        try:
+            sign = val >= default
+            word = more_less_words[int(not sign)] # first word is increase, second is decrease
+            if type(val) == float and format_type in [FORMAT_ACTUAL_VALUE, FORMAT_DELTA_CHANGE]:
+                if format_type == FORMAT_ACTUAL_VALUE:
+                    value_str = "{:.1f}".format(abs(val))
+                elif format_type == FORMAT_DELTA_CHANGE:
+                    value_str = "{:.1f}".format(abs(val))
+            elif format_type == FORMAT_ACTUAL_VALUE:
+                value_str = str(abs(val))
+            elif format_type == FORMAT_DELTA_CHANGE:
+                value_str = str(abs(val - default))
+            elif format_type == FORMAT_PERCENT_CHANGE:
+                value_str = f"{abs(val/default-1):.0%}"
+            elif format_type == FORMAT_PERCENT_OF_DEFAULT_VALUE:
+                value_str = F"{val/default:.0%}"
+            else:
+                value_str = "unknown"
+            return {'value': value_str, 'sign': '+' if sign else '-', 'change_word': word} 
+        except:
+            return {'value': f"error in get_str_value for {self.name}, {format_type}", 'sign': '', 'change_word': ''}
+
+
+    def randomize(self, random, level, WriteMemory, do_write):
+        if self.should_try_to_test(level) and self.test(random, self.chance, level):
+            value = self.calculate_value(random, level)
+        else:
+            value = copy.deepcopy(self.default)
+        if self.value == value or not do_write:
+            return
+        self.value = value
+        self.write_value(self.address, value, self.datatype, WriteMemory)
+
+
+class ContinuousVar(RandomVariable):
+    def __init__(self, name, address, chance, datatype, default, min, max, enabled_on_levels = None, multivar_functions=None):
+        super().__init__(name, address, chance, datatype, default, enabled_on_levels, multivar_functions)
+        if min > max:
+            (min,max) = (max,min)
+        self.min = min
+        self.max = max
+
+    def get_randomized_value(self, random: random.Random, level):
+        datatype = self.datatype[0] if self.multivar else self.datatype
+        if datatype == 'float' or datatype == 'double':
+            return random.uniform(self.min, self.max)
+        return random.randint(int(self.min), int(self.max))
+
+
+class DiscreteVar(RandomVariable):
+    def __init__(self, name, address, chance, datatype, default, choices:list, enabled_on_levels = None, multivar_functions=None):
+        super().__init__(name, address, chance, datatype, default, enabled_on_levels, multivar_functions)
+        self.choices = choices
+
+    def get_randomized_value(self, random: random.Random, level):
+        return random.choice(self.choices)
+
+
+class OnOffVar(RandomVariable):
+    def __init__(self, name, address, chance, datatype, default, onValue, enabled_on_levels = None, multivar_functions=None):
+        super().__init__(name, address, chance, datatype, default, enabled_on_levels, multivar_functions)
+        self.onValue = onValue
+
+    def get_randomized_value(self, random: random.Random, level):
+        return self.onValue
+    
+    def get_str_value(self, format_type, more_less_words, modify_value_func = None):
+        if self.is_default():
+            return {'value': 'Off', 'sign': '', 'change_word': ''}
+        return {'value': 'On', 'sign': '', 'change_word': ''}
+
+
+class OutputStringBase(abc.ABC):
+    def __init__(self, format_str: str, modify_value_func = None):
+        self.format_str = format_str
+        self.modify_value_func = modify_value_func
+    
+    def is_active(self):
+        return True
+    
+    @abc.abstractmethod
+    def __str__(self) -> str:
+        pass
+
+
+class SimpleOutputString(OutputStringBase):
+    def __init__(self, value_container, format_str: str, modify_value_func = None):
+        super().__init__(format_str, modify_value_func)
+        if type(value_container) != list:
+            self.value_container = [value_container]
+        else:
+            self.value_container = value_container
+
+    def __str__(self) -> str:
+        if type(self.value_container) != list or (type(self.value_container) == list and len(self.value_container) == 0):
+            return f"error in SimpleOutputString __str__, format: {self.format_str}"
+        value = self.value_container[0]
+        if self.modify_value_func:
+            try:
+                value = self.modify_value_func(value)
+            except:
+                print("Error in modify_func_value, value_container = " + self.value_container)
+        try:
+            return self.format_str.format(value)
+        except:
+            return f"error in SimpleOutputString format_str.format, format={self.format_str}"
+
+
+class VarStr(OutputStringBase):
+    def __init__(self, var: RandomVariable, format_str: str, format_value_type: int = FORMAT_ACTUAL_VALUE, format_more_less_words=['more', 'less'], modify_value_func = None):
+        super().__init__(format_str, modify_value_func)
+        self.var = var
+        self.format_value_type = format_value_type
+        self.format_more_less_words = format_more_less_words
+
+    def is_active(self):
+        return not self.var.is_default()
+    
+    def __str__(self) -> str:
+        try:
+            return self.format_str.format(**self.var.get_str_value(self.format_value_type, self.format_more_less_words, self.modify_value_func))
+        except: 
+            return f"error in VarStr format_str.format, format={self.format_str}"
+
+
+class IndexedStrContainer:
+    def __init__(self, name: str, address: int, max_bytes_per_string: int, string_count: int):
+        self.name = name
+        self.address = address
+        self.bytes_per_string = max_bytes_per_string
+        self.string_count = string_count
+        self.str_dict = dict(zip(range(string_count), ([] for _ in range(string_count))))
+
+    def add_var(self, var: OutputStringBase, indices):
+        if type(indices) != list:
+            indices = [indices]
+        if any(x not in self.str_dict for x in indices):
+            raise ValueError(f"wrong index for {self.name} container, indices: {','.join(str(x) for x in indices)}")
+        for i in indices:
+            self.str_dict[i].append(var)
+
+    def construct_string(self, index: int):
+        if index not in self.str_dict:
+            string = f"index {index} is not in {self.name} dictionary on construct_string"
+            print(string)
+        else:
+            vars: list[OutputStringBase] = self.str_dict[index]
+            str_list = []
+            for v in vars:
+                if not v.is_active():
+                    continue
+                str_list.append(str(v))
+            string = '\n'.join(str_list)
+        return string
+    
+    def write_string(self, index: int, string: str, WriteMemory):
+        if index not in self.str_dict:
+            print(f"index {index} is not in {self.name} dictionary in write_string")
+            return
+        address = self.address + self.bytes_per_string * index
+        if len(string) > self.bytes_per_string - 1:
+            string = string[:self.bytes_per_string - 1]
+        l = list(string.encode('ascii', 'ignore'))
+        l.append(0)
+        WriteMemory("unsigned char", l, address)
+
+    def update_strings(self, WriteMemory):
+        for i in range(self.string_count):
+            string = self.construct_string(i)
+            self.write_string(i, string, WriteMemory)
+
+
+class NonIndexedStrContainer:
+    def __init__(self, name: str, address: int, max_bytes_per_string: int, string_count: int, n_of_lines_output_address: int):
+        self.name = name
+        self.address = address
+        self.bytes_per_string = max_bytes_per_string
+        self.string_count = string_count
+        self.n_of_lines_output_address = n_of_lines_output_address
+        self.vars = []
+        self.n_of_lines_written = 0
+
+    def add_var(self, var: OutputStringBase):
+        self.vars.append(var)
+
+    def construct_string(self, var: OutputStringBase):
+        if var.is_active():
+            return str(var)
+        return ""
+    
+    def write_string(self, index: int, string: str, WriteMemory):
+        if index >= self.string_count:
+            print(f"Index {index} outside of string_count range for {self.name} in write_string")
+            return
+        address = self.address + self.bytes_per_string * index
+        if len(string) > self.bytes_per_string - 1:
+            string = string[:self.bytes_per_string - 1]
+        l = list(string.encode('ascii', 'ignore'))
+        l.append(0)
+        WriteMemory("unsigned char", l, address)
+        
+
+    def update_strings(self, WriteMemory):
+        free_index = 0
+        for v in self.vars:
+            if not v.is_active():
+                continue
+            string = self.construct_string(v)
+            self.write_string(free_index, string, WriteMemory)
+            free_index = free_index + 1
+            if free_index >= self.string_count:
+                break
+        self.n_of_lines_written = free_index
+        self.write_n_of_lines(WriteMemory, free_index, self.n_of_lines_output_address)
+
+    def get_amount_of_lines(self):
+        return self.n_of_lines_written
+    
+    def write_n_of_lines(self, WriteMemory, value, address):
+        WriteMemory("int", value, address)
+
+
+@dataclass
+class VarWithStrIndices:
+    var_str: OutputStringBase
+    plant_indices: list[int] = None
+    zombie_indices: list[int] = None
+    affects_game_str: bool = False
+
+
+class RandomVars:
+    def __init__(self, seed, write_memory_func, do_activate_strings, plants_container: IndexedStrContainer, 
+                 zombies_container: IndexedStrContainer, game_container: NonIndexedStrContainer, catZombieHealth: int, catFireRate: int):
+        assert (do_activate_strings and plants_container and zombies_container and game_container) or not do_activate_strings
+        self.WriteMemory = write_memory_func
+        self.random = random.Random(seed)
+        self.do_activate_strings = do_activate_strings
+        self.vars: list[VarWithStrIndices] = []
+        self.catZombieHealth = max(catZombieHealth, 0)
+        self.catFireRate = max(catFireRate, 0)
+        self.any_category_enabled = catZombieHealth or catFireRate # use to make sure that system is enabled for randomization and not just for string rendering
+        # we can add categories check here before adding vars, also can adjust their chances
+        if self.any_category_enabled:
+            self.vars.append(VarWithStrIndices(
+                VarStr(
+                    var=DiscreteVar("starting sun", 0x0040b09b, chance=self.chance(80, mean([catZombieHealth, catFireRate])), datatype="int",
+                                     default=50, choices=[75, 75, 100], enabled_on_levels=lambda l: l % 5 != 0),
+                    format_str="Starting sun amount is {change_word} to {value}",
+                    format_value_type=FORMAT_ACTUAL_VALUE,
+                    format_more_less_words=['increased', 'decreased']),
+                affects_game_str=True
+            ))
+        if catZombieHealth:
+            # special cases are balloon, zomboss. Doesn't change default body health (270),
+            # so normals, snorkels, backups, boblseds, peashooter, gatling, squash are untouched
+            indices =           [2,   4,   6,   19,   20,   7,   17,  3,    14,   23,   32,   12,   22,   15,   18,   5,   8,    24,   21,   27,  28,   31]
+            defaults =          [370, 1100,1100,1350, 450,  1400,100, 500,  500,  3000, 6000, 1350, 850,  500,  500,  150, 500,  70,   500,  1100,500,  2200]
+            isArmorHP =         [True,True,True,False,False,True,True,False,False,False,False,False,False,False,False,True,False,False,False,True,False,True]
+            changeMultipliers = [1,   0.67,0.67,0.7,  1,    0.6, 0.2, 1,    1,    0.33, 0.166,0.67, 1,    1,    1,    1,   1,    2.5,  0.8,  0.67,1,    0.4]
+            addresses = [0x00522892,0x0052292B,0x00522949,0x0052296E,0x00522A1B,0x00522BB0,0x00522BEF,0x00522CBF,0x00522D64,0x00523D26,0x00523E4A,
+                         0x00522DE1,0x00522E8D,0x00522FC7,0x00523300,0x0052337D,0x00523530,0x005235AC,0x0052299C,0x0052382B,0x00523A87,0x0052395D]
+            assert len(indices) == len(defaults) == len(isArmorHP) == len(changeMultipliers) == len(addresses)
+            for i in range(len(indices)):
+                if isArmorHP[i]:
+                    min_m = (0.25 + 0.03 * catZombieHealth) / (defaults[i] / (270 + defaults[i])) * changeMultipliers[i]**0.75
+                    max_m = (0.3 + 0.06 * catZombieHealth) / (defaults[i] / (270 + defaults[i])) * changeMultipliers[i]
+                else:
+                    min_m = (0.25 + 0.03 * catZombieHealth) * changeMultipliers[i]**0.75
+                    max_m = (0.3 + 0.06 * catZombieHealth) * changeMultipliers[i]
+                args = { 'var': ContinuousVar("zombie health "+str(indices[i]), address=addresses[i], chance=self.chance(120, catZombieHealth), datatype="int",
+                                        default=defaults[i], min=max(defaults[i]*(1-min_m), 5), # min has a min value of 5, so it doesn't go negative
+                                        max=defaults[i]*(1+max_m)),
+                         'format_str': "Health change: {sign}{value}",
+                         'format_value_type': FORMAT_PERCENT_CHANGE
+                }
+                if isArmorHP[i]:
+                    args['modify_value_func'] = lambda h:h+270 # body health for zombies with armor
+                self.vars.append(VarWithStrIndices(
+                    VarStr(**args),
+                    zombie_indices=[indices[i]]
+                ))
+            # ballon has special formatting
+            balloon_choices = [40, 60]
+            if catZombieHealth > 1:
+                balloon_choices.extend([40,60,80])
+            if catZombieHealth > 3:
+                balloon_choices.extend([60,80,100,100])
+            self.vars.append(VarWithStrIndices(
+                    VarStr(var=DiscreteVar("zombie health "+str(16), address=0x005234BF, chance=70-8*catZombieHealth, datatype="int",
+                                        default=20, choices=balloon_choices),
+                            format_str="Balloon requires extra {value} hits to pop",
+                            format_value_type=FORMAT_DELTA_CHANGE,
+                            modify_value_func=lambda h:h//20 # modify_value_func changes value (and default) before formatting, it doesn't affect actual randomization
+                    ),
+                    zombie_indices=[16],
+                    plant_indices=[26] # show it on cactus tooltip as well
+            ))
+            # dr zomboss has a some chance to just have less hp, and it's printed on screen instead of his tooltip (since he never shows one)
+            self.vars.append(VarWithStrIndices(
+                    VarStr(var=ContinuousVar("zombie health "+str(25), address=0x00523624, chance=25+catZombieHealth*20, datatype="int",
+                                        default=40000, min=28000, max=36000,
+                                        enabled_on_levels=lambda l:l==50), # triggered only on 5-10
+                            format_str="Zomboss has just {value} of his normal hp",
+                            format_value_type=FORMAT_PERCENT_OF_DEFAULT_VALUE,
+                    ),
+                    affects_game_str=True
+            ))
+        if catFireRate:
+            indices =  [0,   5,   7,   8,   10,  13,  18,  24,  26,  28,  29,  32,  34,  39,  40,  42,  43,  44,  47,   31]
+            defaults = [150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 300, 300, 300, 150, 200, 150, 300, 3000, 1500]
+            addresses = [0x69F2CC + i * 36 for i in indices]
+            addresses[-2] = 0x464D4D # cob cannon fire cooldown
+            addresses[-1] = 0x46163A # magnet recharge
+            assert len(indices) == len(defaults) == len(addresses)
+            for i in range(len(indices)):
+                self.vars.append(VarWithStrIndices(
+                    VarStr(var=ContinuousVar("fire period "+str(indices[i]), address=addresses[i], chance=self.chance(110, catFireRate), datatype="int",
+                                        default=defaults[i], min=defaults[i]*(0.8-0.02*catFireRate-0.1*int(indices[i]==47)),
+                                        max=defaults[i]*(1.25+0.03*catFireRate-0.1*int(indices[i]==47))), # cob is made faster on average, because I feel like it
+                            format_str="Fire Rate: {sign}{value}",
+                            format_value_type=FORMAT_PERCENT_CHANGE,
+                            modify_value_func=lambda period:1/period # reciprocal of time is fire rate
+                    ),
+                    plant_indices=[indices[i]]
+                ))
+            # chomper chewing time - can only be decreased, chance is constant (reason - I want it that way)
+            self.vars.append(VarWithStrIndices(
+                    VarStr(var=ContinuousVar("fire period "+str(6), address=0x461551, chance=40, datatype="int",
+                                        default=4000, min=4000*(0.75-0.08*catFireRate), max=4000*(0.85),
+                                        enabled_on_levels=lambda l:l!=45), # disabled on 5-5
+                            format_str="Chewing duration {change_word} to {value} sec",
+                            format_value_type=FORMAT_ACTUAL_VALUE,
+                            format_more_less_words=['increased', 'decreased'],
+                            modify_value_func=lambda period:period/100+2 # there's also ~2 sec wakeup animation?
+                    ),
+                    plant_indices=[6]
+                ))
+            # imitater transformation time - there's also animation time (about 1.2 sec) unaffected by this change
+            self.vars.append(VarWithStrIndices(
+                    VarStr(var=ContinuousVar("fire period "+str(48), address=0x45E2D9, chance=self.chance(110, catFireRate), datatype="int",
+                                        default=200, min=200*(0.1), max=200*(1.9)),
+                            format_str="Transformation speed: {sign}{value}",
+                            format_value_type=FORMAT_PERCENT_CHANGE,
+                            modify_value_func=lambda period:1/(period+120) # add ~1.2 untouched second of animation
+                    ),
+                    plant_indices=[48]
+                ))
+            # coffee transformation time - affects both delay and wake up timer
+            self.vars.append(VarWithStrIndices(
+                    VarStr(var=ContinuousVar("fire period "+str(35), address=[0x45E521,0x466B36], chance=self.chance(110, catFireRate), datatype=["int","int"],
+                                        default=[100,100], min=30, max=170, multivar_functions=[lambda main:main]),
+                                        # multivar_functions allows us to modify several values at the same time, but only if those extra values
+                                        # are dependant on main one - in that case wake up timer set to be the same as coffee delay
+                            format_str="Transformation speed: {sign}{value}",
+                            format_value_type=FORMAT_PERCENT_CHANGE,
+                            modify_value_func=lambda period:1/period
+                    ),
+                    plant_indices=[35]
+                ))
+        if do_activate_strings:
+            self.plant_strings = plants_container
+            self.zombie_strings = zombies_container
+            self.game_strings = game_container
+            for v in self.vars:
+                if v.affects_game_str:
+                    self.game_strings.add_var(v.var_str)
+                if v.plant_indices:
+                    self.plant_strings.add_var(v.var_str, v.plant_indices)
+                if v.zombie_indices:
+                    self.zombie_strings.add_var(v.var_str, v.zombie_indices)
+
+    def chance(self, base: float, modifier: float) -> float:
+        if modifier == 0:
+            return 0
+        if modifier == 5:
+            return base
+        # modifier of 5 means use base chance; below 5, chance is decreased exponentially
+        return base / (1.4 ** (5 - modifier))
+
+    def randomize(self, level, do_write):
+        for v in self.vars:
+            v.var_str.var.randomize(self.random, level, self.WriteMemory, do_write)
+        if do_write and self.do_activate_strings:
+            self.plant_strings.update_strings(self.WriteMemory)
+            self.zombie_strings.update_strings(self.WriteMemory)
+            self.game_strings.update_strings(self.WriteMemory)
+
+#endregion
+######### END OF RANDOM VARS SYSTEM ########
+
 
 daveActualPlantCount = 3 if davePlantsCount.get() == "random(1-5)" else int(davePlantsCount.get())
+actualRandomVarsZombieHealth = ["Off", "Very weak", "Weak", "Average", "Strong", "Very Strong"].index(randomVarsCatZombieHealth.get())
+actualRandomVarsFireRate = ["Off", "Very weak", "Weak", "Average", "Strong", "Very Strong"].index(randomVarsCatFireRate.get())
+randomVarsSystemEnabled = actualRandomVarsZombieHealth > 0 or actualRandomVarsFireRate > 0 or renderWeights.get() or renderWavePoints.get()
 
 LEVEL_PLANTS = [
     0,
@@ -577,8 +1119,21 @@ LEVEL_STRINGS = ["Not a level",
     "5-1", "5-2", "5-3", "5-4", "5-5", "5-6", "5-7", "5-8", "5-9", "5-10"
 ]
 
+bytes_per_plant_string = 512 # should be a power of 2
+bytes_per_zombie_string = 512 # should be a power of 2
+bytes_per_game_string = 128 # should be a power of 2
+n_of_plant_strings = 50 # 49 normal plants + 1 dummy string for other unusual plants
+n_of_zombie_strings = 33
+n_of_game_strings = 24 # more than 24 won't fit on screen
+
 plants=[[100, 750], [50, 750], [150, 5000], [50, 3000], [25, 3000], [175, 750], [150, 750], [200, 750], [0, 750], [25, 750], [75, 750], [75, 750], [75, 3000], [25, 750], [75, 5000], [125, 5000], [25, 750], [50, 3000], [325, 750], [25, 3000], [125, 5000], [100, 750], [175, 750], [125, 3000], [0, 3000], [25, 3000], [125, 750], [100, 750], [125, 750], [125, 750], [125, 3000], [100, 750], [100, 750], [25, 750], [100, 750], [75, 750], [50, 750], [100, 750], [50, 3000], [300, 750], [250, 5000], [150, 5000], [150, 5000], [225, 5000], [200, 5000], [50, 5000], [125, 5000], [500, 5000]]
 zombies=[['Basic', 1, 4000, 1, 1], ['Flag (ignore)', 1, 0, 1, 1], ['Cone', 3, 4000, 2, 1], ['Vaulter', 6, 2000, 2, 5], ['Bucket', 8, 3000, 4, 1], ['Newspaper', 11, 1000, 2, 1], ['Screen-Door', 13, 3500, 4, 5], ['Footballer', 16, 2000, 7, 5], ['Dancer', 18, 1000, 5, 5], ['Backup (ignore)', 18, 0, 1, 1], ['Ducky-Tube (ignore)', 21, 0, 1, 5], ['Snorkel', 23, 2000, 3, 10], ['Zomboni', 26, 2000, 7, 10], ['Bobsled', 26, 1500, 3, 10], ['Dolphin', 28, 1500, 3, 10], ['Jack', 31, 1000, 3, 10], ['Balloon', 33, 2000, 2, 10], ['Digger', 36, 1000, 4, 10], ['Pogo', 38, 1000, 4, 10], ['Yeti (ignore)', 40, 1, 4, 1], ['Bungee', 41, 1000, 3, 10], ['Ladder', 43, 1000, 4, 10], ['Catapult', 46, 1500, 5, 10], ['Gargantuar', 48, 1500, 10, 15], ['Imp', 1, 0, 10, 1], ['Zomboss', 50, 0, 10, 1], ['Peashooter', 99, 4000, 1, 1], ['Wall-Nut', 99, 3000, 4, 1], ['Jalapeno', 99, 1000, 3, 10], ['Gatling Pea', 99, 2000, 3, 10], ['Squash', 99, 2000, 3, 10], ['Tall Nut', 99, 2000, 7, 10], ['Giga Gargantuar', 48, 6000, 10, 15]]
+
+plant_names_container = [x for x in SEED_STRINGS][:n_of_plant_strings-1] + ['Some plant'] # constant, so can pass string and not a list
+plant_cooldowns_container = { index: element for index,element in enumerate([[x[1]] for x in plants][:n_of_plant_strings-1]) } # not a constant, so passing a list to keep a reference
+zombie_names_container = [x[0].replace(' (ignore)', '') for x in zombies][:n_of_zombie_strings] # constant, so can pass string and not a list
+wavepoints_container = { index: element for index,element in enumerate([[x[3]] for x in zombies][:n_of_zombie_strings]) } # not a constant, so passing a list to keep a reference
+zombie_weight_container = { index: element for index,element in enumerate([[x[2]] for x in zombies][:n_of_zombie_strings]) } # not a constant, so passing a list to keep a reference
 
 def randomiseLevels(seed):
     global noRestrictions
@@ -889,6 +1444,8 @@ def randomiseWeights():
                 weight=weight*10
             else:
                 weight=weight*100
+            if i in zombie_weight_container:
+                zombie_weight_container[i][0] = weight
             WriteMemory("int", weight, 0x69DA94 + 0x1C*i)
     WriteMemory("int", 0, 0x69DA94 + 0x1C*1)
     WriteMemory("int", 0, 0x69DA94 + 0x1C*9)
@@ -932,6 +1489,8 @@ def randomiseWavePoints():
                 randomCheck=random.randint(0,2)
                 if i==2:
                     randomCheck=1
+            if i in wavepoints_container:
+                wavepoints_container[i][0] = wavePoint
             WriteMemory("int", wavePoint, 0x69DA88 + 0x1C*i)
 
 def convertToLevel(level):
@@ -977,6 +1536,8 @@ def randomiseCooldown():
             power=random.choice([1, -1])
             x = divider**power
             newCooldown=round(plants[i][1] * x)
+            if i in plant_cooldowns_container:
+                plant_cooldowns_container[i][0] = newCooldown
             min_green_blue_value = 110 # the smaller, the redder plants will be, 0#255 range
             # color has less green and blue components the bigger cooldown relative to base cooldown is. But also, bigger default cooldowns become redder a little bit faster
             color = clamp(1 - ((max(x, 0.5) - 0.5) / 1.5), 0, 1) \
@@ -1535,7 +2096,7 @@ if randomCooldowns.get():
     
     
 # Plant::GetTooltip # show cooldown instead of tooltip when random cooldowns are on
-if randomCooldowns.get():
+if randomCooldowns.get() and (LINUX or not randomVarsSystemEnabled):
     WriteMemory("unsigned char", [ 
         0x8B,0x44,0x24,0x04,                # mov eax,[esp+04] // plant index
         0x56,                               # push esi // preserve
@@ -1569,7 +2130,7 @@ WriteMemory("unsigned char", [
     0x651ce8)
 
 # activate code for changing plant name to plant tooltip in seed bank
-if randomCooldowns.get():
+if randomCooldowns.get() or (randomVarsSystemEnabled and WINDOWS):
     WriteMemory("unsigned char", [ 
     0xE9,0xD4,0x25,0x24,0x00,   # jmp 651ce8
     0x90,                       # nop
@@ -2411,7 +2972,104 @@ if enableDave.get() != 'False':
             ], 
             0x48403A)
     
-
+# random vars setup
+if randomVarsSystemEnabled:
+    if WINDOWS:
+        # I pupposefully don't dealloc memory, because game will crash if player resets while still in level (and not in main menu),
+        # it leaks ~192 kB of memory per reset, and it's year 2024
+        string_stuff_address: int = VirtualAllocEx(pvz_handle, None, 0x30000, 0x1000, 0x40)
+        # +0: printing on board enabled (hotkey-toggleable)
+        # +4: n of lines outputted onto board (since it doesn't support newline character) written by container
+        # +0x100: hotkey code
+        # +0x200: printing on lawn code
+        hotkey_code_address = string_stuff_address + 0x100
+        string_code_address = string_stuff_address + 0x200
+        plants_string_address = string_stuff_address + 4 * 1024
+        zombies_string_address = plants_string_address + 40 * 1024
+        game_string_address = zombies_string_address + 20 * 1024
+        plants_string_container = IndexedStrContainer("plants", plants_string_address, bytes_per_plant_string, n_of_plant_strings)
+        zombies_string_container = IndexedStrContainer("zombies", zombies_string_address, bytes_per_zombie_string, n_of_zombie_strings)
+        game_string_container = NonIndexedStrContainer("game", game_string_address, bytes_per_game_string, n_of_game_strings, string_stuff_address+4)
+        for index, el in enumerate(plant_names_container):
+            plants_string_container.add_var(SimpleOutputString(el, "{}"), [index])
+        for index, el in enumerate(zombie_names_container):
+            zombies_string_container.add_var(SimpleOutputString(el, "{}"), [index])
+        if randomCooldowns.get():
+            for _, (index, el) in enumerate(plant_cooldowns_container.items()):
+                # it's important we pass the same object as the object we modify in randomiseCooldowns, same for other non-constant values
+                plants_string_container.add_var(SimpleOutputString(el, "cd: {:.1f} sec", modify_value_func=lambda cd: cd / 100), [index])
+        if randomWavePoints.get() != 'False' and renderWavePoints.get():
+            for _, (index, el) in enumerate(wavepoints_container.items()):
+                if index == 10: #ducky
+                    continue
+                zombies_string_container.add_var(SimpleOutputString(el, "Wave points: {}"), [index])
+        if randomWeights.get() and renderWeights.get():
+            for _, (index, el) in enumerate(zombie_weight_container.items()):
+                if index == 10: # ducky
+                    continue
+                zombies_string_container.add_var(SimpleOutputString(el, "Weight: {}"), [index])
+        # Plant tooltip
+        WriteMemory("unsigned char", [
+            0x8B, 0x44, 0x24, 0x04, 0x83, 0xF8, 0x30, 0x7E, 0x05, 0xB8, 0x31, 0x00, 0x00, 0x00,
+            0xC1, 0xE0, int(math.log2(bytes_per_plant_string)), 0x8D, 0x80, *list(plants_string_address.to_bytes(4, "little")),
+            0x50, 0xE8, 0x83, 0xC6, 0xF9, 0xFF, 0xC3,
+            ],
+            0x467DB0)
+        # Zombie tooltip
+        WriteMemory("unsigned char", [
+            0xC1, 0xE0, int(math.log2(bytes_per_zombie_string)), 0x8D, 0x80, *list(zombies_string_address.to_bytes(4, "little")),
+            0x50, 0x8D, 0x74, 0x24, 0x34, 0x8B, 0xCE, 0xE8, 0xEE, 0x53, 0xFF, 0xFF, 0xEB, 0x12,
+            ],
+            0x40F04D)
+        WriteMemory("unsigned char", [
+            0xE8, 0x45, 0xB8, 0x10, 0x00, #SetLabel instead of SetTitle
+            ],
+            0x40F086)
+        WriteMemory("unsigned char", [
+            0x0F, 0x1F, 0x44, 0x00, 0x00, # nop 5 instead of call
+            ],
+            0x40f0d2)
+        # enable tooltip for zombotany guys
+        WriteMemory("unsigned char", [
+            0xEB, # nop 5 instead of call
+            ],
+            0x40E7E8)
+        # Rendering strings on board
+        WriteMemory("unsigned char", [
+            0xA1,*list(string_stuff_address.to_bytes(4,"little")),0x85,0xC0,0x74,0x79,0x8B,0x4C,0x24,0x08,0xA1,0x30,
+            0x76,0x6A,0x00,0x89,0x41,0x40,0x68,0xFF,0x00,0x00,0x00,0x68,0xFF,0x00,0x00,
+            0x00,0x68,0xFF,0x00,0x00,0x00,0x68,0xFF,0x00,0x00,0x00,0x8B,0xC4,0xE8,
+            *list((0x586CC0-string_code_address-0x30).to_bytes(4,"little",signed=True)),
+            0x83,0xC4,0x10,0x56,0x8B,0x35,*list((string_stuff_address+4).to_bytes(4,"little")),0x68,
+            *list(game_string_address.to_bytes(4,"little")),0x6A,0x74,0x85,0xF6,0x74,0x39,0x83,0xEC,0x1C,0x8B,0xCC,0x8B,0x44,
+            0x24,0x20,0x50,0xE8,*list((0x404450-string_code_address-0x54).to_bytes(4,"little",signed=True)),0x50,0x8B,0x54,0x24,0x20,0x52,0x6A,
+            0x32,0x50,0x8B,0x44,0x24,0x40,0xE8,*list((0x587120-string_code_address-0x66).to_bytes(4,"little",signed=True)),
+            0x59,0xE8,*list((0x404420-string_code_address-0x6C).to_bytes(4,"little",signed=True)),
+            0x83,0xC4,0x1C,0x5A,0x83,0xC2,0x10,0x58,0x05,*list(bytes_per_game_string.to_bytes(4,"little",signed=True)),0x50,0x52,
+            0x4E,0x75,0xC7,0x83,0xC4,0x08,0x5E,0x6A,0xFF,0x64,0xA1,0x00,0x00,0x00,0x00,
+            0xE9,*list((0x41AA48-string_code_address-0x8F).to_bytes(4,"little",signed=True)),
+            ],
+            string_code_address)
+        WriteMemory("unsigned char", [
+            0xE9, *list((string_code_address-0x41AA45).to_bytes(4,"little",signed=True)),
+            0x0F, 0x1F, 0x00,
+            ],
+            0x41AA40)
+        # Hotkey for switching string printing
+        WriteMemory("unsigned char", [
+            0x83, 0xFF, 0x0D, 0x75, 0x07, 0x83, 0x35, *list(string_stuff_address.to_bytes(4, "little")), 0x01,
+            0x83, 0xFF, 0x20, 0x0F, 0x84, *list((0x41B86C-hotkey_code_address-0x15).to_bytes(4,"little",signed=True)),
+            0xE9, *list((0x41B867-hotkey_code_address-0x1A).to_bytes(4,"little",signed=True)),
+            ],
+            hotkey_code_address)
+        WriteMemory("unsigned char", [
+            0xE9, *list((hotkey_code_address-0x41B867).to_bytes(4,"little",signed=True)),
+            ],
+            0x41B862)
+    else:
+        plants_string_container = zombies_string_container = game_string_container = None
+    random_vars = RandomVars(seed, WriteMemory, WINDOWS, plants_string_container, zombies_string_container, game_string_container,
+                             catZombieHealth=actualRandomVarsZombieHealth, catFireRate=actualRandomVarsFireRate)
 
 try:
     leftoverZombies=open('leftoverZombies.txt', 'r')
@@ -2449,7 +3107,7 @@ for i in range(50):
         if savePoint-1==i:
             saved.set(False)
     if not saved.get() and i!=0:
-        linesToWrite=[seed, (i+1), str(ReadMemory("int", 0x6A9EC0,0x82C,0x214)), str(ReadMemory("int",0x6A9EC0,0x82C, 0x28)), (challengeMode.get()), (shopless.get()), (noRestrictions.get()), (noAutoSlots.get()), (imitater.get()), (randomisePlants.get()), (seeded.get()), (upgradeRewards.get()), (randomWeights.get()), (randomWavePoints.get()), startingWave.get(), randomCost.get(), randomCooldowns.get(), costTextToggle.get(), randomZombies.get(), randomConveyors.get(), cooldownColoring.get(), enableDave.get(), davePlantsCount.get()]
+        linesToWrite=[seed, (i+1), str(ReadMemory("int", 0x6A9EC0,0x82C,0x214)), str(ReadMemory("int",0x6A9EC0,0x82C, 0x28)), (challengeMode.get()), (shopless.get()), (noRestrictions.get()), (noAutoSlots.get()), (imitater.get()), (randomisePlants.get()), (seeded.get()), (upgradeRewards.get()), (randomWeights.get()), (randomWavePoints.get()), startingWave.get(), randomCost.get(), randomCooldowns.get(), costTextToggle.get(), randomZombies.get(), randomConveyors.get(), cooldownColoring.get(), enableDave.get(), davePlantsCount.get(), randomVarsCatZombieHealth.get(), randomVarsCatFireRate.get(), renderWeights.get(), renderWavePoints.get()]
         saveFile=open('saveFile.txt', 'w')
         for k in range(len(linesToWrite)):
             linesToWrite[k]=str(linesToWrite[k])
@@ -2523,6 +3181,9 @@ for i in range(50):
         randomiseStartingWave(startingWave)
     if not saved.get():
         WriteMemory("int",newlevel,0x651190)
+    if randomVarsSystemEnabled and i!=0:
+        # optimization - we don't actually write random vars and strings when using jump-to-level, but still randomize then (so seed works)
+        random_vars.randomize(levels[i], do_write=not saved.get())
     if not shopless.get():
         WriteMemory("bool",True,0x6A9EC0,0x82C,0x21C)
         WriteMemory("bool",True,0x6A9EC0,0x82C,0x218)
@@ -2555,7 +3216,7 @@ for i in range(50):
 
 WriteMemory("int",0,0x651190)
 
-linesToWrite=[seed, "finished", str(ReadMemory("int", 0x6A9EC0,0x82C,0x214)), str(ReadMemory("int",0x6A9EC0,0x82C, 0x28)), (challengeMode.get()), (shopless.get()), (noRestrictions.get()), (noAutoSlots.get()), (imitater.get()), (randomisePlants.get()), (seeded.get()), (upgradeRewards.get()), (randomWeights.get()), (randomWavePoints.get()), startingWave.get(), randomCost.get(), randomCooldowns.get(), costTextToggle.get(), randomZombies.get(), randomConveyors.get(), cooldownColoring.get(), enableDave.get(), davePlantsCount.get()]
+linesToWrite=[seed, "finished", str(ReadMemory("int", 0x6A9EC0,0x82C,0x214)), str(ReadMemory("int",0x6A9EC0,0x82C, 0x28)), (challengeMode.get()), (shopless.get()), (noRestrictions.get()), (noAutoSlots.get()), (imitater.get()), (randomisePlants.get()), (seeded.get()), (upgradeRewards.get()), (randomWeights.get()), (randomWavePoints.get()), startingWave.get(), randomCost.get(), randomCooldowns.get(), costTextToggle.get(), randomZombies.get(), randomConveyors.get(), cooldownColoring.get(), enableDave.get(), davePlantsCount.get(), randomVarsCatZombieHealth.get(), randomVarsCatFireRate.get(), renderWeights.get(), renderWavePoints.get()]
 saveFile=open('saveFile.txt', 'w')
 for k in range(len(linesToWrite)):
     linesToWrite[k]=str(linesToWrite[k])
