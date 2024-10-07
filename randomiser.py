@@ -220,6 +220,7 @@ enableDave       = StringVar(value="False")
 davePlantsCount  = StringVar(value="3")
 randomVarsCatZombieHealth = StringVar(value="Off")
 randomVarsCatFireRate = StringVar(value="Off")
+limitPreviews    = BooleanVar(value=False)
 
 seed=str(random.randint(1,999999999999))
 
@@ -238,6 +239,8 @@ if hasSave:
         fileInfo.append("False") #renderWeights
     if len(fileInfo)<27:
         fileInfo.append("False") #renderWavePoints
+    if len(fileInfo)<28:
+        fileInfo.append("False") #limitPreviews
     challengeMode.set(  eval(fileInfo[4].strip()))
     shopless.set(       eval(fileInfo[5].strip()))
     noRestrictions.set( eval(fileInfo[6].strip()))
@@ -261,6 +264,7 @@ if hasSave:
     randomVarsCatFireRate.set(str(fileInfo[24].strip()))
     renderWeights.set(str(fileInfo[25].strip()))
     renderWavePoints.set(str(fileInfo[26].strip()))
+    limitPreviews.set(str(fileInfo[27].strip()))
     if fileInfo[1]=="finished\n":
         hasSave=False
 
@@ -344,7 +348,7 @@ def shoplessButtonClick():
         manualMoneyButton.config(state=NORMAL)
 
 def continueButtonClick():
-    global seed, challengeMode, shopless, noRestrictions, noAutoSlots, imitater, randomisePlants, seeded, upgradeRewards, randomWeights, randomWavePoints, startingWave, randomCost, randomCooldowns, costTextToggle, randomZombies, randomConveyors, cooldownColoring, enableDave, davePlantsCount, randomVarsCatZombieHealth, randomVarsCatFireRate, renderWeights, renderWavePoints, saved, savePoint, fileInfo, jumpLevel
+    global seed, challengeMode, shopless, noRestrictions, noAutoSlots, imitater, randomisePlants, seeded, upgradeRewards, randomWeights, randomWavePoints, startingWave, randomCost, randomCooldowns, costTextToggle, randomZombies, randomConveyors, cooldownColoring, enableDave, davePlantsCount, randomVarsCatZombieHealth, randomVarsCatFireRate, renderWeights, renderWavePoints, limitPreviews, saved, savePoint, fileInfo, jumpLevel
     seed=fileInfo[0].strip()
     savePoint=int(fileInfo[1].strip())
     WriteMemory("int", int(fileInfo[2].strip()), 0x6A9EC0,0x82C,0x214) #slots
@@ -373,6 +377,7 @@ def continueButtonClick():
     randomVarsCatFireRate.set(str(fileInfo[24].strip()))
     renderWeights.set(str(fileInfo[25].strip()))
     renderWavePoints.set(str(fileInfo[26].strip()))
+    limitPreviews.set(str(fileInfo[27].strip()))
     saved.set(True)
     jumpLevel=""
     window.destroy()
@@ -495,6 +500,9 @@ cooldownColoringToggle.config(state=DISABLED)
 zombiesButton=Checkbutton(window, text="RANDOM ZOMBIES", width=16, variable=randomZombies, anchor="w")#command=cooldownButtonClick)
 zombiesButton.grid(row=3, column=4, sticky=W)
 
+limitPreviewsButton=Checkbutton(window, text="LIMIT PREVIEWS", width=16, variable=limitPreviews, anchor="w")#command=cooldownButtonClick)
+limitPreviewsButton.grid(row=4, column=4, sticky=W)
+
 ##zombiesButton=Checkbutton(window, text="RANDOM CONVEYORS", width=16, variable=randomConveyors, anchor="w")#command=cooldownButtonClick)
 ##zombiesButton.grid(row=4, column=4, sticky=W)
 
@@ -516,12 +524,12 @@ enableDaveButton.bind('<<ComboboxSelected>>', lambda e: enableDaveChanged(enable
 enableDaveButton.grid(row=4, column=5, sticky=W)
 
 daveAmountLabel=Label(window, text="DAVE PLANTS COUNT:")
-daveAmountLabel.grid(row=1, column=6, sticky=W)
+daveAmountLabel.grid(row=5, column=5, sticky=W)
 daveAmountButton=ttk.Combobox(window, text="DAVE PLANTS COUNT", width=16, textvariable=davePlantsCount )#command=randomConveyorButtonClick)
 daveAmountButton["values"] = ["1", "2", "3", "4", "5", "random(1-5)"]
 daveAmountButton.state(["readonly"])
 daveAmountButton.bind('<<ComboboxSelected>>', lambda e: daveAmountButton.selection_clear())
-daveAmountButton.grid(row=2, column=6, sticky=W)
+daveAmountButton.grid(row=6, column=5, sticky=W)
 if (enableDave.get() == 'False'):
     daveAmountButton.config(state=DISABLED)
 
@@ -594,6 +602,7 @@ print("Coloured Cost:",      str(costTextToggle.get()))
 print("Random Cooldowns:",   str(randomCooldowns.get()))
 print("Cooldown seed coloring:",   str(cooldownColoring.get()))
 print("Random Zombies:",     str(randomZombies.get()))
+print("Limited Previews:",   str(limitPreviews.get()))
 print("Random Conveyors:",   str(randomConveyors.get()))
 print("Crazy Dave:",         str(enableDave.get()))
 print("Dave Plants Count:",  str(davePlantsCount.get()))
@@ -913,12 +922,14 @@ class RandomVars:
     def __init__(self, seed, write_memory_func, do_activate_strings, plants_container: IndexedStrContainer, 
                  zombies_container: IndexedStrContainer, game_container: NonIndexedStrContainer, catZombieHealth: int, catFireRate: int):
         assert (do_activate_strings and plants_container and zombies_container and game_container) or not do_activate_strings
+        catFireRate = max(catFireRate, 0)
+        catZombieHealth = max(catZombieHealth, 0)
         self.WriteMemory = write_memory_func
         self.random = random.Random(seed)
         self.do_activate_strings = do_activate_strings
         self.vars: list[VarWithStrIndices] = []
-        self.catZombieHealth = max(catZombieHealth, 0)
-        self.catFireRate = max(catFireRate, 0)
+        self.catZombieHealth = catZombieHealth
+        self.catFireRate = catFireRate
         self.any_category_enabled = catZombieHealth or catFireRate # use to make sure that system is enabled for randomization and not just for string rendering
         # we can add categories check here before adding vars, also can adjust their chances
         if self.any_category_enabled:
@@ -955,7 +966,7 @@ class RandomVars:
                          'format_value_type': FORMAT_PERCENT_CHANGE
                 }
                 if isArmorHP[i]:
-                    args['modify_value_func'] = lambda h:h+270 # body health for zombies with armor
+                    args['modify_value_func'] = lambda h:h+180 # body health for zombies with armor - but account only for health needed to depcaitate zombie
                 self.vars.append(VarWithStrIndices(
                     VarStr(**args),
                     zombie_indices=[indices[i]]
@@ -967,14 +978,14 @@ class RandomVars:
             if catZombieHealth > 3:
                 balloon_choices.extend([60,80,100,100])
             self.vars.append(VarWithStrIndices(
-                    VarStr(var=DiscreteVar("zombie health "+str(16), address=0x005234BF, chance=70-8*catZombieHealth, datatype="int",
+                    VarStr(var=DiscreteVar("zombie health "+str(16), address=0x005234BF, chance=30+8*catZombieHealth, datatype="int",
                                         default=20, choices=balloon_choices),
                             format_str="Balloon requires extra {value} hits to pop",
                             format_value_type=FORMAT_DELTA_CHANGE,
                             modify_value_func=lambda h:h//20 # modify_value_func changes value (and default) before formatting, it doesn't affect actual randomization
                     ),
                     zombie_indices=[16],
-                    plant_indices=[26] # show it on cactus tooltip as well
+                    plant_indices=[26, 43] # show it on cactus and cattail tooltip as well
             ))
             # dr zomboss has a some chance to just have less hp, and it's printed on screen instead of his tooltip (since he never shows one)
             self.vars.append(VarWithStrIndices(
@@ -1000,7 +1011,8 @@ class RandomVars:
                                         max=defaults[i]*(1.25+0.03*catFireRate-0.1*int(indices[i]==47))), # cob is made faster on average, because I feel like it
                             format_str="Fire Rate: {sign}{value}",
                             format_value_type=FORMAT_PERCENT_CHANGE,
-                            modify_value_func=lambda period:1/period # reciprocal of time is fire rate
+                            modify_value_func=lambda period:1/(period-7.5) # reciprocal of time is fire rate, also take rng per shot into account -
+                                                                           # 0.075 sec is wrong for magnet and cob, but that's fine
                     ),
                     plant_indices=[indices[i]]
                 ))
@@ -2818,6 +2830,17 @@ WriteMemory("unsigned char", [
 ], 0x40bdeb)
 
 
+# Limit previews
+if limitPreviews.get():
+    WriteMemory("unsigned char", [
+        0x66, 0x90, # nop 2
+    ], 0x43A608)
+    WriteMemory("unsigned char", [
+        0x83, 0xC4, 0x04, # add esp,4
+        0x66, 0x90,       # nop 2
+    ], 0x43A66C)
+
+
 # Crazy Dave stuff
 # I know this is a lot of code, but I'm not sure how to make it better - a lot of it is for umbrella/blover/torchwood.
 # We need a lot of bytes to check whether umbrella/blover/torchwood are unlocked to make it work like in vanilla,
@@ -3031,7 +3054,7 @@ if randomVarsSystemEnabled:
             0x40f0d2)
         # enable tooltip for zombotany guys
         WriteMemory("unsigned char", [
-            0xEB, # nop 5 instead of call
+            0xEB,
             ],
             0x40E7E8)
         # Rendering strings on board
@@ -3107,7 +3130,7 @@ for i in range(50):
         if savePoint-1==i:
             saved.set(False)
     if not saved.get() and i!=0:
-        linesToWrite=[seed, (i+1), str(ReadMemory("int", 0x6A9EC0,0x82C,0x214)), str(ReadMemory("int",0x6A9EC0,0x82C, 0x28)), (challengeMode.get()), (shopless.get()), (noRestrictions.get()), (noAutoSlots.get()), (imitater.get()), (randomisePlants.get()), (seeded.get()), (upgradeRewards.get()), (randomWeights.get()), (randomWavePoints.get()), startingWave.get(), randomCost.get(), randomCooldowns.get(), costTextToggle.get(), randomZombies.get(), randomConveyors.get(), cooldownColoring.get(), enableDave.get(), davePlantsCount.get(), randomVarsCatZombieHealth.get(), randomVarsCatFireRate.get(), renderWeights.get(), renderWavePoints.get()]
+        linesToWrite=[seed, (i+1), str(ReadMemory("int", 0x6A9EC0,0x82C,0x214)), str(ReadMemory("int",0x6A9EC0,0x82C, 0x28)), (challengeMode.get()), (shopless.get()), (noRestrictions.get()), (noAutoSlots.get()), (imitater.get()), (randomisePlants.get()), (seeded.get()), (upgradeRewards.get()), (randomWeights.get()), (randomWavePoints.get()), startingWave.get(), randomCost.get(), randomCooldowns.get(), costTextToggle.get(), randomZombies.get(), randomConveyors.get(), cooldownColoring.get(), enableDave.get(), davePlantsCount.get(), randomVarsCatZombieHealth.get(), randomVarsCatFireRate.get(), renderWeights.get(), renderWavePoints.get(), limitPreviews.get()]
         saveFile=open('saveFile.txt', 'w')
         for k in range(len(linesToWrite)):
             linesToWrite[k]=str(linesToWrite[k])
@@ -3216,7 +3239,7 @@ for i in range(50):
 
 WriteMemory("int",0,0x651190)
 
-linesToWrite=[seed, "finished", str(ReadMemory("int", 0x6A9EC0,0x82C,0x214)), str(ReadMemory("int",0x6A9EC0,0x82C, 0x28)), (challengeMode.get()), (shopless.get()), (noRestrictions.get()), (noAutoSlots.get()), (imitater.get()), (randomisePlants.get()), (seeded.get()), (upgradeRewards.get()), (randomWeights.get()), (randomWavePoints.get()), startingWave.get(), randomCost.get(), randomCooldowns.get(), costTextToggle.get(), randomZombies.get(), randomConveyors.get(), cooldownColoring.get(), enableDave.get(), davePlantsCount.get(), randomVarsCatZombieHealth.get(), randomVarsCatFireRate.get(), renderWeights.get(), renderWavePoints.get()]
+linesToWrite=[seed, "finished", str(ReadMemory("int", 0x6A9EC0,0x82C,0x214)), str(ReadMemory("int",0x6A9EC0,0x82C, 0x28)), (challengeMode.get()), (shopless.get()), (noRestrictions.get()), (noAutoSlots.get()), (imitater.get()), (randomisePlants.get()), (seeded.get()), (upgradeRewards.get()), (randomWeights.get()), (randomWavePoints.get()), startingWave.get(), randomCost.get(), randomCooldowns.get(), costTextToggle.get(), randomZombies.get(), randomConveyors.get(), cooldownColoring.get(), enableDave.get(), davePlantsCount.get(), randomVarsCatZombieHealth.get(), randomVarsCatFireRate.get(), renderWeights.get(), renderWavePoints.get(), limitPreviews.get()]
 saveFile=open('saveFile.txt', 'w')
 for k in range(len(linesToWrite)):
     linesToWrite[k]=str(linesToWrite[k])
