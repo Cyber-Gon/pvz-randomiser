@@ -4,10 +4,13 @@ import platform
 import math
 import abc
 import copy
+from types import MethodType
 from dataclasses import dataclass
 from inspect import signature
 from statistics import mean
+from idlelib.tooltip import Hovertip
 import atexit
+
 try:
     if platform.system() == "Windows":
         WINDOWS = True
@@ -199,11 +202,11 @@ window.title("Randomiser settings")
 challengeMode    = BooleanVar(value=False)
 shopless         = BooleanVar(value=False)
 noRestrictions   = BooleanVar(value=False)
-noAutoSlots      = BooleanVar(value=False)
+noAutoSlots      = BooleanVar(value=True) # enabled by default
 imitater         = BooleanVar(value=False)
-randomisePlants  = BooleanVar(value=False)
+randomisePlants  = BooleanVar(value=True) # enabled by default
 seeded           = BooleanVar(value=False)
-upgradeRewards   = BooleanVar(value=False)
+upgradeRewards   = BooleanVar(value=True) # enabled by default
 randomWeights    = BooleanVar(value=False)
 renderWeights    = BooleanVar(value=False)
 randomWavePoints = StringVar(value="False")
@@ -417,45 +420,62 @@ jumpLabel.grid(row=0, column=2, sticky=W)
 
 jumpEntry=Entry(window, width=20, bg="light green")
 jumpEntry.grid(row=0, column=3, sticky=W)
+Hovertip(jumpEntry, "Allows you to go to the specified level immediately\nFormat is: 3-7 (world-level)\n"\
+    "You should create a new save file, beat 1-1, and you will be moved to the specified level", 10)
 
 if hasSave:
     continueButton=Button(window, text="CONTINUE LAST RUN", width=16, command=continueButtonClick)
     continueButton.grid(row=0, column=4, sticky=W)
+    Hovertip(continueButton, "Continue last game - all your settings and run seed will be restored,\nYou don't need to input same settings.\n"\
+        "You should create a new save file, beat 1-1, and you will be moved to the level you stopped at", 10)
 
 spaces=150
 
 #create a button widget (dear god this is unwieldy)
 challengeButton=Checkbutton(window, text="CHALLENGE", width=16, variable=challengeMode, anchor="w")#command=challengeButtonClick)
 challengeButton.grid(row=1, column=0, sticky=W)
+Hovertip(challengeButton, "Makes level ordering harder - some default limitations are not enabled with this setting", 10)
 
 shoplessButton=Checkbutton(window, text="SHOPLESS", width=16, variable=shopless, anchor="w", command=shoplessButtonClick)
 shoplessButton.grid(row=3, column=0, sticky=W)
+Hovertip(shoplessButton, "Not recommended. Disables shop - you won't get seed slots or upgrade plants", 10)
 
 noRestrictionsButton=Checkbutton(window, text="NO RESTRICTIONS", width=16, variable=noRestrictions, anchor="w", command=noRestrictionsButtonClick)
 noRestrictionsButton.grid(row=2, column=0, sticky=W)
+Hovertip(noRestrictionsButton, "Removes all restrictions from level ordering, as well as some other modes.\n"\
+    "You might require A LOT of attempts to beat the game with this setting", 10)
 
 manualMoneyButton=Checkbutton(window, text="MANUAL MONEY", width=16, variable=noAutoSlots, anchor="w")#command=autoSlotsButtonClick)
 manualMoneyButton.grid(row=3, column=3, sticky=W)
+Hovertip(manualMoneyButton, "RECOMMENDED - you will buy items from shop yourself, including seed slots.\nWithout this, your money will disappear after every level", 10)
 
 imitaterButton=Checkbutton(window, text="INSTANT IMITATER", width=16, variable=imitater, anchor="w")#command=imitaterButtonClick)
 imitaterButton.grid(row=2, column=4, sticky=W)
+Hovertip(imitaterButton, "The imitater is unlocked immediately on game start -\nand it allows you to pick any plant, even not yet unlocked ones.\n"\
+    "You also get extra seed slot in the beginning of the game, so you can actually bring imitated plant", 10)
 
 randPlantsButton=Checkbutton(window, text="RANDOM PLANTS", width=16, variable=randomisePlants, anchor="w")#command=randPlantsButtonClick)
 randPlantsButton.grid(row=4, column=0, sticky=W)
+Hovertip(randPlantsButton, "RECOMMENDED - you get random plant after beating each level, instead of the normal reward.", 10)
 
 seededButton=Checkbutton(window, text="SEEDED", width=16, variable=seeded, anchor="w")#command=seededButtonClick)
 seededButton.grid(row=1, column=4, sticky=W)
+Hovertip(seededButton, "Enabled seeded RNG in game - things like zombie spawns will be seeded", 10)
 
 upgradeButton=Checkbutton(window, text="UPGRADE REWARDS", width=16, variable=upgradeRewards, anchor="w")#command=upgradeButtonClick)
 upgradeButton.grid(row=4, column=3, sticky=W)
+Hovertip(upgradeButton, "RECOMMENDED - Some of level rewards, which are normally missing, might be changed to upgrade plants,\nso you don't need to buy them", 10)
 
 randWeightsButton=Checkbutton(window, text="RANDOM WEIGHTS", width=16, variable=randomWeights, anchor="w", command=randomWeightsButtonClick)
 randWeightsButton.grid(row=1, column=1, sticky=W)
+Hovertip(randWeightsButton, "Weights (the chance that game spawns particular type of zombie) are randomised,\n"\
+    "so sometimes you might get a lot of zombies of specific type, or almost none at all", 10)
 
 renderWeightsButton=Checkbutton(window, text="SHOW WEIGHT", width=16, variable=renderWeights, anchor="w")#command=randomWeightsButtonClick)
 renderWeightsButton.grid(row=2, column=1, sticky=W)
 if not randomWeights.get():
     renderWeightsButton.config(state=DISABLED)
+Hovertip(renderWeightsButton, "The random weights of zombies are shown on their tooltip in seed selection screen", 10)
 
 randWavePointsLabel=Label(window, text="RAND WAVE POINTS:")
 randWavePointsLabel.grid(row=4, column=2, sticky=W)
@@ -464,11 +484,13 @@ randWavePointsButton["values"] = ["False", "Normal", "EXTREME"]
 randWavePointsButton.state(["readonly"])
 randWavePointsButton.bind('<<ComboboxSelected>>', lambda e: randomWavePointsChanged())
 randWavePointsButton.grid(row=5, column=2, sticky=W)
+Hovertip(randWavePointsButton, "How much does it \"cost\" the game to spawn particular types of zombies is randomized", 10)
 
 renderWavePointsButton=Checkbutton(window, text="SHOW WAVEPOINTS", width=16, variable=renderWavePoints, anchor="w")#command=randomWeightsButtonClick)
 renderWavePointsButton.grid(row=6, column=2, sticky=W)
 if randomWavePoints.get == 'False':
     renderWavePointsButton.config(state=DISABLED)
+Hovertip(renderWavePointsButton, "The random wave points of zombies are shown on their tooltip in seed selection screen", 10)
 
 waveStartLabel=Label(window, text="STARTING WAVE:")
 waveStartLabel.grid(row=1, column=3, sticky=W)
@@ -477,16 +499,20 @@ waveStartButton["values"] = ["False", "Random", "Instant"]
 waveStartButton.state(["readonly"])
 waveStartButton.bind('<<ComboboxSelected>>', lambda e: waveStartButton.selection_clear())
 waveStartButton.grid(row=2, column=3, sticky=W)
+Hovertip(waveStartButton, "Randomizes how early zombie types are allowed to spawn on every level.\nInstant means there are no limitations (except waves 1-3)", 10)
 
 costButton=Checkbutton(window, text="RANDOM COST", width=16, variable=randomCost, anchor="w", command=costButtonClick)
 costButton.grid(row=3, column=1, sticky=W)
+Hovertip(costButton, "Sun cost of each plant is randomized", 10)
 
 costTextButton=Checkbutton(window, text="COLOURED COST", width=16, variable=costTextToggle, anchor="w")#command=costTextButtonClick)
 costTextButton.grid(row=4, column=1, sticky=W)
 costTextButton.config(state=DISABLED)
+Hovertip(costTextButton, "Sun cost will be colored accordingly to how much it has changed", 10)
 
 cooldownButton=Checkbutton(window, text="RAND COOLDOWNS", width=16, variable=randomCooldowns, anchor="w", command=cooldownButtonClick)
 cooldownButton.grid(row=1, column=2, sticky=W)
+Hovertip(cooldownButton, "Cooldown of each plant is randomized", 10)
 
 cooldownColoringLabel=Label(window, text="COOLDOWN SEED COLORS:")
 cooldownColoringLabel.grid(row=2, column=2, sticky=W)
@@ -495,13 +521,17 @@ cooldownColoringToggle["values"] = ["False", "Selection only", "Always on"]
 cooldownColoringToggle.state(["readonly"])
 cooldownColoringToggle.bind('<<ComboboxSelected>>', lambda e: cooldownColoringToggle.selection_clear())
 cooldownColoringToggle.grid(row=3, column=2, sticky=W)
-cooldownColoringToggle.config(state=DISABLED)
+if not randomCooldowns.get():
+    cooldownColoringToggle.config(state=DISABLED)
+Hovertip(cooldownColoringToggle, "Seed packets will be colored depending on how bad their cooldown is,\ncompared to original", 10)
 
 zombiesButton=Checkbutton(window, text="RANDOM ZOMBIES", width=16, variable=randomZombies, anchor="w")#command=cooldownButtonClick)
 zombiesButton.grid(row=3, column=4, sticky=W)
+Hovertip(zombiesButton, "Adds or removes random zombie types from each level", 10)
 
 limitPreviewsButton=Checkbutton(window, text="LIMIT PREVIEWS", width=16, variable=limitPreviews, anchor="w")#command=cooldownButtonClick)
 limitPreviewsButton.grid(row=4, column=4, sticky=W)
+Hovertip(limitPreviewsButton, "Limits each zombie type to appear only once on level preview,\nso you have no idea how many there are of each type", 10)
 
 ##zombiesButton=Checkbutton(window, text="RANDOM CONVEYORS", width=16, variable=randomConveyors, anchor="w")#command=cooldownButtonClick)
 ##zombiesButton.grid(row=4, column=4, sticky=W)
@@ -513,15 +543,16 @@ conveyorButton["values"] = ["False", "Balanced", "It's Raining Seeds"]
 conveyorButton.state(["readonly"])
 conveyorButton.bind('<<ComboboxSelected>>', lambda e: conveyorButton.selection_clear())
 conveyorButton.grid(row=2, column=5, sticky=W)
+Hovertip(conveyorButton, "Changes available plants in conveyor levels.\n It's raining seeds means there are almost no limits to what plant you can get", 10)
 
 enableDaveLabel=Label(window, text="CRAZY DAVE:")
 enableDaveLabel.grid(row=3, column=5, sticky=W)
 enableDaveButton=ttk.Combobox(window, text="CRAZY DAVE", width=16, textvariable=enableDave)
 enableDaveButton["values"] = ["False", "On", "On + plant upgrades"]
 enableDaveButton.state(["readonly"])
-
 enableDaveButton.bind('<<ComboboxSelected>>', lambda e: enableDaveChanged(enableDaveButton))
 enableDaveButton.grid(row=4, column=5, sticky=W)
+Hovertip(enableDaveButton, "Makes Crazy Dave pick some plants for you", 10)
 
 daveAmountLabel=Label(window, text="DAVE PLANTS COUNT:")
 daveAmountLabel.grid(row=5, column=5, sticky=W)
@@ -532,6 +563,7 @@ daveAmountButton.bind('<<ComboboxSelected>>', lambda e: daveAmountButton.selecti
 daveAmountButton.grid(row=6, column=5, sticky=W)
 if (enableDave.get() == 'False'):
     daveAmountButton.config(state=DISABLED)
+Hovertip(daveAmountButton, "How many plants Dave picks every level. Random means it will be random amount every level", 10)
 
 def enableDaveChanged(button):
     global daveAmountButton, enableDave
@@ -549,6 +581,7 @@ randomVarsCatZombieHealthButton["values"] = ["Off", "Very weak", "Weak", "Averag
 randomVarsCatZombieHealthButton.state(["readonly"])
 randomVarsCatZombieHealthButton.bind('<<ComboboxSelected>>', lambda e: randomVarsCatZombieHealthButton.selection_clear())
 randomVarsCatZombieHealthButton.grid(row=6, column=0, sticky=W)
+Hovertip(randomVarsCatZombieHealthButton, "Random Zombie health - options change how strong and often healths are randomized.", 10)
 
 randomVarsCatFireRateLabel=Label(window, text="FIRE RATE RANDO:")
 randomVarsCatFireRateLabel.grid(row=5, column=1, sticky=W)
@@ -557,9 +590,11 @@ randomVarsCatFireRateButton["values"] = ["Off", "Very weak", "Weak", "Average", 
 randomVarsCatFireRateButton.state(["readonly"])
 randomVarsCatFireRateButton.bind('<<ComboboxSelected>>', lambda e: randomVarsCatFireRateButton.selection_clear())
 randomVarsCatFireRateButton.grid(row=6, column=1, sticky=W)
+Hovertip(randomVarsCatFireRateButton, "Plant Random Fire rates - options change how strong and often fire rates are randomized.", 10)
 
 closeButton=Button(window, text="SUBMIT SETTINGS", width=16, command=closeButtonClick)
 closeButton.grid(row=0, column=6, sticky=W)
+Hovertip(closeButton, "Begin the game - press this, and go beat 1-1.", 10)
 
 informationButton=Button(window, text="INFORMATION", width=16, command=informationButtonClick)
 informationButton.grid(row=0, column=7, sticky=W)
@@ -567,15 +602,16 @@ informationButton.grid(row=0, column=7, sticky=W)
 #creates an entry widget, assigning it to a variable
 entry=Entry(window, width=20, bg="light green")
 entry.grid(row=0, column=1, sticky=W) #positioning this widget on the screen
+Hovertip(entry, "Seed to use for randomiser and, if enabled, seeded mode.\nEvery playthrough on the same Randomiser version "\
+    "with the same settings and\nwith the same seed will produce same randomisation", 10)
 
 #create a text box widget
 outputText=Text(window, width=120, height=15, wrap=WORD, background="yellow")
 outputText.grid(row=7, column=0, columnspan=10, sticky=W)
+outputText.insert(END, "How to play:\nCreate a new save file in game (don't start 1-1 yet)\nChoose and submit settings\nBeat 1-1 and then randomization will be enabled")
 
 if randomCost.get():
     costTextButton.config(state=NORMAL)
-if randomCooldowns.get():
-    cooldownColoringToggle.config(state=NORMAL)
 if noRestrictions.get():
     challengeButton.config(state=DISABLED)
 if shopless.get():
@@ -681,34 +717,45 @@ class RandomVariable(abc.ABC):
 
     def is_default(self):
         return self.default == self.value
+
+    def current_main_value(self):
+        return self.value[0] if self.multivar else self.value
     
-    def get_str_value(self, format_type, more_less_words, modify_value_func = None) -> dict:
-        val = self.value[0] if self.multivar else self.value
-        default = self.default[0] if self.multivar else self.default
-        if modify_value_func:
-            val = modify_value_func(val)
-            default = modify_value_func(default)
+    def get_value_str(self, format_type, val, default):
+        if (type(val) != float and type(val) != int) or (type(default) != int and type(default) != float):
+            print(f"{self.name} get_value_str error: {val}, {default}")
+            return f"{self.name} get_value_str error: {val}, {default}"
+        if type(val) == float and format_type in [FORMAT_ACTUAL_VALUE, FORMAT_DELTA_CHANGE]:
+            if format_type == FORMAT_ACTUAL_VALUE:
+                return "{:.1f}".format(abs(val))
+            elif format_type == FORMAT_DELTA_CHANGE:
+                return "{:.1f}".format(abs(val))
+        elif format_type == FORMAT_ACTUAL_VALUE:
+            return str(abs(val))
+        elif format_type == FORMAT_DELTA_CHANGE:
+            return str(abs(val - default))
+        elif format_type == FORMAT_PERCENT_CHANGE:
+            return f"{abs(val/default-1):.0%}"
+        elif format_type == FORMAT_PERCENT_OF_DEFAULT_VALUE:
+            return F"{val/default:.0%}"
+        else:
+            print(f"Unknown format_type, {self.name} get_value_str")
+            return "unknown"
+
+    def tooltip_values(self, format_type, more_less_words, modify_value_func = None, value_index = 0) -> dict:
         try:
+            val = self.value[value_index] if self.multivar else self.value
+            default = self.default[value_index] if self.multivar else self.default
+            if modify_value_func:
+                val = modify_value_func(val)
+                default = modify_value_func(default)
             sign = val >= default
             word = more_less_words[int(not sign)] # first word is increase, second is decrease
-            if type(val) == float and format_type in [FORMAT_ACTUAL_VALUE, FORMAT_DELTA_CHANGE]:
-                if format_type == FORMAT_ACTUAL_VALUE:
-                    value_str = "{:.1f}".format(abs(val))
-                elif format_type == FORMAT_DELTA_CHANGE:
-                    value_str = "{:.1f}".format(abs(val))
-            elif format_type == FORMAT_ACTUAL_VALUE:
-                value_str = str(abs(val))
-            elif format_type == FORMAT_DELTA_CHANGE:
-                value_str = str(abs(val - default))
-            elif format_type == FORMAT_PERCENT_CHANGE:
-                value_str = f"{abs(val/default-1):.0%}"
-            elif format_type == FORMAT_PERCENT_OF_DEFAULT_VALUE:
-                value_str = F"{val/default:.0%}"
-            else:
-                value_str = "unknown"
+            value_str = self.get_value_str(format_type, val, default)
             return {'value': value_str, 'sign': '+' if sign else '-', 'change_word': word} 
-        except:
-            return {'value': f"error in get_str_value for {self.name}, {format_type}", 'sign': '', 'change_word': ''}
+        except Exception as e:
+            print(f"{self.name} tooltip_values exception: {e}")
+            return {'value': "error", 'sign': '', 'change_word': ''}
 
 
     def randomize(self, random, level, WriteMemory, do_write):
@@ -737,9 +784,28 @@ class ContinuousVar(RandomVariable):
         return random.randint(int(self.min), int(self.max))
 
 
+class VarWithRanges(RandomVariable):
+    def __init__(self, name, address, chance, datatype, default, ranges:list[tuple], enabled_on_levels = None, multivar_functions=None):
+        super().__init__(name, address, chance, datatype, default, enabled_on_levels, multivar_functions)
+        # ranges is a list of tuples of (weight, min, max)
+        assert type(ranges) == list and len(ranges) > 0
+        assert all(type(x) == tuple and len(x) == 3 and isinstance(val, (int, float)) for x in ranges for val in x)
+        self.weights = [x[0] for x in ranges if x[0] > 0]
+        self.value_ranges = [(min(x[1], x[2]), max(x[1], x[2])) for x in ranges if x[0] > 0]
+        assert len(self.weights) > 0
+
+    def get_randomized_value(self, random: random.Random, level):
+        range = random.choices(self.value_ranges, self.weights)[0] # tuple of (min, max)
+        datatype = self.datatype[0] if self.multivar else self.datatype
+        if datatype == 'float' or datatype == 'double':
+            return random.uniform(range[0], range[1])
+        return random.randint(int(range[0]), int(range[1]))
+
+
 class DiscreteVar(RandomVariable):
     def __init__(self, name, address, chance, datatype, default, choices:list, enabled_on_levels = None, multivar_functions=None):
         super().__init__(name, address, chance, datatype, default, enabled_on_levels, multivar_functions)
+        assert type(choices) == list and len(choices) > 0
         self.choices = choices
 
     def get_randomized_value(self, random: random.Random, level):
@@ -754,10 +820,11 @@ class OnOffVar(RandomVariable):
     def get_randomized_value(self, random: random.Random, level):
         return self.onValue
     
-    def get_str_value(self, format_type, more_less_words, modify_value_func = None):
-        if self.is_default():
-            return {'value': 'Off', 'sign': '', 'change_word': ''}
-        return {'value': 'On', 'sign': '', 'change_word': ''}
+    def get_value_str(self, *args):
+        return 'Off' if self.is_default() else 'On'
+    
+    def tooltip_values(self, format_type, more_less_words, modify_value_func = None, value_index = 0):
+        return {'value': self.get_value_str(), 'sign': '', 'change_word': ''}
 
 
 class OutputStringBase(abc.ABC):
@@ -783,13 +850,15 @@ class SimpleOutputString(OutputStringBase):
 
     def __str__(self) -> str:
         if type(self.value_container) != list or (type(self.value_container) == list and len(self.value_container) == 0):
-            return f"error in SimpleOutputString __str__, format: {self.format_str}"
+            print(f"error in SimpleOutputString __str__, format: {self.format_str}")
+            return f"error"
         value = self.value_container[0]
         if self.modify_value_func:
             try:
                 value = self.modify_value_func(value)
             except:
                 print("Error in modify_func_value, value_container = " + self.value_container)
+                return "error"
         try:
             return self.format_str.format(value)
         except:
@@ -808,9 +877,23 @@ class VarStr(OutputStringBase):
     
     def __str__(self) -> str:
         try:
-            return self.format_str.format(**self.var.get_str_value(self.format_value_type, self.format_more_less_words, self.modify_value_func))
+            return self.format_str.format(**self.var.tooltip_values(self.format_value_type, self.format_more_less_words, self.modify_value_func))
         except: 
             return f"error in VarStr format_str.format, format={self.format_str}"
+
+
+class FireRateVarStr(VarStr):
+    def __init__(self, var: RandomVariable, format_str: str, format_value_type: int = FORMAT_ACTUAL_VALUE, format_more_less_words=['more', 'less'], modify_value_func = None,
+                unstable_str: str = "", unstable_range: tuple = (0,0)):
+        super().__init__(var, format_str, format_value_type, format_more_less_words, modify_value_func)
+        self.unstable_str = unstable_str
+        self.unstable_range = unstable_range
+    
+    def __str__(self) -> str:
+        val = self.var.current_main_value()
+        if self.unstable_range[0] <= val <= self.unstable_range[1]:
+            return self.unstable_str
+        return super().__str__()
 
 
 class IndexedStrContainer:
@@ -933,10 +1016,15 @@ class RandomVars:
         self.any_category_enabled = catZombieHealth or catFireRate # use to make sure that system is enabled for randomization and not just for string rendering
         # we can add categories check here before adding vars, also can adjust their chances
         if self.any_category_enabled:
+            class StartingSunVar(DiscreteVar):
+                def test(self, random: random.Random, chance, level):
+                    if (level - 1) // 10 in [1,3]:
+                        chance = (chance / 100)**0.5 * 100 # increase chance on night levels
+                    return super().test(random, chance, level)
             self.vars.append(VarWithStrIndices(
                 VarStr(
-                    var=DiscreteVar("starting sun", 0x0040b09b, chance=self.chance(80, mean([catZombieHealth, catFireRate])), datatype="int",
-                                     default=50, choices=[75, 75, 100], enabled_on_levels=lambda l: l % 5 != 0),
+                    var=StartingSunVar("starting sun", 0x0040b09b, chance=self.chance(50, mean([catZombieHealth, catFireRate])), datatype="int",
+                                        default=50, choices=[75, 75, 100], enabled_on_levels=lambda l: l % 5 != 0),
                     format_str="Starting sun amount is {change_word} to {value}",
                     format_value_type=FORMAT_ACTUAL_VALUE,
                     format_more_less_words=['increased', 'decreased']),
@@ -945,23 +1033,53 @@ class RandomVars:
         if catZombieHealth:
             # special cases are balloon, zomboss. Doesn't change default body health (270),
             # so normals, snorkels, backups, boblseds, peashooter, gatling, squash are untouched
+
+            # idea is: very strong is 100% chance overall + some chance for bigger changes + chance for no restrictions style changes.
+            # strong is 100% chance overall + some chance for bigger changes, but no no restrictions style
+            # average is <100% overall chance + slim chance for bigger changes
+            # everything below has less chance for any change + smaller range of changes
+            # every change should be sizeable, let's make no like +1% changes
             indices =           [2,   4,   6,   19,   20,   7,   17,  3,    14,   23,   32,   12,   22,   15,   18,   5,   8,    24,   21,   27,  28,   31]
             defaults =          [370, 1100,1100,1350, 450,  1400,100, 500,  500,  3000, 6000, 1350, 850,  500,  500,  150, 500,  70,   500,  1100,500,  2200]
             isArmorHP =         [True,True,True,False,False,True,True,False,False,False,False,False,False,False,False,True,False,False,False,True,False,True]
-            changeMultipliers = [1,   0.67,0.67,0.7,  1,    0.6, 0.2, 1,    1,    0.33, 0.166,0.67, 1,    1,    1,    1,   1,    2.5,  0.8,  0.67,1,    0.4]
+            changeMultipliers = [1,   0.7, 0.7, 0.7,  1,    0.7, 0.2, 1,    1,    0.38, 0.20, 0.7,  1,    1,    1,    1,   1,    2.5,  0.85, 0.7, 1,    0.45]
             addresses = [0x00522892,0x0052292B,0x00522949,0x0052296E,0x00522A1B,0x00522BB0,0x00522BEF,0x00522CBF,0x00522D64,0x00523D26,0x00523E4A,
                          0x00522DE1,0x00522E8D,0x00522FC7,0x00523300,0x0052337D,0x00523530,0x005235AC,0x0052299C,0x0052382B,0x00523A87,0x0052395D]
             assert len(indices) == len(defaults) == len(isArmorHP) == len(changeMultipliers) == len(addresses)
             for i in range(len(indices)):
+                # note, we use 180 and not 270 because players are generally interested in how long it takes to kill zombie with firepower, so use hp without head
+                ranges = []
+                # weakest changes
                 if isArmorHP[i]:
-                    min_m = (0.25 + 0.03 * catZombieHealth) / (defaults[i] / (270 + defaults[i])) * changeMultipliers[i]**0.8
-                    max_m = (0.3 + 0.05 * catZombieHealth) / (defaults[i] / (270 + defaults[i])) * changeMultipliers[i]
+                    min_m = (0.075 + 0.005 * catZombieHealth) / (defaults[i] / (180 + defaults[i])) * changeMultipliers[i]
+                    max_m = (0.09 + 0.06 * catZombieHealth) / (defaults[i] / (180 + defaults[i])) * changeMultipliers[i]
                 else:
-                    min_m = (0.25 + 0.03 * catZombieHealth) * changeMultipliers[i]**0.8
-                    max_m = (0.3 + 0.05 * catZombieHealth) * changeMultipliers[i]
-                args = { 'var': ContinuousVar("zombie health "+str(indices[i]), address=addresses[i], chance=self.chance(120, catZombieHealth), datatype="int",
-                                        default=defaults[i], min=max(defaults[i]*(1-min_m), 5), # min has a min value of 5, so it doesn't go negative
-                                        max=defaults[i]*(1+max_m)),
+                    min_m = (0.075 + 0.005 * catZombieHealth) * changeMultipliers[i]
+                    max_m = (0.09 + 0.06 * catZombieHealth) * changeMultipliers[i]
+                ranges.append((100, defaults[i]*(1+min_m), defaults[i]*(1+max_m)))
+                ranges.append((100, max(defaults[i]*(1-max_m*0.88), 5), max(defaults[i]*(1-min_m*0.88), 5))) # never set less than 5 hp
+                if catZombieHealth > 2:
+                    # stronger changes:
+                    if isArmorHP[i]:
+                        min_m = (0.05 + 0.04 * catZombieHealth) / (defaults[i] / (180 + defaults[i])) * changeMultipliers[i]
+                        max_m = (0.4 + 0.05 * catZombieHealth) / (defaults[i] / (180 + defaults[i])) * changeMultipliers[i]
+                    else:
+                        min_m = (0.05 + 0.04 * catZombieHealth) * changeMultipliers[i]
+                        max_m = (0.4 + 0.05 * catZombieHealth) * changeMultipliers[i]
+                    ranges.append((-60 + 30 * catZombieHealth, defaults[i]*(1+min_m), defaults[i]*(1+max_m)))
+                    ranges.append((-60 + 30 * catZombieHealth, max(defaults[i]*(1-max_m*0.8), 5), max(defaults[i]*(1-min_m*0.8), 5))) # never set less than 5 hp
+                if catZombieHealth > 4 and ((defaults[i] > 400 and isArmorHP[i]) or not isArmorHP[i]):
+                    # very strong changes
+                    if isArmorHP[i]:
+                        min_m = (0.9) / (defaults[i] / (180 + defaults[i])) * changeMultipliers[i]**0.7
+                        max_m = (1.3) / (defaults[i] / (180 + defaults[i])) * changeMultipliers[i]**0.7
+                    else:
+                        min_m = (0.9) * changeMultipliers[i]**0.7
+                        max_m = (1.3) * changeMultipliers[i]**0.7
+                    ranges.append((53, defaults[i]*(1+min_m), defaults[i]*(1+max_m)))
+                    ranges.append((47, max(defaults[i]*(1-max_m*0.66), 5), max(defaults[i]*(1-min_m*0.66), 5))) # never set less than 5 hp
+                args = { 'var': VarWithRanges("zombie health "+str(indices[i]), address=addresses[i], chance=self.chance(120, catZombieHealth), datatype="int",
+                                        default=defaults[i], ranges=ranges),
                          'format_str': "Health change: {sign}{value}",
                          'format_value_type': FORMAT_PERCENT_CHANGE
                 }
@@ -978,7 +1096,7 @@ class RandomVars:
             if catZombieHealth > 3:
                 balloon_choices.extend([60,80,100,100])
             self.vars.append(VarWithStrIndices(
-                    VarStr(var=DiscreteVar("zombie health "+str(16), address=0x005234BF, chance=30+8*catZombieHealth, datatype="int",
+                    VarStr(var=DiscreteVar("zombie health "+str(16), address=0x005234BF, chance=45+5*catZombieHealth, datatype="int",
                                         default=20, choices=balloon_choices),
                             format_str="Balloon requires extra {value} hits to pop",
                             format_value_type=FORMAT_DELTA_CHANGE,
@@ -987,31 +1105,61 @@ class RandomVars:
                     zombie_indices=[16],
                     plant_indices=[26, 43] # show it on cactus and cattail tooltip as well
             ))
-            # dr zomboss has a some chance to just have less hp, and it's printed on screen instead of his tooltip (since he never shows one)
+            # dr zomboss
             self.vars.append(VarWithStrIndices(
-                    VarStr(var=ContinuousVar("zombie health "+str(25), address=0x00523624, chance=25+catZombieHealth*20, datatype="int",
-                                        default=40000, min=28000, max=36000,
+                    VarStr(var=VarWithRanges("zombie health "+str(25), address=0x00523624, chance=50+catZombieHealth*17, datatype="int", default=40000,
+                                        ranges=[(100, 33000-1000*catZombieHealth, 36000), (15+12*catZombieHealth, 44000, 44000+4000*int(catZombieHealth==5))],
                                         enabled_on_levels=lambda l:l==50), # triggered only on 5-10
-                            format_str="Zomboss has just {value} of his normal hp",
-                            format_value_type=FORMAT_PERCENT_OF_DEFAULT_VALUE,
+                            format_str="Zomboss has {value} hp {change_word} than usual",
+                            format_value_type=FORMAT_PERCENT_CHANGE,
+                            format_more_less_words=['more', 'less']
                     ),
                     affects_game_str=True
             ))
         if catFireRate:
-            indices =  [0,   5,   7,   8,   10,  13,  18,  24,  26,  28,  29,  32,  34,  39,  40,  42,  43,  44,  47,   31]
-            defaults = [150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 300, 300, 300, 150, 200, 150, 300, 3000, 1500]
+            indices =            [0,   5,   7,   8,    10,  13,  18,  24,   26,  28,  29,  32,  34,  39,  40,   42,   43,   44,  47,   31]
+            defaults =           [150, 150, 150, 150,  150, 150, 150, 150,  150, 150, 150, 300, 300, 300, 150,  200,  150,  300, 3000, 1500]
+            unstableValues =     [36.5,36.5,29,  30.5, 52.5,0,   35.5,30.5, 0,   0,   42,  0,   0,   0,   45,   131,  36.5, 0,   0,    0]
+            canGoBeyondAverage = [True,True,True,True, True,True,True,True, True,True,True,True,True,True,True, False,True, True,True, True]
+            canGoVeryStrong =    [True,True,True,False,True,True,True,False,True,True,True,True,True,True,False,False,False,True,True, True]
             addresses = [0x69F2CC + i * 36 for i in indices]
             addresses[-2] = 0x464D4D # cob cannon fire cooldown
             addresses[-1] = 0x46163A # magnet recharge
             assert len(indices) == len(defaults) == len(addresses)
             for i in range(len(indices)):
+                ranges = []
+                puffMultiplier = 1 - 0.5 * int(indices[i] == 8 or indices[i] == 24)
+                isCob = int(indices[i] == 47)
+                minDelay = 162 if indices[i] == 42 else 96 if indices[i] == 40 else 97 if indices[i] == 43 else 0
+                # weak range - limited at average setting
+                ranges.append((100, defaults[i]*(1+(0.06+0.01*min(catFireRate,3))*puffMultiplier-0.15*isCob),
+                    defaults[i]*(1+(0.19+0.07*min(catFireRate,3))*puffMultiplier-0.15*isCob)))
+                ranges.append((100, max(defaults[i]*(1-(0.05+0.01*min(catFireRate,3))*puffMultiplier-0.1*isCob), minDelay),
+                    max(defaults[i]*(1-(0.15+0.05*min(catFireRate,3))*puffMultiplier-0.1*isCob), minDelay)))
+                # stronger range
+                if catFireRate > 3 and canGoBeyondAverage[i]:
+                    ranges.append(((50+30*(catFireRate-4))*puffMultiplier, defaults[i]*(1+0.4*puffMultiplier),
+                        defaults[i]*(1+0.75*puffMultiplier)))
+                    ranges.append(((50+30*(catFireRate-4))*puffMultiplier, max(defaults[i]*(1-0.3*puffMultiplier), minDelay),
+                        max(defaults[i]*(1-0.43*puffMultiplier), minDelay)))
+                # very strong range
+                if catFireRate > 4 and canGoVeryStrong[i]:
+                    ranges.append((62, defaults[i]*1.8, defaults[i]*2.2))
+                    ranges.append((40, defaults[i]*0.47, defaults[i]*0.54))
+                # unstable fire rate
+                if catFireRate > 2 and unstableValues[i] != 0:
+                    ranges.append((-12 + 16 * catFireRate, math.floor(unstableValues[i]), math.ceil(unstableValues[i])))
+                    unstable_range = (math.floor(unstableValues[i]), math.ceil(unstableValues[i]))
+                else:
+                    unstable_range = (0,0)
                 self.vars.append(VarWithStrIndices(
-                    VarStr(var=ContinuousVar("fire period "+str(indices[i]), address=addresses[i], chance=self.chance(110, catFireRate), datatype="int",
-                                        default=defaults[i], min=defaults[i]*(0.8-0.02*catFireRate-0.1*int(indices[i]==47)),
-                                        max=defaults[i]*(1.25+0.03*catFireRate-0.1*int(indices[i]==47))), # cob is made faster on average, because I feel like it
+                    FireRateVarStr(var=VarWithRanges("fire period "+str(indices[i]), address=addresses[i], chance=puffMultiplier*self.chance(120, catFireRate),
+                                            datatype="int", default=defaults[i], ranges=ranges),
                             format_str="Fire Rate: {sign}{value}",
                             format_value_type=FORMAT_PERCENT_CHANGE,
-                            modify_value_func=lambda period:1/(period-7.5) # reciprocal of time is fire rate, also take rng per shot into account -
+                            unstable_range=unstable_range,
+                            unstable_str="Fire Rate: *Unstable*",
+                            modify_value_func=lambda period:1/(period-7.5) # reciprocal of time is fire rate, this also takes rng per shot into account -
                                                                            # 0.075 sec is wrong for magnet and cob, but that's fine
                     ),
                     plant_indices=[indices[i]]
@@ -1019,7 +1167,7 @@ class RandomVars:
             # chomper chewing time - can only be decreased, chance is constant (reason - I want it that way)
             self.vars.append(VarWithStrIndices(
                     VarStr(var=ContinuousVar("fire period "+str(6), address=0x461551, chance=40, datatype="int",
-                                        default=4000, min=4000*(0.75-0.08*catFireRate), max=4000*(0.85),
+                                        default=4000, min=4000*(0.65-0.04*catFireRate), max=4000*(0.9),
                                         enabled_on_levels=lambda l:l!=45), # disabled on 5-5
                             format_str="Chewing duration {change_word} to {value} sec",
                             format_value_type=FORMAT_ACTUAL_VALUE,
@@ -1030,7 +1178,7 @@ class RandomVars:
                 ))
             # imitater transformation time - there's also animation time (about 1.2 sec) unaffected by this change
             self.vars.append(VarWithStrIndices(
-                    VarStr(var=ContinuousVar("fire period "+str(48), address=0x45E2D9, chance=self.chance(110, catFireRate), datatype="int",
+                    VarStr(var=ContinuousVar("fire period "+str(48), address=0x45E2D9, chance=self.chance(120, catFireRate), datatype="int",
                                         default=200, min=200*(0.1), max=200*(1.9)),
                             format_str="Transformation speed: {sign}{value}",
                             format_value_type=FORMAT_PERCENT_CHANGE,
@@ -1040,8 +1188,8 @@ class RandomVars:
                 ))
             # coffee transformation time - affects both delay and wake up timer
             self.vars.append(VarWithStrIndices(
-                    VarStr(var=ContinuousVar("fire period "+str(35), address=[0x45E521,0x466B36], chance=self.chance(110, catFireRate), datatype=["int","int"],
-                                        default=[100,100], min=30, max=170, multivar_functions=[lambda main:main]),
+                    VarStr(var=ContinuousVar("fire period "+str(35), address=[0x45E521,0x466B36], chance=self.chance(120, catFireRate), datatype=["int","int"],
+                                        default=[100,100], min=20, max=180, multivar_functions=[lambda main:main]),
                                         # multivar_functions allows us to modify several values at the same time, but only if those extra values
                                         # are dependant on main one - in that case wake up timer set to be the same as coffee delay
                             format_str="Transformation speed: {sign}{value}",
@@ -1063,12 +1211,12 @@ class RandomVars:
                     self.zombie_strings.add_var(v.var_str, v.zombie_indices)
 
     def chance(self, base: float, modifier: float) -> float:
-        if modifier == 0:
+        if modifier <= 0:
             return 0
         if modifier == 5:
             return base
         # modifier of 5 means use base chance; below 5, chance is decreased exponentially
-        return base / (1.4 ** (5 - modifier))
+        return base / (1.2 ** (5 - modifier))
 
     def randomize(self, level, do_write):
         for v in self.vars:
@@ -3008,8 +3156,8 @@ if randomVarsSystemEnabled:
         hotkey_code_address = string_stuff_address + 0x100
         string_code_address = string_stuff_address + 0x200
         plants_string_address = string_stuff_address + 4 * 1024
-        zombies_string_address = plants_string_address + 40 * 1024
-        game_string_address = zombies_string_address + 20 * 1024
+        zombies_string_address = plants_string_address + 26 * 1024
+        game_string_address = zombies_string_address + 18 * 1024
         plants_string_container = IndexedStrContainer("plants", plants_string_address, bytes_per_plant_string, n_of_plant_strings)
         zombies_string_container = IndexedStrContainer("zombies", zombies_string_address, bytes_per_zombie_string, n_of_zombie_strings)
         game_string_container = NonIndexedStrContainer("game", game_string_address, bytes_per_game_string, n_of_game_strings, string_stuff_address+4)
@@ -3112,8 +3260,9 @@ leftoverZombies=open('leftoverZombies.txt', 'w')
 leftoverZombies.write("")
 leftoverZombies.close()
 
-if(randomCooldowns.get()):
+if randomCooldowns.get():
     WriteMemory("unsigned char",[255,255],0x6512C2) # make peashooter/sunflower not red on first level
+WriteMemory("int",[150],0x69F2CC) # reset peashooter fire rate
 plants_unlocked = 1
 WriteMemory("int", plants_array, 0x651094)
 WriteMemory("int", plants_array2, 0x651194) #ends at 0x65125c
