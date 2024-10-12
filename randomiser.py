@@ -4,7 +4,6 @@ import platform
 import math
 import abc
 import copy
-from types import MethodType
 from dataclasses import dataclass
 from inspect import signature
 from statistics import mean
@@ -668,6 +667,7 @@ class RandomVariable(abc.ABC):
         self.chance = chance
         self.datatype = datatype
         self.value = copy.deepcopy(default)
+        self.written_value = copy.deepcopy(default)
         self.enabled_on_levels = enabled_on_levels
         self.multivar_functions = multivar_functions
         if type(address) == list:
@@ -702,14 +702,15 @@ class RandomVariable(abc.ABC):
                 values.append(f(main_value))
         return values
 
-    def write_single_value(self, address, value, datatype, WriteMemory):
+    def write_single_value(self, address, value, datatype, WriteMemory, writing_defaults: bool):
         try:
             WriteMemory(datatype, value, address)
         except:
             print("error in write_single_value, name=" + str(self.name) + ", value=" + str(value))
 
-    def write_multivar_value(self, addresses, values, datatypes, WriteMemory):
-        for i in range(len(addresses)):
+    def write_multivar_value(self, addresses, values, datatypes, WriteMemory, writing_defaults: bool):
+        order = reversed(range(len(addresses))) if writing_defaults else range(len(addresses))
+        for i in order:
             try:
                 WriteMemory(datatypes[i], values[i], addresses[i])
             except:
@@ -763,10 +764,11 @@ class RandomVariable(abc.ABC):
             value = self.calculate_value(random, level)
         else:
             value = copy.deepcopy(self.default)
-        if self.value == value or not do_write:
+        if self.written_value == value or not do_write:
             return
         self.value = value
-        self.write_value(self.address, value, self.datatype, WriteMemory)
+        self.written_value = copy.deepcopy(value)
+        self.write_value(self.address, value, self.datatype, WriteMemory, value==self.default)
 
 
 class ContinuousVar(RandomVariable):
@@ -825,6 +827,21 @@ class OnOffVar(RandomVariable):
     
     def tooltip_values(self, format_type, more_less_words, modify_value_func = None, value_index = 0):
         return {'value': self.get_value_str(), 'sign': '', 'change_word': ''}
+
+
+class FireRateVar(VarWithRanges):
+    def __init__(self, name, address, chance, datatype, default, ranges, unstable_range: tuple, enabled_on_levels=None, multivar_functions=None):
+        super().__init__(name, address, chance, datatype, default, ranges, enabled_on_levels, multivar_functions)
+        assert type(unstable_range) == tuple and len(unstable_range) == 2
+        self.unstable_range = (min(unstable_range), max(unstable_range))
+
+    def randomize(self, random, level, WriteMemory, do_write, allow_unstable=True):
+        super().randomize(random, level, WriteMemory, do_write)
+        if not allow_unstable:
+            value = self.current_main_value()
+            while self.unstable_range[0] <= value <= self.unstable_range[1]:
+                self.randomize(random, level, WriteMemory, do_write)
+                value = self.current_main_value()
 
 
 class OutputStringBase(abc.ABC):
@@ -1001,18 +1018,170 @@ class VarWithStrIndices:
     affects_game_str: bool = False
 
 
-class RandomVars:
-    def __init__(self, seed, write_memory_func, do_activate_strings, plants_container: IndexedStrContainer, 
-                 zombies_container: IndexedStrContainer, game_container: NonIndexedStrContainer, catZombieHealth: int, catFireRate: int):
+class VarContainer(abc.ABC):
+    def __init__(self, rng, write_memory_func, do_activate_strings, plants_container: IndexedStrContainer, 
+                 zombies_container: IndexedStrContainer, game_container: NonIndexedStrContainer):
         assert (do_activate_strings and plants_container and zombies_container and game_container) or not do_activate_strings
+        self.WriteMemory = write_memory_func
+        self.rng = rng
+        self.do_activate_strings = do_activate_strings
+        if do_activate_strings:
+            self.plant_strings = plants_container
+            self.zombie_strings = zombies_container
+            self.game_strings = game_container
+
+    @abc.abstractmethod
+    def randomize(self, level, do_write):
+        pass
+
+    def chance(self, base: float, modifier: float) -> float:
+        if modifier <= 0:
+            return 0
+        if modifier == 5:
+            return base
+        # modifier of 5 means use base chance; below 5, chance is decreased exponentially
+        return base / (1.2 ** (5 - modifier))
+
+    def add_vars_to_string_containers(self, vars: list[VarWithStrIndices]):
+        if not self.do_activate_strings:
+            return
+        for v in vars:
+            if v.affects_game_str:
+                self.game_strings.add_var(v.var_str)
+            if v.plant_indices:
+                self.plant_strings.add_var(v.var_str, v.plant_indices)
+            if v.zombie_indices:
+                self.zombie_strings.add_var(v.var_str, v.zombie_indices)
+
+
+class FireRateContainer(VarContainer):
+    def __init__(self, rng, write_memory_func, do_activate_strings, plants_container, zombies_container, game_container, category):
+        super().__init__(rng, write_memory_func, do_activate_strings, plants_container, zombies_container, game_container)
+        self.category = category
+        self.vars: list[VarWithStrIndices] = []
+        self.potentially_unstable_vars: list[VarWithStrIndices] = []
+        indices =            [0,   5,   7,   8,    10,  13,  18,  24,   26,  28,  29,  32,  34,  39,  40,   42,   43,   44,  47,   31]
+        defaults =           [150, 150, 150, 150,  150, 150, 150, 150,  150, 150, 150, 300, 300, 300, 150,  200,  150,  300, 3000, 1500]
+        unstableValues =     [36.5,36.5,29,  30.5, 52.5,0,   35.5,30.5, 0,   0,   42,  0,   0,   0,   45,   131,  36.5, 0,   0,    0]
+        canGoBeyondAverage = [True,True,True,True, True,True,True,True, True,True,True,True,True,True,True, False,True, True,True, True]
+        canGoVeryStrong =    [True,True,True,False,True,True,True,False,True,True,True,True,True,True,False,False,False,True,True, True]
+        addresses = [0x69F2CC + i * 36 for i in indices]
+        addresses[-2] = 0x464D4D # cob cannon fire cooldown
+        addresses[-1] = 0x46163A # magnet recharge
+        assert len(indices) == len(defaults) == len(addresses)
+        for i in range(len(indices)):
+            ranges = []
+            puffMultiplier = 1 - 0.5 * int(indices[i] == 8 or indices[i] == 24)
+            isCob = int(indices[i] == 47)
+            minDelay = 162 if indices[i] == 42 else 96 if indices[i] == 40 else 97 if indices[i] == 43 else 0
+            # weak range - limited at average setting
+            ranges.append((100, defaults[i]*(1+(0.06+0.01*min(category,3))*puffMultiplier-0.15*isCob),
+                defaults[i]*(1+(0.18+0.06*min(category,3))*puffMultiplier-0.15*isCob)))
+            ranges.append((100, max(defaults[i]*(1-(0.05+0.01*min(category,3))*puffMultiplier-0.1*isCob), minDelay),
+                max(defaults[i]*(1-(0.14+0.05*min(category,3))*puffMultiplier-0.1*isCob), minDelay)))
+            # stronger range
+            if category > 3 and canGoBeyondAverage[i]:
+                ranges.append(((50+30*(category-4))*puffMultiplier, defaults[i]*(1+0.35*puffMultiplier),
+                    defaults[i]*(1+0.7*puffMultiplier)))
+                ranges.append(((50+30*(category-4))*puffMultiplier, max(defaults[i]*(1-0.25*puffMultiplier), minDelay),
+                    max(defaults[i]*(1-0.42*puffMultiplier), minDelay)))
+            # very strong range
+            if category > 4 and canGoVeryStrong[i]:
+                ranges.append((62, defaults[i]*1.75, defaults[i]*2.1))
+                ranges.append((40, defaults[i]*0.47, defaults[i]*0.55))
+            # unstable fire rate
+            if category > 2 and unstableValues[i] != 0:
+                ranges.append((-12 + 12 * category, math.floor(unstableValues[i]), math.ceil(unstableValues[i])))
+                unstable_range = (math.floor(unstableValues[i]), math.ceil(unstableValues[i]))
+            else:
+                unstable_range = (0,0)
+            self.potentially_unstable_vars.append(VarWithStrIndices(
+                            FireRateVarStr(var=FireRateVar("fire period "+str(indices[i]), address=addresses[i],
+                                                chance=puffMultiplier*self.chance(120, category),
+                                                datatype="int", default=defaults[i], ranges=ranges, unstable_range=unstable_range),
+                                format_str="Fire Rate: {sign}{value}",
+                                format_value_type=FORMAT_PERCENT_CHANGE,
+                                unstable_range=unstable_range,
+                                unstable_str="Fire Rate: *Unstable*",
+                                modify_value_func=lambda period:1/(period-7.5)  # reciprocal of time is fire rate, this also takes rng per shot into account -
+                                                                                # 0.075 sec is wrong for magnet and cob, but that's fine
+                ),
+                plant_indices=[indices[i]]
+            ))
+        # chomper chewing time - can only be decreased, chance is constant (reason - I want it that way)
+        self.vars.append(VarWithStrIndices(
+                VarStr(var=ContinuousVar("fire period "+str(6), address=0x461551, chance=40, datatype="int",
+                                    default=4000, min=4000*(0.65-0.04*category), max=4000*(0.9),
+                                    enabled_on_levels=lambda l:l!=45), # disabled on 5-5
+                        format_str="Chewing duration {change_word} to {value} sec",
+                        format_value_type=FORMAT_ACTUAL_VALUE,
+                        format_more_less_words=['increased', 'decreased'],
+                        modify_value_func=lambda period:period/100+2 # there's also ~2 sec wakeup animation?
+                ),
+                plant_indices=[6]
+            ))
+        # imitater transformation time - there's also animation time (about 1.2 sec) unaffected by this change
+        self.vars.append(VarWithStrIndices(
+                VarStr(var=ContinuousVar("fire period "+str(48), address=0x45E2D9, chance=self.chance(120, category), datatype="int",
+                                    default=200, min=200*(0.1), max=200*(1.9)),
+                        format_str="Transformation speed: {sign}{value}",
+                        format_value_type=FORMAT_PERCENT_CHANGE,
+                        modify_value_func=lambda period:1/(period+120) # add ~1.2 untouched second of animation
+                ),
+                plant_indices=[48]
+            ))
+        # coffee transformation time - affects both delay and wake up timer
+        self.vars.append(VarWithStrIndices(
+                VarStr(var=ContinuousVar("fire period "+str(35), address=[0x45E521,0x466B36], chance=self.chance(120, category), datatype=["int","int"],
+                                    default=[100,100], min=20, max=180, multivar_functions=[lambda main:main]),
+                                    # multivar_functions allows us to modify several values at the same time, but only if those extra values
+                                    # are dependant on main one - in that case wake up timer set to be the same as coffee delay
+                        format_str="Transformation speed: {sign}{value}",
+                        format_value_type=FORMAT_PERCENT_CHANGE,
+                        modify_value_func=lambda period:1/period
+                ),
+                plant_indices=[35]
+            ))
+        # tired plants - reduce fire rate of every individual plant after each shot. Too OP with with unstable fire rate, so this takes priority
+        self.WriteMemory("unsigned char", [0x53, 0x55, 0xFF, 0x40, 0x5C, 0xEB, 0x07], 0x0045EF09) # replacing CC bytes
+        self.WriteMemory("unsigned char", [0xFF, 0x43, 0x5C], 0x0045F29D) # replacing CC bytes
+        self.WriteMemory("unsigned char", [0xFF, 0x46, 0x5C], 0x0045F6DD) # replacing CC bytes
+        self.tired_var = VarWithStrIndices(
+            VarStr(var=OnOffVar("tired plants", address=[0x0045EF15,0x0045F8D1,0x0045F8DD], chance=11+category*0.7,
+                                    datatype=["unsigned char","unsigned char","unsigned char"],
+                                    default=[[0x53,0x55], [0xe8,0xca,0xf9,0xff,0xff], [0xe8,0xfe,0xfd,0xff,0xff]],
+                                    onValue=[0xeb,0xf2], # first address
+                                    multivar_functions=[lambda _:[0xE8, 0xC7, 0xF9, 0xFF, 0xFF], lambda _:[0xE8, 0xFB, 0xFD, 0xFF, 0xFF]]),
+                    format_str="Tired plants: after every shot, each individual plant slows down its fire rate a bit",
+            ),
+            affects_game_str=True
+        )
+        self.add_vars_to_string_containers([self.tired_var])
+        self.add_vars_to_string_containers(self.vars)
+        self.add_vars_to_string_containers(self.potentially_unstable_vars)
+
+    def randomize(self, level, do_write):
+        self.tired_var.var_str.var.randomize(self.rng, level, self.WriteMemory, do_write)
+        for v in self.vars:
+            v.var_str.var.randomize(self.rng, level, self.WriteMemory, do_write)
+        allow_unstable = self.tired_var.var_str.var.is_default()
+        for v in self.potentially_unstable_vars:
+            v.var_str.var.randomize(self.rng, level, self.WriteMemory, do_write, allow_unstable)
+
+
+class RandomVars(VarContainer):
+    def __init__(self, rng, write_memory_func, do_activate_strings, plants_container: IndexedStrContainer, 
+                 zombies_container: IndexedStrContainer, game_container: NonIndexedStrContainer, enable_printing_address,
+                 catZombieHealth: int, catFireRate: int):
+        super().__init__(rng, write_memory_func, do_activate_strings, plants_container, zombies_container, game_container)
         catFireRate = max(catFireRate, 0)
         catZombieHealth = max(catZombieHealth, 0)
-        self.WriteMemory = write_memory_func
-        self.random = random.Random(seed)
-        self.do_activate_strings = do_activate_strings
-        self.vars: list[VarWithStrIndices] = []
+        self.enable_printing_address = enable_printing_address
         self.catZombieHealth = catZombieHealth
         self.catFireRate = catFireRate
+        self.vars: list[VarWithStrIndices] = []
+        self.unprintable_vars: list[RandomVariable] = []
+        self.var_containers: list[VarContainer] = []
         self.any_category_enabled = catZombieHealth or catFireRate # use to make sure that system is enabled for randomization and not just for string rendering
         # we can add categories check here before adding vars, also can adjust their chances
         if self.any_category_enabled:
@@ -1117,111 +1286,22 @@ class RandomVars:
                     affects_game_str=True
             ))
         if catFireRate:
-            indices =            [0,   5,   7,   8,    10,  13,  18,  24,   26,  28,  29,  32,  34,  39,  40,   42,   43,   44,  47,   31]
-            defaults =           [150, 150, 150, 150,  150, 150, 150, 150,  150, 150, 150, 300, 300, 300, 150,  200,  150,  300, 3000, 1500]
-            unstableValues =     [36.5,36.5,29,  30.5, 52.5,0,   35.5,30.5, 0,   0,   42,  0,   0,   0,   45,   131,  36.5, 0,   0,    0]
-            canGoBeyondAverage = [True,True,True,True, True,True,True,True, True,True,True,True,True,True,True, False,True, True,True, True]
-            canGoVeryStrong =    [True,True,True,False,True,True,True,False,True,True,True,True,True,True,False,False,False,True,True, True]
-            addresses = [0x69F2CC + i * 36 for i in indices]
-            addresses[-2] = 0x464D4D # cob cannon fire cooldown
-            addresses[-1] = 0x46163A # magnet recharge
-            assert len(indices) == len(defaults) == len(addresses)
-            for i in range(len(indices)):
-                ranges = []
-                puffMultiplier = 1 - 0.5 * int(indices[i] == 8 or indices[i] == 24)
-                isCob = int(indices[i] == 47)
-                minDelay = 162 if indices[i] == 42 else 96 if indices[i] == 40 else 97 if indices[i] == 43 else 0
-                # weak range - limited at average setting
-                ranges.append((100, defaults[i]*(1+(0.06+0.01*min(catFireRate,3))*puffMultiplier-0.15*isCob),
-                    defaults[i]*(1+(0.19+0.07*min(catFireRate,3))*puffMultiplier-0.15*isCob)))
-                ranges.append((100, max(defaults[i]*(1-(0.05+0.01*min(catFireRate,3))*puffMultiplier-0.1*isCob), minDelay),
-                    max(defaults[i]*(1-(0.15+0.05*min(catFireRate,3))*puffMultiplier-0.1*isCob), minDelay)))
-                # stronger range
-                if catFireRate > 3 and canGoBeyondAverage[i]:
-                    ranges.append(((50+30*(catFireRate-4))*puffMultiplier, defaults[i]*(1+0.4*puffMultiplier),
-                        defaults[i]*(1+0.75*puffMultiplier)))
-                    ranges.append(((50+30*(catFireRate-4))*puffMultiplier, max(defaults[i]*(1-0.3*puffMultiplier), minDelay),
-                        max(defaults[i]*(1-0.43*puffMultiplier), minDelay)))
-                # very strong range
-                if catFireRate > 4 and canGoVeryStrong[i]:
-                    ranges.append((62, defaults[i]*1.8, defaults[i]*2.2))
-                    ranges.append((40, defaults[i]*0.47, defaults[i]*0.54))
-                # unstable fire rate
-                if catFireRate > 2 and unstableValues[i] != 0:
-                    ranges.append((-12 + 16 * catFireRate, math.floor(unstableValues[i]), math.ceil(unstableValues[i])))
-                    unstable_range = (math.floor(unstableValues[i]), math.ceil(unstableValues[i]))
-                else:
-                    unstable_range = (0,0)
-                self.vars.append(VarWithStrIndices(
-                    FireRateVarStr(var=VarWithRanges("fire period "+str(indices[i]), address=addresses[i], chance=puffMultiplier*self.chance(120, catFireRate),
-                                            datatype="int", default=defaults[i], ranges=ranges),
-                            format_str="Fire Rate: {sign}{value}",
-                            format_value_type=FORMAT_PERCENT_CHANGE,
-                            unstable_range=unstable_range,
-                            unstable_str="Fire Rate: *Unstable*",
-                            modify_value_func=lambda period:1/(period-7.5) # reciprocal of time is fire rate, this also takes rng per shot into account -
-                                                                           # 0.075 sec is wrong for magnet and cob, but that's fine
-                    ),
-                    plant_indices=[indices[i]]
-                ))
-            # chomper chewing time - can only be decreased, chance is constant (reason - I want it that way)
-            self.vars.append(VarWithStrIndices(
-                    VarStr(var=ContinuousVar("fire period "+str(6), address=0x461551, chance=40, datatype="int",
-                                        default=4000, min=4000*(0.65-0.04*catFireRate), max=4000*(0.9),
-                                        enabled_on_levels=lambda l:l!=45), # disabled on 5-5
-                            format_str="Chewing duration {change_word} to {value} sec",
-                            format_value_type=FORMAT_ACTUAL_VALUE,
-                            format_more_less_words=['increased', 'decreased'],
-                            modify_value_func=lambda period:period/100+2 # there's also ~2 sec wakeup animation?
-                    ),
-                    plant_indices=[6]
-                ))
-            # imitater transformation time - there's also animation time (about 1.2 sec) unaffected by this change
-            self.vars.append(VarWithStrIndices(
-                    VarStr(var=ContinuousVar("fire period "+str(48), address=0x45E2D9, chance=self.chance(120, catFireRate), datatype="int",
-                                        default=200, min=200*(0.1), max=200*(1.9)),
-                            format_str="Transformation speed: {sign}{value}",
-                            format_value_type=FORMAT_PERCENT_CHANGE,
-                            modify_value_func=lambda period:1/(period+120) # add ~1.2 untouched second of animation
-                    ),
-                    plant_indices=[48]
-                ))
-            # coffee transformation time - affects both delay and wake up timer
-            self.vars.append(VarWithStrIndices(
-                    VarStr(var=ContinuousVar("fire period "+str(35), address=[0x45E521,0x466B36], chance=self.chance(120, catFireRate), datatype=["int","int"],
-                                        default=[100,100], min=20, max=180, multivar_functions=[lambda main:main]),
-                                        # multivar_functions allows us to modify several values at the same time, but only if those extra values
-                                        # are dependant on main one - in that case wake up timer set to be the same as coffee delay
-                            format_str="Transformation speed: {sign}{value}",
-                            format_value_type=FORMAT_PERCENT_CHANGE,
-                            modify_value_func=lambda period:1/period
-                    ),
-                    plant_indices=[35]
-                ))
+            self.var_containers.append(FireRateContainer(random.Random(seed), write_memory_func, do_activate_strings, plants_container,
+                                        zombies_container, game_container, catFireRate))
         if do_activate_strings:
-            self.plant_strings = plants_container
-            self.zombie_strings = zombies_container
-            self.game_strings = game_container
-            for v in self.vars:
-                if v.affects_game_str:
-                    self.game_strings.add_var(v.var_str)
-                if v.plant_indices:
-                    self.plant_strings.add_var(v.var_str, v.plant_indices)
-                if v.zombie_indices:
-                    self.zombie_strings.add_var(v.var_str, v.zombie_indices)
-
-    def chance(self, base: float, modifier: float) -> float:
-        if modifier <= 0:
-            return 0
-        if modifier == 5:
-            return base
-        # modifier of 5 means use base chance; below 5, chance is decreased exponentially
-        return base / (1.2 ** (5 - modifier))
+            # force printing after every level end
+            self.unprintable_vars.append(OnOffVar("force printing", self.enable_printing_address, 100, "unsigned char", 0, 1))
+        self.add_vars_to_string_containers(self.vars)
+            
 
     def randomize(self, level, do_write):
         for v in self.vars:
-            v.var_str.var.randomize(self.random, level, self.WriteMemory, do_write)
-        if do_write and self.do_activate_strings:
+            v.var_str.var.randomize(self.rng, level, self.WriteMemory, do_write)
+        for v in self.unprintable_vars:
+            v.randomize(self.rng, level, self.WriteMemory, do_write)
+        for c in self.var_containers:
+            c.randomize(level, do_write)
+        if do_write and self.do_activate_strings: # as this is a main container, it also updates strings
             self.plant_strings.update_strings(self.WriteMemory)
             self.zombie_strings.update_strings(self.WriteMemory)
             self.game_strings.update_strings(self.WriteMemory)
@@ -3161,6 +3241,7 @@ if randomVarsSystemEnabled:
         plants_string_container = IndexedStrContainer("plants", plants_string_address, bytes_per_plant_string, n_of_plant_strings)
         zombies_string_container = IndexedStrContainer("zombies", zombies_string_address, bytes_per_zombie_string, n_of_zombie_strings)
         game_string_container = NonIndexedStrContainer("game", game_string_address, bytes_per_game_string, n_of_game_strings, string_stuff_address+4)
+        game_string_container.add_var(SimpleOutputString(["Press Enter to show/hide"], "{}"))
         for index, el in enumerate(plant_names_container):
             plants_string_container.add_var(SimpleOutputString(el, "{}"), [index])
         for index, el in enumerate(zombie_names_container):
@@ -3239,8 +3320,9 @@ if randomVarsSystemEnabled:
             0x41B862)
     else:
         plants_string_container = zombies_string_container = game_string_container = None
-    random_vars = RandomVars(seed, WriteMemory, WINDOWS, plants_string_container, zombies_string_container, game_string_container,
-                             catZombieHealth=actualRandomVarsZombieHealth, catFireRate=actualRandomVarsFireRate)
+        string_stuff_address = 0
+    random_vars = RandomVars(random.Random(seed), WriteMemory, WINDOWS, plants_string_container, zombies_string_container, game_string_container,
+                             enable_printing_address=string_stuff_address, catZombieHealth=actualRandomVarsZombieHealth, catFireRate=actualRandomVarsFireRate)
 
 try:
     leftoverZombies=open('leftoverZombies.txt', 'r')
