@@ -764,9 +764,9 @@ class RandomVariable(abc.ABC):
             value = self.calculate_value(random, level)
         else:
             value = copy.deepcopy(self.default)
-        if self.written_value == value or not do_write:
-            return
         self.value = value
+        if not do_write:
+            return
         self.written_value = copy.deepcopy(value)
         self.write_value(self.address, value, self.datatype, WriteMemory, value==self.default)
 
@@ -835,13 +835,27 @@ class FireRateVar(VarWithRanges):
         assert type(unstable_range) == tuple and len(unstable_range) == 2
         self.unstable_range = (min(unstable_range), max(unstable_range))
 
-    def randomize(self, random, level, WriteMemory, do_write, allow_unstable=True):
-        super().randomize(random, level, WriteMemory, do_write)
-        if not allow_unstable:
-            value = self.current_main_value()
+    def randomize(self, random, level, WriteMemory, do_write, allow_unstable=True, max_multiplier=1.0):
+        self.allow_unstable = allow_unstable
+        self.max_multiplier = max_multiplier
+        return super().randomize(random, level, WriteMemory, do_write)
+
+    def fire_rate_randomize_value(self, random, level):
+        range = random.choices(self.value_ranges, self.weights)[0] # tuple of (min, max)
+        actual_range = (range[0], range[0] + self.max_multiplier * (range[1] - range[0]))
+        datatype = self.datatype[0] if self.multivar else self.datatype
+        if datatype == 'float' or datatype == 'double':
+            value = random.uniform(actual_range[0], actual_range[1])
+        else:
+            value = random.randint(int(actual_range[0]), int(actual_range[1]))
+        return value
+
+    def get_randomized_value(self, random: random.Random, level):
+        value = self.fire_rate_randomize_value(random, level)
+        if not self.allow_unstable:
             while self.unstable_range[0] <= value <= self.unstable_range[1]:
-                self.randomize(random, level, WriteMemory, do_write)
-                value = self.current_main_value()
+                value = self.fire_rate_randomize_value(random, level)
+        return value
 
 
 class OutputStringBase(abc.ABC):
@@ -1087,7 +1101,7 @@ class FireRateContainer(VarContainer):
                     max(defaults[i]*(1-0.42*puffMultiplier), minDelay)))
             # very strong range
             if category > 4 and canGoVeryStrong[i]:
-                ranges.append((62, defaults[i]*1.75, defaults[i]*2.1))
+                ranges.append((60, defaults[i]*1.75, defaults[i]*2.1))
                 ranges.append((40, defaults[i]*0.47, defaults[i]*0.55))
             # unstable fire rate
             if category > 2 and unstableValues[i] != 0:
@@ -1147,9 +1161,10 @@ class FireRateContainer(VarContainer):
         self.WriteMemory("unsigned char", [0xFF, 0x43, 0x5C], 0x0045F29D) # replacing CC bytes
         self.WriteMemory("unsigned char", [0xFF, 0x46, 0x5C], 0x0045F6DD) # replacing CC bytes
         self.tired_var = VarWithStrIndices(
-            VarStr(var=OnOffVar("tired plants", address=[0x0045EF15,0x0045F8D1,0x0045F8DD], chance=11+category*0.7,
+            VarStr(var=OnOffVar("tired plants", address=[0x0045EF15,0x0045F8D1,0x0045F8DD], chance=10+category*0.5,
                                     datatype=["unsigned char","unsigned char","unsigned char"],
                                     default=[[0x53,0x55], [0xe8,0xca,0xf9,0xff,0xff], [0xe8,0xfe,0xfd,0xff,0xff]],
+                                    enabled_on_levels=lambda l:l not in [5,15,45] or (l==45 and randomConveyors.get() != 'False'),
                                     onValue=[0xeb,0xf2], # first address
                                     multivar_functions=[lambda _:[0xE8, 0xC7, 0xF9, 0xFF, 0xFF], lambda _:[0xE8, 0xFB, 0xFD, 0xFF, 0xFF]]),
                     format_str="Tired plants: after every shot, each individual plant slows down its fire rate a bit",
@@ -1166,7 +1181,7 @@ class FireRateContainer(VarContainer):
             v.var_str.var.randomize(self.rng, level, self.WriteMemory, do_write)
         allow_unstable = self.tired_var.var_str.var.is_default()
         for v in self.potentially_unstable_vars:
-            v.var_str.var.randomize(self.rng, level, self.WriteMemory, do_write, allow_unstable)
+            v.var_str.var.randomize(self.rng, level, self.WriteMemory, do_write, allow_unstable, 1.0 if allow_unstable else 0.7)
 
 
 class RandomVars(VarContainer):
@@ -1192,7 +1207,7 @@ class RandomVars(VarContainer):
                     return super().test(random, chance, level)
             self.vars.append(VarWithStrIndices(
                 VarStr(
-                    var=StartingSunVar("starting sun", 0x0040b09b, chance=self.chance(50, mean([catZombieHealth, catFireRate])), datatype="int",
+                    var=StartingSunVar("starting sun", 0x0040b09b, chance=self.chance(55, mean([catZombieHealth, catFireRate])), datatype="int",
                                         default=50, choices=[75, 75, 100], enabled_on_levels=lambda l: l % 5 != 0),
                     format_str="Starting sun amount is {change_word} to {value}",
                     format_value_type=FORMAT_ACTUAL_VALUE,
@@ -1266,7 +1281,9 @@ class RandomVars(VarContainer):
                 balloon_choices.extend([60,80,100,100])
             self.vars.append(VarWithStrIndices(
                     VarStr(var=DiscreteVar("zombie health "+str(16), address=0x005234BF, chance=45+5*catZombieHealth, datatype="int",
-                                        default=20, choices=balloon_choices),
+                                        default=20, choices=balloon_choices,
+                                        enabled_on_levels=lambda l:(l in [33,34,39,40] and (not randomZombies.get() or not 16 in currentZombies))\
+                                            or (l not in [33,34,39,40] and randomZombies.get() and 16 in currentZombies)),
                             format_str="Balloon requires extra {value} hits to pop",
                             format_value_type=FORMAT_DELTA_CHANGE,
                             modify_value_func=lambda h:h//20 # modify_value_func changes value (and default) before formatting, it doesn't affect actual randomization
@@ -1277,7 +1294,8 @@ class RandomVars(VarContainer):
             # dr zomboss
             self.vars.append(VarWithStrIndices(
                     VarStr(var=VarWithRanges("zombie health "+str(25), address=0x00523624, chance=50+catZombieHealth*17, datatype="int", default=40000,
-                                        ranges=[(100, 33000-1000*catZombieHealth, 36000), (15+12*catZombieHealth, 44000, 44000+4000*int(catZombieHealth==5))],
+                                        ranges=[(100, 33000-1000*catZombieHealth, 36000),
+                                                (15+12*catZombieHealth, 42000, 44000+4000*int(catZombieHealth==5 and randomConveyors.get() != "It's Raining Seeds"))],
                                         enabled_on_levels=lambda l:l==50), # triggered only on 5-10
                             format_str="Zomboss has {value} hp {change_word} than usual",
                             format_value_type=FORMAT_PERCENT_CHANGE,
@@ -1288,9 +1306,6 @@ class RandomVars(VarContainer):
         if catFireRate:
             self.var_containers.append(FireRateContainer(random.Random(seed), write_memory_func, do_activate_strings, plants_container,
                                         zombies_container, game_container, catFireRate))
-        if do_activate_strings:
-            # force printing after every level end
-            self.unprintable_vars.append(OnOffVar("force printing", self.enable_printing_address, 100, "unsigned char", 0, 1))
         self.add_vars_to_string_containers(self.vars)
             
 
@@ -1305,6 +1320,8 @@ class RandomVars(VarContainer):
             self.plant_strings.update_strings(self.WriteMemory)
             self.zombie_strings.update_strings(self.WriteMemory)
             self.game_strings.update_strings(self.WriteMemory)
+            if self.game_strings.get_amount_of_lines() > 1: # first line is always hotkey hint
+                self.WriteMemory("unsigned char", [1], self.enable_printing_address) # force printing
 
 #endregion
 ######### END OF RANDOM VARS SYSTEM ########
