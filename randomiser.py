@@ -1161,7 +1161,7 @@ class FireRateContainer(VarContainer):
         self.WriteMemory("unsigned char", [0xFF, 0x43, 0x5C], 0x0045F29D) # replacing CC bytes
         self.WriteMemory("unsigned char", [0xFF, 0x46, 0x5C], 0x0045F6DD) # replacing CC bytes
         self.tired_var = VarWithStrIndices(
-            VarStr(var=OnOffVar("tired plants", address=[0x0045EF15,0x0045F8D1,0x0045F8DD], chance=10+category*0.5,
+            VarStr(var=OnOffVar("tired plants", address=[0x0045EF15,0x0045F8D1,0x0045F8DD], chance=0,
                                     datatype=["unsigned char","unsigned char","unsigned char"],
                                     default=[[0x53,0x55], [0xe8,0xca,0xf9,0xff,0xff], [0xe8,0xfe,0xfd,0xff,0xff]],
                                     enabled_on_levels=lambda l:l not in [5,15,45] or (l==45 and randomConveyors.get() != 'False'),
