@@ -3246,99 +3246,98 @@ if randomVarsSystemEnabled:
         # I pupposefully don't dealloc memory, because game will crash if player resets while still in level (and not in main menu),
         # it leaks ~192 kB of memory per reset, and it's year 2024
         string_stuff_address: int = VirtualAllocEx(pvz_handle, None, 0x30000, 0x1000, 0x40)
-        # +0: printing on board enabled (hotkey-toggleable)
-        # +4: n of lines outputted onto board (since it doesn't support newline character) written by container
-        # +0x100: hotkey code
-        # +0x200: printing on lawn code
-        hotkey_code_address = string_stuff_address + 0x100
-        string_code_address = string_stuff_address + 0x200
-        plants_string_address = string_stuff_address + 4 * 1024
-        zombies_string_address = plants_string_address + 26 * 1024
-        game_string_address = zombies_string_address + 18 * 1024
-        plants_string_container = IndexedStrContainer("plants", plants_string_address, bytes_per_plant_string, n_of_plant_strings)
-        zombies_string_container = IndexedStrContainer("zombies", zombies_string_address, bytes_per_zombie_string, n_of_zombie_strings)
-        game_string_container = NonIndexedStrContainer("game", game_string_address, bytes_per_game_string, n_of_game_strings, string_stuff_address+4)
-        game_string_container.add_var(SimpleOutputString(["Press Enter to show/hide"], "{}"))
-        for index, el in enumerate(plant_names_container):
-            plants_string_container.add_var(SimpleOutputString(el, "{}"), [index])
-        for index, el in enumerate(zombie_names_container):
-            zombies_string_container.add_var(SimpleOutputString(el, "{}"), [index])
-        if randomCooldowns.get():
-            for _, (index, el) in enumerate(plant_cooldowns_container.items()):
-                # it's important we pass the same object as the object we modify in randomiseCooldowns, same for other non-constant values
-                plants_string_container.add_var(SimpleOutputString(el, "cd: {:.1f} sec", modify_value_func=lambda cd: cd / 100), [index])
-        if randomWavePoints.get() != 'False' and renderWavePoints.get():
-            for _, (index, el) in enumerate(wavepoints_container.items()):
-                if index == 10: #ducky
-                    continue
-                zombies_string_container.add_var(SimpleOutputString(el, "Wave points: {}"), [index])
-        if randomWeights.get() and renderWeights.get():
-            for _, (index, el) in enumerate(zombie_weight_container.items()):
-                if index == 10: # ducky
-                    continue
-                zombies_string_container.add_var(SimpleOutputString(el, "Weight: {}"), [index])
-        # Plant tooltip
-        WriteMemory("unsigned char", [
-            0x8B, 0x44, 0x24, 0x04, 0x83, 0xF8, 0x30, 0x7E, 0x05, 0xB8, 0x31, 0x00, 0x00, 0x00,
-            0xC1, 0xE0, int(math.log2(bytes_per_plant_string)), 0x8D, 0x80, *list(plants_string_address.to_bytes(4, "little")),
-            0x50, 0xE8, 0x83, 0xC6, 0xF9, 0xFF, 0xC3,
-            ],
-            0x467DB0)
-        # Zombie tooltip
-        WriteMemory("unsigned char", [
-            0xC1, 0xE0, int(math.log2(bytes_per_zombie_string)), 0x8D, 0x80, *list(zombies_string_address.to_bytes(4, "little")),
-            0x50, 0x8D, 0x74, 0x24, 0x34, 0x8B, 0xCE, 0xE8, 0xEE, 0x53, 0xFF, 0xFF, 0xEB, 0x12,
-            ],
-            0x40F04D)
-        WriteMemory("unsigned char", [
-            0xE8, 0x45, 0xB8, 0x10, 0x00, #SetLabel instead of SetTitle
-            ],
-            0x40F086)
-        WriteMemory("unsigned char", [
-            0x0F, 0x1F, 0x44, 0x00, 0x00, # nop 5 instead of call
-            ],
-            0x40f0d2)
-        # enable tooltip for zombotany guys
-        WriteMemory("unsigned char", [
-            0xEB,
-            ],
-            0x40E7E8)
-        # Rendering strings on board
-        WriteMemory("unsigned char", [
-            0xA1,*list(string_stuff_address.to_bytes(4,"little")),0x85,0xC0,0x74,0x79,0x8B,0x4C,0x24,0x08,0xA1,0x30,
-            0x76,0x6A,0x00,0x89,0x41,0x40,0x68,0xFF,0x00,0x00,0x00,0x68,0xFF,0x00,0x00,
-            0x00,0x68,0xFF,0x00,0x00,0x00,0x68,0xFF,0x00,0x00,0x00,0x8B,0xC4,0xE8,
-            *list((0x586CC0-string_code_address-0x30).to_bytes(4,"little",signed=True)),
-            0x83,0xC4,0x10,0x56,0x8B,0x35,*list((string_stuff_address+4).to_bytes(4,"little")),0x68,
-            *list(game_string_address.to_bytes(4,"little")),0x6A,0x74,0x85,0xF6,0x74,0x39,0x83,0xEC,0x1C,0x8B,0xCC,0x8B,0x44,
-            0x24,0x20,0x50,0xE8,*list((0x404450-string_code_address-0x54).to_bytes(4,"little",signed=True)),0x50,0x8B,0x54,0x24,0x20,0x52,0x6A,
-            0x32,0x50,0x8B,0x44,0x24,0x40,0xE8,*list((0x587120-string_code_address-0x66).to_bytes(4,"little",signed=True)),
-            0x59,0xE8,*list((0x404420-string_code_address-0x6C).to_bytes(4,"little",signed=True)),
-            0x83,0xC4,0x1C,0x5A,0x83,0xC2,0x10,0x58,0x05,*list(bytes_per_game_string.to_bytes(4,"little",signed=True)),0x50,0x52,
-            0x4E,0x75,0xC7,0x83,0xC4,0x08,0x5E,0x6A,0xFF,0x64,0xA1,0x00,0x00,0x00,0x00,
-            0xE9,*list((0x41AA48-string_code_address-0x8F).to_bytes(4,"little",signed=True)),
-            ],
-            string_code_address)
-        WriteMemory("unsigned char", [
-            0xE9, *list((string_code_address-0x41AA45).to_bytes(4,"little",signed=True)),
-            0x0F, 0x1F, 0x00,
-            ],
-            0x41AA40)
-        # Hotkey for switching string printing
-        WriteMemory("unsigned char", [
-            0x83, 0xFF, 0x0D, 0x75, 0x07, 0x83, 0x35, *list(string_stuff_address.to_bytes(4, "little")), 0x01,
-            0x83, 0xFF, 0x20, 0x0F, 0x84, *list((0x41B86C-hotkey_code_address-0x15).to_bytes(4,"little",signed=True)),
-            0xE9, *list((0x41B867-hotkey_code_address-0x1A).to_bytes(4,"little",signed=True)),
-            ],
-            hotkey_code_address)
-        WriteMemory("unsigned char", [
-            0xE9, *list((hotkey_code_address-0x41B867).to_bytes(4,"little",signed=True)),
-            ],
-            0x41B862)
     else:
-        plants_string_container = zombies_string_container = game_string_container = None
-        string_stuff_address = 0
-    random_vars = RandomVars(random.Random(seed), WriteMemory, WINDOWS, plants_string_container, zombies_string_container, game_string_container,
+        string_stuff_address: int = 0x215010
+    # +0: printing on board enabled (hotkey-toggleable)
+    # +4: n of lines outputted onto board (since it doesn't support newline character) written by container
+    # +0x100: hotkey code
+    # +0x200: printing on lawn code
+    hotkey_code_address = string_stuff_address + 0x100
+    string_code_address = string_stuff_address + 0x200
+    plants_string_address = string_stuff_address + 4 * 1024
+    zombies_string_address = plants_string_address + 26 * 1024
+    game_string_address = zombies_string_address + 18 * 1024
+    plants_string_container = IndexedStrContainer("plants", plants_string_address, bytes_per_plant_string, n_of_plant_strings)
+    zombies_string_container = IndexedStrContainer("zombies", zombies_string_address, bytes_per_zombie_string, n_of_zombie_strings)
+    game_string_container = NonIndexedStrContainer("game", game_string_address, bytes_per_game_string, n_of_game_strings, string_stuff_address+4)
+    game_string_container.add_var(SimpleOutputString(["Press Enter to show/hide"], "{}"))
+    for index, el in enumerate(plant_names_container):
+        plants_string_container.add_var(SimpleOutputString(el, "{}"), [index])
+    for index, el in enumerate(zombie_names_container):
+        zombies_string_container.add_var(SimpleOutputString(el, "{}"), [index])
+    if randomCooldowns.get():
+        for _, (index, el) in enumerate(plant_cooldowns_container.items()):
+            # it's important we pass the same object as the object we modify in randomiseCooldowns, same for other non-constant values
+            plants_string_container.add_var(SimpleOutputString(el, "cd: {:.1f} sec", modify_value_func=lambda cd: cd / 100), [index])
+    if randomWavePoints.get() != 'False' and renderWavePoints.get():
+        for _, (index, el) in enumerate(wavepoints_container.items()):
+            if index == 10: #ducky
+                continue
+            zombies_string_container.add_var(SimpleOutputString(el, "Wave points: {}"), [index])
+    if randomWeights.get() and renderWeights.get():
+        for _, (index, el) in enumerate(zombie_weight_container.items()):
+            if index == 10: # ducky
+                continue
+            zombies_string_container.add_var(SimpleOutputString(el, "Weight: {}"), [index])
+    # Plant tooltip
+    WriteMemory("unsigned char", [
+        0x8B, 0x44, 0x24, 0x04, 0x83, 0xF8, 0x30, 0x7E, 0x05, 0xB8, 0x31, 0x00, 0x00, 0x00,
+        0xC1, 0xE0, int(math.log2(bytes_per_plant_string)), 0x8D, 0x80, *list(plants_string_address.to_bytes(4, "little")),
+        0x50, 0xE8, 0x83, 0xC6, 0xF9, 0xFF, 0xC3,
+        ],
+        0x467DB0)
+    # Zombie tooltip
+    WriteMemory("unsigned char", [
+        0xC1, 0xE0, int(math.log2(bytes_per_zombie_string)), 0x8D, 0x80, *list(zombies_string_address.to_bytes(4, "little")),
+        0x50, 0x8D, 0x74, 0x24, 0x34, 0x8B, 0xCE, 0xE8, 0xEE, 0x53, 0xFF, 0xFF, 0xEB, 0x12,
+        ],
+        0x40F04D)
+    WriteMemory("unsigned char", [
+        0xE8, 0x45, 0xB8, 0x10, 0x00, #SetLabel instead of SetTitle
+        ],
+        0x40F086)
+    WriteMemory("unsigned char", [
+        0x0F, 0x1F, 0x44, 0x00, 0x00, # nop 5 instead of call
+        ],
+        0x40f0d2)
+    # enable tooltip for zombotany guys
+    WriteMemory("unsigned char", [
+        0xEB,
+        ],
+        0x40E7E8)
+    # Rendering strings on board
+    WriteMemory("unsigned char", [
+        0xA1,*list(string_stuff_address.to_bytes(4,"little")),0x85,0xC0,0x74,0x79,0x8B,0x4C,0x24,0x08,0xA1,0x30,
+        0x76,0x6A,0x00,0x89,0x41,0x40,0x68,0xFF,0x00,0x00,0x00,0x68,0xFF,0x00,0x00,
+        0x00,0x68,0xFF,0x00,0x00,0x00,0x68,0xFF,0x00,0x00,0x00,0x8B,0xC4,0xE8,
+        *list((0x586CC0-string_code_address-0x30).to_bytes(4,"little",signed=True)),
+        0x83,0xC4,0x10,0x56,0x8B,0x35,*list((string_stuff_address+4).to_bytes(4,"little")),0x68,
+        *list(game_string_address.to_bytes(4,"little")),0x6A,0x74,0x85,0xF6,0x74,0x39,0x83,0xEC,0x1C,0x8B,0xCC,0x8B,0x44,
+        0x24,0x20,0x50,0xE8,*list((0x404450-string_code_address-0x54).to_bytes(4,"little",signed=True)),0x50,0x8B,0x54,0x24,0x20,0x52,0x6A,
+        0x32,0x50,0x8B,0x44,0x24,0x40,0xE8,*list((0x587120-string_code_address-0x66).to_bytes(4,"little",signed=True)),
+        0x59,0xE8,*list((0x404420-string_code_address-0x6C).to_bytes(4,"little",signed=True)),
+        0x83,0xC4,0x1C,0x5A,0x83,0xC2,0x10,0x58,0x05,*list(bytes_per_game_string.to_bytes(4,"little",signed=True)),0x50,0x52,
+        0x4E,0x75,0xC7,0x83,0xC4,0x08,0x5E,0x6A,0xFF,0x64,0xA1,0x00,0x00,0x00,0x00,
+        0xE9,*list((0x41AA48-string_code_address-0x8F).to_bytes(4,"little",signed=True)),
+        ],
+        string_code_address)
+    WriteMemory("unsigned char", [
+        0xE9, *list((string_code_address-0x41AA45).to_bytes(4,"little",signed=True)),
+        0x0F, 0x1F, 0x00,
+        ],
+        0x41AA40)
+    # Hotkey for switching string printing
+    WriteMemory("unsigned char", [
+        0x83, 0xFF, 0x0D, 0x75, 0x07, 0x83, 0x35, *list(string_stuff_address.to_bytes(4, "little")), 0x01,
+        0x83, 0xFF, 0x20, 0x0F, 0x84, *list((0x41B86C-hotkey_code_address-0x15).to_bytes(4,"little",signed=True)),
+        0xE9, *list((0x41B867-hotkey_code_address-0x1A).to_bytes(4,"little",signed=True)),
+        ],
+        hotkey_code_address)
+    WriteMemory("unsigned char", [
+        0xE9, *list((hotkey_code_address-0x41B867).to_bytes(4,"little",signed=True)),
+        ],
+        0x41B862)
+    random_vars = RandomVars(random.Random(seed), WriteMemory, True, plants_string_container, zombies_string_container, game_string_container,
                              enable_printing_address=string_stuff_address, catZombieHealth=actualRandomVarsZombieHealth, catFireRate=actualRandomVarsFireRate)
 
 try:
