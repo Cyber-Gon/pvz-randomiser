@@ -3046,6 +3046,78 @@ WriteMemory("unsigned char", [ #upgrade plant table
 
 
 
+#Random firerates indicator
+
+WriteMemory("unsigned char", [12 for i in range(56)], 0x651308)
+WriteMemory("unsigned char",[ #color lookup table
+0x44,0x00,0x00,
+0x88,0x11,0x22,
+0xcc,0x22,0x44,
+0xff,0x66,0x66,
+0x88,0x88,0x88,
+0x88,0xbb,0x88,
+0x99,0xdd,0x99,
+0xcc,0xff,0xaa,
+0xee,0xaa,0x22
+], 0x651340)
+WriteMemory("unsigned int", [0,0x2b,0,0,0,1,0,0, 0,0x20,0,0,0,1,0,0, 0,0x2d,0,0,0,1,0,0,], 0x651360) #ends at 0x6513c0
+WriteMemory("unsigned char", [
+0x8b, 0xc7,                                     #movl   %edi,           %eax
+0xb1, 0x01,                                     #movb   $0x1,            %cl
+0xe8, 0x37, 0x52, 0xf3, 0xff,                   #call   0x586d10             #SetColorizeImages #586d10-651ad9
+
+0x31, 0xc0,                                     #xorl   %eax,           %eax
+0x6a, 0x03,                                     #pushl  $3
+0xb0, 0xff,                                     #movb   $0xff,           %al
+0x59,                                           #popl   %ecx
+0x50,                                           #pushl  %eax
+0x8a, 0x85, 0x08, 0x13, 0x65, 0x00,             #movb   0x651308(%ebp),  %al
+
+                                                #firerateRender.loopA:
+0x0f, 0xb6, 0x94, 0x08, 0x3f, 0x13, 0x65, 0x00, #        movzbl 0x65133f(%eax,%ecx), %edx
+0x52,                                           #        pushl  %edx
+0xe2, 0xf5,                                     #loop firerateRender.loopA
+
+0x3c, 0x0c,                                     #cmpb   $12,             %al
+0x0f, 0x94, 0xc2,                               #sete   %dl
+0x0f, 0x92, 0xc1,                               #setc   %cl
+0x8d, 0x14, 0x4a,                               #leal   (%edx,%ecx,2),  %edx
+0x8b, 0xc4,                                     #movl   %esp,           %eax
+0x8b, 0xcf,                                     #movl   %edi,           %ecx
+0x52,                                           #pushl  %edx
+0xe8, 0xb9, 0x51, 0xf3, 0xff,                   #call   0x586cc0             #SetColor #0x586cc0-651b07
+
+0x8b, 0xce,                                     #movl   %esi,           %ecx #FONT_PICO129
+0x8b, 0xc7,                                     #movl   %edi,           %eax
+0xe8, 0xa0, 0x51, 0xf3, 0xff,                   #call   0x586cb0             #SetFont #586cb0-651b10
+
+0x58,                                           #popl   %eax
+0x6a, 0x32,                                     #pushl  $50
+0xdb, 0x04, 0x24,                               #fildl  (%esp)
+0xd8, 0x84, 0x24, 0x18, 0x01, 0x00, 0x00,       #fadds  0x118(%esp)
+0xdb, 0x1c, 0x24,                               #fistpl (%esp)
+0x6a, 0x26,                                     #pushl  $38
+0xdb, 0x04, 0x24,                               #fildl  (%esp)
+0xd8, 0x84, 0x24, 0x18, 0x01, 0x00, 0x00,       #fadds  0x118(%esp)
+0xdb, 0x1c, 0x24,                               #fistpl (%esp)
+0xc1, 0xe0, 0x05,                               #shll   $5,             %eax
+0x05, 0x60, 0x13, 0x65, 0x00,                   #addl   $0x651360,      %eax
+0x50,                                           #pushl  %eax
+0x8b, 0xc7,                                     #movl   %edi,           %eax
+0xe8, 0xe1, 0x55, 0xf3, 0xff,                   #call   0x587120             #DrawString #587120-651b3f
+0x83, 0xc4, 0x10,                               #addl   $0x10,          %esp
+
+0x8b, 0xc7,                                     #movl   %edi,           %eax
+0xb1, 0x00,                                     #movb   $0x0,            %cl
+0xe8, 0xc5, 0x51, 0xf3, 0xff,                   #call   0x586d10             #SetColorizeImages #586d10-651b4b
+0xc3                                            #retl
+], 0x651ad0)
+if randomVarsCatFireRate.get() != "Off" and False:
+    WriteMemory("unsigned char", [
+    0xe8, 0xe7, 0x99, 0x1c, 0x00 #call 0x651ad0
+    ], 0x4880e4)
+
+
 #I haven't been bothered to label these yet
 
 WriteMemory("unsigned char", [
@@ -3453,6 +3525,7 @@ for i in range(50):
         WriteMemory("int",newlevel,0x651190)
     if randomVarsSystemEnabled and i!=0:
         # optimization - we don't actually write random vars and strings when using jump-to-level, but still randomize then (so seed works)
+        WriteMemory("unsigned char", [12 for i in range(56)], 0x651308)
         random_vars.randomize(levels[i], do_write=not saved.get())
     if not shopless.get():
         WriteMemory("bool",True,0x6A9EC0,0x82C,0x21C)
