@@ -679,7 +679,7 @@ class RandomVariable(abc.ABC):
             self.calculate_value = self.get_randomized_value
             self.write_value = self.write_single_value
 
-    def should_try_to_test(self, level):
+    def can_be_enabled(self, level):
         if self.enabled_on_levels:
             return self.enabled_on_levels(level)
         return True
@@ -760,7 +760,7 @@ class RandomVariable(abc.ABC):
 
 
     def randomize(self, random, level, WriteMemory, do_write):
-        if self.should_try_to_test(level) and self.test(random, self.chance, level):
+        if self.test(random, self.chance, level) and self.can_be_enabled(level):
             value = self.calculate_value(random, level)
         else:
             value = copy.deepcopy(self.default)
@@ -1033,11 +1033,11 @@ class VarWithStrIndices:
 
 
 class VarContainer(abc.ABC):
-    def __init__(self, rng, write_memory_func, do_activate_strings, plants_container: IndexedStrContainer, 
+    def __init__(self, seed, write_memory_func, do_activate_strings, plants_container: IndexedStrContainer, 
                  zombies_container: IndexedStrContainer, game_container: NonIndexedStrContainer):
         assert (do_activate_strings and plants_container and zombies_container and game_container) or not do_activate_strings
         self.WriteMemory = write_memory_func
-        self.rng = rng
+        self.rng = random.Random(seed)
         self.do_activate_strings = do_activate_strings
         if do_activate_strings:
             self.plant_strings = plants_container
@@ -1069,8 +1069,8 @@ class VarContainer(abc.ABC):
 
 
 class FireRateContainer(VarContainer):
-    def __init__(self, rng, write_memory_func, do_activate_strings, plants_container, zombies_container, game_container, category):
-        super().__init__(rng, write_memory_func, do_activate_strings, plants_container, zombies_container, game_container)
+    def __init__(self, seed, write_memory_func, do_activate_strings, plants_container, zombies_container, game_container, category):
+        super().__init__(seed, write_memory_func, do_activate_strings, plants_container, zombies_container, game_container)
         self.category = category
         self.vars: list[VarWithStrIndices] = []
         self.potentially_unstable_vars: list[VarWithStrIndices] = []
@@ -1184,14 +1184,115 @@ class FireRateContainer(VarContainer):
             v.var_str.var.randomize(self.rng, level, self.WriteMemory, do_write, allow_unstable, 1.0 if allow_unstable else 0.7)
 
 
+class HealthContainer(VarContainer):
+    def __init__(self, seed, write_memory_func, do_activate_strings, plants_container, zombies_container, game_container, category):
+        super().__init__(seed, write_memory_func, do_activate_strings, plants_container, zombies_container, game_container)
+        self.category = category
+        self.vars: list[VarWithStrIndices] = []
+        # special cases are balloon, zomboss. Doesn't change default body health (270),
+        # so normals, snorkels, backups, boblseds, peashooter, gatling, squash are untouched
+
+        # idea is: very strong is 100% chance overall + some chance for bigger changes + chance for no restrictions style changes.
+        # strong is 100% chance overall + some chance for bigger changes, but no no restrictions style
+        # average is <100% overall chance + slim chance for bigger changes
+        # everything below has less chance for any change + smaller range of changes
+        # every change should be sizeable, let's make no like +1% changes
+        indices =           [2,   4,   6,   19,   20,   7,   17,  3,    14,   23,   32,   12,   22,   15,   18,   5,   8,    24,   21,   27,  28,   31]
+        defaults =          [370, 1100,1100,1350, 450,  1400,100, 500,  500,  3000, 6000, 1350, 850,  500,  500,  150, 500,  70,   500,  1100,500,  2200]
+        isArmorHP =         [True,True,True,False,False,True,True,False,False,False,False,False,False,False,False,True,False,False,False,True,False,True]
+        changeMultipliers = [1,   0.7, 0.7, 0.7,  1,    0.7, 0.2, 1,    1,    0.38, 0.20, 0.7,  1,    1,    1,    1,   1,    2.5,  0.85, 0.7, 1,    0.45]
+        addresses = [0x00522892,0x0052292B,0x00522949,0x0052296E,0x00522A1B,0x00522BB0,0x00522BEF,0x00522CBF,0x00522D64,0x00523D26,0x00523E4A,
+                        0x00522DE1,0x00522E8D,0x00522FC7,0x00523300,0x0052337D,0x00523530,0x005235AC,0x0052299C,0x0052382B,0x00523A87,0x0052395D]
+        assert len(indices) == len(defaults) == len(isArmorHP) == len(changeMultipliers) == len(addresses)
+        for i in range(len(indices)):
+            # note, we use 180 and not 270 because players are generally interested in how long it takes to kill zombie with firepower, so use hp without head
+            ranges = []
+            # weakest changes
+            if isArmorHP[i]:
+                min_m = (0.075 + 0.005 * category) / (defaults[i] / (180 + defaults[i])) * changeMultipliers[i]
+                max_m = (0.09 + 0.06 * category) / (defaults[i] / (180 + defaults[i])) * changeMultipliers[i]
+            else:
+                min_m = (0.075 + 0.005 * category) * changeMultipliers[i]
+                max_m = (0.09 + 0.06 * category) * changeMultipliers[i]
+            ranges.append((100, defaults[i]*(1+min_m), defaults[i]*(1+max_m)))
+            ranges.append((100, max(defaults[i]*(1-max_m*0.88), 5), max(defaults[i]*(1-min_m*0.88), 5))) # never set less than 5 hp
+            if category > 2:
+                # stronger changes:
+                if isArmorHP[i]:
+                    min_m = (0.05 + 0.04 * category) / (defaults[i] / (180 + defaults[i])) * changeMultipliers[i]
+                    max_m = (0.4 + 0.05 * category) / (defaults[i] / (180 + defaults[i])) * changeMultipliers[i]
+                else:
+                    min_m = (0.05 + 0.04 * category) * changeMultipliers[i]
+                    max_m = (0.4 + 0.05 * category) * changeMultipliers[i]
+                ranges.append((-60 + 30 * category, defaults[i]*(1+min_m), defaults[i]*(1+max_m)))
+                ranges.append((-60 + 30 * category, max(defaults[i]*(1-max_m*0.8), 5), max(defaults[i]*(1-min_m*0.8), 5))) # never set less than 5 hp
+            if category > 4 and ((defaults[i] > 400 and isArmorHP[i]) or not isArmorHP[i]):
+                # very strong changes
+                if isArmorHP[i]:
+                    min_m = (0.9) / (defaults[i] / (180 + defaults[i])) * changeMultipliers[i]**0.7
+                    max_m = (1.3) / (defaults[i] / (180 + defaults[i])) * changeMultipliers[i]**0.7
+                else:
+                    min_m = (0.9) * changeMultipliers[i]**0.7
+                    max_m = (1.3) * changeMultipliers[i]**0.7
+                ranges.append((53, defaults[i]*(1+min_m), defaults[i]*(1+max_m)))
+                ranges.append((47, max(defaults[i]*(1-max_m*0.66), 5), max(defaults[i]*(1-min_m*0.66), 5))) # never set less than 5 hp
+            args = { 'var': VarWithRanges("zombie health "+str(indices[i]), address=addresses[i], chance=self.chance(120, category), datatype="int",
+                                    default=defaults[i], ranges=ranges),
+                        'format_str': "Health change: {sign}{value}",
+                        'format_value_type': FORMAT_PERCENT_CHANGE
+            }
+            if isArmorHP[i]:
+                args['modify_value_func'] = lambda h:h+180 # body health for zombies with armor - but account only for health needed to depcaitate zombie
+            self.vars.append(VarWithStrIndices(
+                VarStr(**args),
+                zombie_indices=[indices[i]]
+            ))
+        # ballon has special formatting
+        balloon_choices = [40, 60]
+        if category > 1:
+            balloon_choices.extend([40,60,80])
+        if category > 3:
+            balloon_choices.extend([60,80,100,100])
+        self.vars.append(VarWithStrIndices(
+                VarStr(var=DiscreteVar("zombie health "+str(16), address=0x005234BF, chance=45+5*category, datatype="int",
+                                    default=20, choices=balloon_choices,
+                                    enabled_on_levels=lambda l:l==-1 or (l in [33,34,39,40] and (not randomZombies.get() or not 16 in currentZombies))\
+                                        or (l not in [33,34,39,40] and randomZombies.get() and 16 in currentZombies)),
+                        format_str="Balloon requires extra {value} hits to pop",
+                        format_value_type=FORMAT_DELTA_CHANGE,
+                        modify_value_func=lambda h:h//20 # modify_value_func changes value (and default) before formatting, it doesn't affect actual randomization
+                ),
+                zombie_indices=[16],
+                plant_indices=[26, 43] # show it on cactus and cattail tooltip as well
+        ))
+        # dr zomboss
+        self.vars.append(VarWithStrIndices(
+                VarStr(var=VarWithRanges("zombie health "+str(25), address=0x00523624, chance=50+category*17, datatype="int", default=40000,
+                                    ranges=[(100, 33000-1000*category, 36000),
+                                            (15+12*category, 42000, 44000+4000*int(category==5 and randomConveyors.get() != "It's Raining Seeds"))],
+                                    enabled_on_levels=lambda l:l==50), # triggered only on 5-10
+                        format_str="Zomboss has {value} hp {change_word} than usual",
+                        format_value_type=FORMAT_PERCENT_CHANGE,
+                        format_more_less_words=['more', 'less']
+                ),
+                affects_game_str=True
+        ))
+        self.add_vars_to_string_containers(self.vars)
+
+    def randomize(self, level, do_write):
+        for v in self.vars:
+            v.var_str.var.randomize(self.rng, level, self.WriteMemory, do_write)
+
+
 class RandomVars(VarContainer):
-    def __init__(self, rng, write_memory_func, do_activate_strings, plants_container: IndexedStrContainer, 
-                 zombies_container: IndexedStrContainer, game_container: NonIndexedStrContainer, enable_printing_address,
+    def __init__(self, seed, write_memory_func, do_activate_strings, plants_container: IndexedStrContainer, 
+                 zombies_container: IndexedStrContainer, game_container: NonIndexedStrContainer, code_address,
                  catZombieHealth: int, catFireRate: int):
-        super().__init__(rng, write_memory_func, do_activate_strings, plants_container, zombies_container, game_container)
+        super().__init__(seed, write_memory_func, do_activate_strings, plants_container, zombies_container, game_container)
+        self.seed = seed
         catFireRate = max(catFireRate, 0)
         catZombieHealth = max(catZombieHealth, 0)
-        self.enable_printing_address = enable_printing_address
+        self.code_address = code_address
         self.catZombieHealth = catZombieHealth
         self.catFireRate = catFireRate
         self.vars: list[VarWithStrIndices] = []
@@ -1215,96 +1316,10 @@ class RandomVars(VarContainer):
                 affects_game_str=True
             ))
         if catZombieHealth:
-            # special cases are balloon, zomboss. Doesn't change default body health (270),
-            # so normals, snorkels, backups, boblseds, peashooter, gatling, squash are untouched
-
-            # idea is: very strong is 100% chance overall + some chance for bigger changes + chance for no restrictions style changes.
-            # strong is 100% chance overall + some chance for bigger changes, but no no restrictions style
-            # average is <100% overall chance + slim chance for bigger changes
-            # everything below has less chance for any change + smaller range of changes
-            # every change should be sizeable, let's make no like +1% changes
-            indices =           [2,   4,   6,   19,   20,   7,   17,  3,    14,   23,   32,   12,   22,   15,   18,   5,   8,    24,   21,   27,  28,   31]
-            defaults =          [370, 1100,1100,1350, 450,  1400,100, 500,  500,  3000, 6000, 1350, 850,  500,  500,  150, 500,  70,   500,  1100,500,  2200]
-            isArmorHP =         [True,True,True,False,False,True,True,False,False,False,False,False,False,False,False,True,False,False,False,True,False,True]
-            changeMultipliers = [1,   0.7, 0.7, 0.7,  1,    0.7, 0.2, 1,    1,    0.38, 0.20, 0.7,  1,    1,    1,    1,   1,    2.5,  0.85, 0.7, 1,    0.45]
-            addresses = [0x00522892,0x0052292B,0x00522949,0x0052296E,0x00522A1B,0x00522BB0,0x00522BEF,0x00522CBF,0x00522D64,0x00523D26,0x00523E4A,
-                         0x00522DE1,0x00522E8D,0x00522FC7,0x00523300,0x0052337D,0x00523530,0x005235AC,0x0052299C,0x0052382B,0x00523A87,0x0052395D]
-            assert len(indices) == len(defaults) == len(isArmorHP) == len(changeMultipliers) == len(addresses)
-            for i in range(len(indices)):
-                # note, we use 180 and not 270 because players are generally interested in how long it takes to kill zombie with firepower, so use hp without head
-                ranges = []
-                # weakest changes
-                if isArmorHP[i]:
-                    min_m = (0.075 + 0.005 * catZombieHealth) / (defaults[i] / (180 + defaults[i])) * changeMultipliers[i]
-                    max_m = (0.09 + 0.06 * catZombieHealth) / (defaults[i] / (180 + defaults[i])) * changeMultipliers[i]
-                else:
-                    min_m = (0.075 + 0.005 * catZombieHealth) * changeMultipliers[i]
-                    max_m = (0.09 + 0.06 * catZombieHealth) * changeMultipliers[i]
-                ranges.append((100, defaults[i]*(1+min_m), defaults[i]*(1+max_m)))
-                ranges.append((100, max(defaults[i]*(1-max_m*0.88), 5), max(defaults[i]*(1-min_m*0.88), 5))) # never set less than 5 hp
-                if catZombieHealth > 2:
-                    # stronger changes:
-                    if isArmorHP[i]:
-                        min_m = (0.05 + 0.04 * catZombieHealth) / (defaults[i] / (180 + defaults[i])) * changeMultipliers[i]
-                        max_m = (0.4 + 0.05 * catZombieHealth) / (defaults[i] / (180 + defaults[i])) * changeMultipliers[i]
-                    else:
-                        min_m = (0.05 + 0.04 * catZombieHealth) * changeMultipliers[i]
-                        max_m = (0.4 + 0.05 * catZombieHealth) * changeMultipliers[i]
-                    ranges.append((-60 + 30 * catZombieHealth, defaults[i]*(1+min_m), defaults[i]*(1+max_m)))
-                    ranges.append((-60 + 30 * catZombieHealth, max(defaults[i]*(1-max_m*0.8), 5), max(defaults[i]*(1-min_m*0.8), 5))) # never set less than 5 hp
-                if catZombieHealth > 4 and ((defaults[i] > 400 and isArmorHP[i]) or not isArmorHP[i]):
-                    # very strong changes
-                    if isArmorHP[i]:
-                        min_m = (0.9) / (defaults[i] / (180 + defaults[i])) * changeMultipliers[i]**0.7
-                        max_m = (1.3) / (defaults[i] / (180 + defaults[i])) * changeMultipliers[i]**0.7
-                    else:
-                        min_m = (0.9) * changeMultipliers[i]**0.7
-                        max_m = (1.3) * changeMultipliers[i]**0.7
-                    ranges.append((53, defaults[i]*(1+min_m), defaults[i]*(1+max_m)))
-                    ranges.append((47, max(defaults[i]*(1-max_m*0.66), 5), max(defaults[i]*(1-min_m*0.66), 5))) # never set less than 5 hp
-                args = { 'var': VarWithRanges("zombie health "+str(indices[i]), address=addresses[i], chance=self.chance(120, catZombieHealth), datatype="int",
-                                        default=defaults[i], ranges=ranges),
-                         'format_str': "Health change: {sign}{value}",
-                         'format_value_type': FORMAT_PERCENT_CHANGE
-                }
-                if isArmorHP[i]:
-                    args['modify_value_func'] = lambda h:h+180 # body health for zombies with armor - but account only for health needed to depcaitate zombie
-                self.vars.append(VarWithStrIndices(
-                    VarStr(**args),
-                    zombie_indices=[indices[i]]
-                ))
-            # ballon has special formatting
-            balloon_choices = [40, 60]
-            if catZombieHealth > 1:
-                balloon_choices.extend([40,60,80])
-            if catZombieHealth > 3:
-                balloon_choices.extend([60,80,100,100])
-            self.vars.append(VarWithStrIndices(
-                    VarStr(var=DiscreteVar("zombie health "+str(16), address=0x005234BF, chance=45+5*catZombieHealth, datatype="int",
-                                        default=20, choices=balloon_choices,
-                                        enabled_on_levels=lambda l:(l in [33,34,39,40] and (not randomZombies.get() or not 16 in currentZombies))\
-                                            or (l not in [33,34,39,40] and randomZombies.get() and 16 in currentZombies)),
-                            format_str="Balloon requires extra {value} hits to pop",
-                            format_value_type=FORMAT_DELTA_CHANGE,
-                            modify_value_func=lambda h:h//20 # modify_value_func changes value (and default) before formatting, it doesn't affect actual randomization
-                    ),
-                    zombie_indices=[16],
-                    plant_indices=[26, 43] # show it on cactus and cattail tooltip as well
-            ))
-            # dr zomboss
-            self.vars.append(VarWithStrIndices(
-                    VarStr(var=VarWithRanges("zombie health "+str(25), address=0x00523624, chance=50+catZombieHealth*17, datatype="int", default=40000,
-                                        ranges=[(100, 33000-1000*catZombieHealth, 36000),
-                                                (15+12*catZombieHealth, 42000, 44000+4000*int(catZombieHealth==5 and randomConveyors.get() != "It's Raining Seeds"))],
-                                        enabled_on_levels=lambda l:l==50), # triggered only on 5-10
-                            format_str="Zomboss has {value} hp {change_word} than usual",
-                            format_value_type=FORMAT_PERCENT_CHANGE,
-                            format_more_less_words=['more', 'less']
-                    ),
-                    affects_game_str=True
-            ))
+            self.var_containers.append(HealthContainer(self.seed+"health", write_memory_func, do_activate_strings, plants_container,
+                                        zombies_container, game_container, catZombieHealth))
         if catFireRate:
-            self.var_containers.append(FireRateContainer(random.Random(seed), write_memory_func, do_activate_strings, plants_container,
+            self.var_containers.append(FireRateContainer(self.seed+"firerate", write_memory_func, do_activate_strings, plants_container,
                                         zombies_container, game_container, catFireRate))
         self.add_vars_to_string_containers(self.vars)
             
@@ -1321,7 +1336,7 @@ class RandomVars(VarContainer):
             self.zombie_strings.update_strings(self.WriteMemory)
             self.game_strings.update_strings(self.WriteMemory)
             if self.game_strings.get_amount_of_lines() > 1: # first line is always hotkey hint
-                self.WriteMemory("unsigned char", [1], self.enable_printing_address) # force printing
+                self.WriteMemory("unsigned char", [1], self.code_address) # force printing
 
 #endregion
 ######### END OF RANDOM VARS SYSTEM ########
@@ -1331,6 +1346,16 @@ daveActualPlantCount = 3 if davePlantsCount.get() == "random(1-5)" else int(dave
 actualRandomVarsZombieHealth = ["Off", "Very weak", "Weak", "Average", "Strong", "Very Strong"].index(randomVarsCatZombieHealth.get())
 actualRandomVarsFireRate = ["Off", "Very weak", "Weak", "Average", "Strong", "Very Strong"].index(randomVarsCatFireRate.get())
 randomVarsSystemEnabled = actualRandomVarsZombieHealth > 0 or actualRandomVarsFireRate > 0 or renderWeights.get() or renderWavePoints.get()
+
+weights_rng = random.Random(seed+'weight')
+cost_rng = random.Random(seed+'cost')
+cooldown_rng = random.Random(seed+'cooldown')
+wavepoint_rng = random.Random(seed+'wavepoint')
+startingwave_rng = random.Random(seed+'startingwave')
+zombies_rng = random.Random(seed+'zombies')
+dave_rng = random.Random(seed+'dave')
+upgrade_rng = random.Random(seed+'upgrade')
+# level order and plants use random.seed to reseed global random object, so I don't make separate Random for them
 
 LEVEL_PLANTS = [
     0,
@@ -1391,6 +1416,7 @@ plant_cooldowns_container = { index: element for index,element in enumerate([[x[
 zombie_names_container = [x[0].replace(' (ignore)', '') for x in zombies][:n_of_zombie_strings] # constant, so can pass string and not a list
 wavepoints_container = { index: element for index,element in enumerate([[x[3]] for x in zombies][:n_of_zombie_strings]) } # not a constant, so passing a list to keep a reference
 zombie_weight_container = { index: element for index,element in enumerate([[x[2]] for x in zombies][:n_of_zombie_strings]) } # not a constant, so passing a list to keep a reference
+
 
 def randomiseLevels(seed):
     global noRestrictions
@@ -1690,11 +1716,11 @@ def randomiseWeights():
     for i in range(0, 33):
         if i!=1 and i!=9 and i!=25:
             if i>2:
-                weight=random.randint(1, 60)
+                weight=weights_rng.randint(1, 60)
             elif i==23:
-                weight=random.randint(1, 50)
+                weight=weights_rng.randint(1, 50)
             else:
-                weight=random.randint(1, 45)
+                weight=weights_rng.randint(1, 45)
             if weight>50:
                 weight=weight*1000
             elif weight<5:
@@ -1709,20 +1735,25 @@ def randomiseWeights():
 
 wavePointArray=[1, 1, 2, 2, 4, 2, 4, 7, 5, 0, 1, 3, 7, 3, 3, 3, 2, 4, 4, 4, 3, 4, 5, 10, 10, 0, 1, 4, 3, 3, 3, 7, 10]
 
-def randomiseWavePoints():
+def randomiseWavePoints(minigames=False):
     global randomWavePoints, wavePointArray
     for i in range(2, 33):
+        if i==26 and minigames: # peashooter zombie in minigames have 1 point, because on Zombotany levels there are no normals
+            WriteMemory("int", 1, 0x69DA88 + 0x1C*i)
+            if i in wavepoints_container:
+                wavepoints_container[i][0] = 1
+                continue
         if i!=9 and i!=25:
             addWavePoint=0
             randomCheck=0
             while addWavePoint==0 and not randomCheck:
                 if randomWavePoints.get()=="EXTREME":
                     if i==5:
-                        wavePoint=(random.randint(10,83))//10
+                        wavePoint=(wavepoint_rng.randint(10,83))//10
                     elif i==2:
-                        wavePoint=2+random.randint(0,1)
+                        wavePoint=2+wavepoint_rng.randint(0,1)
                     else:
-                        wavePoint=(random.randint(20,82))//10
+                        wavePoint=(wavepoint_rng.randint(20,82))//10
                     if wavePoint>=8:
                         wavePoint=10    
                 else:
@@ -1739,11 +1770,11 @@ def randomiseWavePoints():
                     else:
                         lowerBound=-1
                         upperBound=1
-                    addWavePoint=random.randint(lowerBound, upperBound)
+                    addWavePoint=wavepoint_rng.randint(lowerBound, upperBound)
                     wavePoint=wavePoint+addWavePoint
                     if wavePoint<2 and i!=5:
                         wavePoint=2
-                randomCheck=random.randint(0,2)
+                randomCheck=wavepoint_rng.randint(0,2)
                 if i==2:
                     randomCheck=1
             if i in wavepoints_container:
@@ -1767,16 +1798,16 @@ def randomiseStartingWave(startingWave):
     else:
         for i in range(3, 33):
             if i<7 and i!=5:
-                WriteMemory("int", random.randint(1,10), 0x69DA90 + 0x1C*i)
+                WriteMemory("int", startingwave_rng.randint(1,10), 0x69DA90 + 0x1C*i)
             elif i!=5:
-                WriteMemory("int", random.randint(4,10), 0x69DA90 + 0x1C*i)
+                WriteMemory("int", startingwave_rng.randint(4,10), 0x69DA90 + 0x1C*i)
     
 def randomiseCost():
     color_array = []
     for i in range(0, 48):
         if i!=1 and i!=8 and i!=24: #sunflower, puff, seashroom are exceptions
-            divider=random.uniform(1,2)
-            power=random.choice([-1, 1])
+            divider=cost_rng.uniform(1,2)
+            power=cost_rng.choice([-1, 1])
             color_array.append(round(((divider-1.0)**0.5)*127) + ((1-power)<<6))
             newCost=round(plants[i][0]*(divider**power))
             WriteMemory("int", newCost , 0x69F2C0 + 0x24*i)
@@ -1789,8 +1820,8 @@ def randomiseCooldown():
     color_array = []
     for i in range(0, 48):
         if i!=1 and i!=8 and i!=33: #sunflower, puff, pot are exceptions
-            divider=random.uniform(1,2)
-            power=random.choice([1, -1])
+            divider=cooldown_rng.uniform(1,2)
+            power=cooldown_rng.choice([1, -1])
             x = divider**power
             newCooldown=round(plants[i][1] * x)
             if i in plant_cooldowns_container:
@@ -1807,7 +1838,7 @@ def randomiseCooldown():
 
 def randomiseDavePlantCount():
     global daveActualPlantCount
-    daveActualPlantCount = random.randint(1,5)
+    daveActualPlantCount = dave_rng.randint(1,5)
     WriteMemory("unsigned char", [
         daveActualPlantCount    # max amount of iterations to pick a plant
         ], 
@@ -1836,7 +1867,7 @@ def generateZombies(levels, level_plants):
         if levels[i]!=50 and levels[i]!=15 and levels[i]!=35:
             for j in range(2, 33):
                 if j!=9 and j!=10 and j!=24 and j!=25:
-                    if not random.randint(0, 11):
+                    if not zombies_rng.randint(0, 11):
                         if (j==11 or j==14) and (levels[i]<21 or levels[i]>40):
                             continue
                         elif zombies[j][1]==levels[i]:
@@ -1859,7 +1890,7 @@ def generateZombies(levels, level_plants):
                             continue
                         else:
                             if j==32:
-                                if not random.randint(0, 6):
+                                if not zombies_rng.randint(0, 6):
                                     currentZombies.append(j)
                             else:
                                 currentZombies.append(j)
@@ -2353,7 +2384,7 @@ if randomCooldowns.get():
     
     
 # Plant::GetTooltip # show cooldown instead of tooltip when random cooldowns are on
-if randomCooldowns.get() and (LINUX or not randomVarsSystemEnabled):
+if randomCooldowns.get() and not randomVarsSystemEnabled:
     WriteMemory("unsigned char", [ 
         0x8B,0x44,0x24,0x04,                # mov eax,[esp+04] // plant index
         0x56,                               # push esi // preserve
@@ -2387,7 +2418,7 @@ WriteMemory("unsigned char", [
     0x651ce8)
 
 # activate code for changing plant name to plant tooltip in seed bank
-if randomCooldowns.get() or (randomVarsSystemEnabled and WINDOWS):
+if randomCooldowns.get() or randomVarsSystemEnabled:
     WriteMemory("unsigned char", [ 
     0xE9,0xD4,0x25,0x24,0x00,   # jmp 651ce8
     0x90,                       # nop
@@ -3196,18 +3227,24 @@ WriteMemory("unsigned char", [
 ], 
 0x651b50)
 
-if enableDave.get() != 'False':
-    def remove_dave_on_exit():
-        WriteMemory("unsigned char", [
+# deactivate Dave
+WriteMemory("unsigned char", [
             0x7e, 0x06, # original code  
             ],
             0x483F2A)
-    atexit.register(remove_dave_on_exit) # easy to do, so will give player on option to forget that they chose crazy dave
-
+WriteMemory("unsigned char", [
+            0x75, 0x16, # original code  
+            ],
+            0x483F1A)
+if enableDave.get() != 'False':
     WriteMemory("unsigned char", [
-        0x66, 0x90, # nop 2 // removes jump if this is first adventure  
+        0x66, 0x90, # nop 2 // removes jump if this is first adventure
         ], 
         0x483F2A)
+    WriteMemory("unsigned char", [
+        0x66, 0x90, # nop 2 // removes jump if this is adventure
+        ], 
+        0x483F1A)
     WriteMemory("unsigned char", [
         0xE9,0xBD,0xDB,0x1C,0x00  # jmp popcapgame1.exe+251B50
         ], 
@@ -3409,8 +3446,8 @@ if randomVarsSystemEnabled:
         0xE9, *list((hotkey_code_address-0x41B867).to_bytes(4,"little",signed=True)),
         ],
         0x41B862)
-    random_vars = RandomVars(random.Random(seed), WriteMemory, True, plants_string_container, zombies_string_container, game_string_container,
-                             enable_printing_address=string_stuff_address, catZombieHealth=actualRandomVarsZombieHealth, catFireRate=actualRandomVarsFireRate)
+    random_vars = RandomVars(seed, WriteMemory, True, plants_string_container, zombies_string_container, game_string_container,
+                             code_address=string_stuff_address, catZombieHealth=actualRandomVarsZombieHealth, catFireRate=actualRandomVarsFireRate)
 
 try:
     leftoverZombies=open('leftoverZombies.txt', 'r')
@@ -3444,118 +3481,195 @@ if saved.get() and jumpLevel!="":
     for a in range(len(levels)):
         if levels[a]==jumpLevel:
             savePoint=a+1
-for i in range(50):
-    if saved.get():
-        if savePoint-1==i:
-            saved.set(False)
-    if not saved.get() and i!=0:
-        linesToWrite=[seed, (i+1), str(ReadMemory("int", 0x6A9EC0,0x82C,0x214)), str(ReadMemory("int",0x6A9EC0,0x82C, 0x28)), (challengeMode.get()), (shopless.get()), (noRestrictions.get()), (noAutoSlots.get()), (imitater.get()), (randomisePlants.get()), (seeded.get()), (upgradeRewards.get()), (randomWeights.get()), (randomWavePoints.get()), startingWave.get(), randomCost.get(), randomCooldowns.get(), costTextToggle.get(), randomZombies.get(), randomConveyors.get(), cooldownColoring.get(), enableDave.get(), davePlantsCount.get(), randomVarsCatZombieHealth.get(), randomVarsCatFireRate.get(), renderWeights.get(), renderWavePoints.get(), limitPreviews.get()]
+if True:
+    WriteMemory("int", [2], 0x6A9EC0, 0x82c, 0x2c) # 2 adventure completions
+    for i in range(33):
+        WriteMemory("int", [1], 0x6A9EC0, 0x82c, 0x6c+4*i) # mini-games
+    for i in range(9):
+        WriteMemory("int", [1], 0x6A9EC0, 0x82c, 0xf8+4*i) # vasebreakers
+    for i in range(9):
+        WriteMemory("int", [1], 0x6A9EC0, 0x82c, 0x120+4*i) # i zombies
+    for i in range(5):
+        WriteMemory("int", [5], 0x6A9EC0, 0x82c, 0x30+4*i) # survivals
+    for i in range(5):
+        WriteMemory("int", [10], 0x6A9EC0, 0x82c, 0x44+4*i) # hard survivals
+    if not shopless.get():
+        for i in range(9):
+            WriteMemory("int", [1], 0x6A9EC0, 0x82c, 0x1c0+4*i) # shop
+        WriteMemory("int",[4],0x6A9EC0,0x82C, 0x214) # slots
+        WriteMemory("int",[1],0x6A9EC0,0x82C,0x21C) #cleaners
+        WriteMemory("int",[1],0x6A9EC0,0x82C,0x218) # cleaners
+        WriteMemory("int",[1],0x6A9EC0,0x82C,0x234) # first aid
+        WriteMemory("int",[200],0x6A9EC0,0x82C, 0x28) # money
+    saved.set(False)
+    plants_unlocked = 40
+    WriteMemory("int",plants_unlocked,0x651090) # needed for Dave
+    for i in range(1000000):
+        linesToWrite=[seed, "2", "0", "0", (challengeMode.get()), (shopless.get()), (noRestrictions.get()), (noAutoSlots.get()), (imitater.get()), (randomisePlants.get()), (seeded.get()), (upgradeRewards.get()), (randomWeights.get()), (randomWavePoints.get()), startingWave.get(), randomCost.get(), randomCooldowns.get(), costTextToggle.get(), randomZombies.get(), randomConveyors.get(), cooldownColoring.get(), enableDave.get(), davePlantsCount.get(), randomVarsCatZombieHealth.get(), randomVarsCatFireRate.get(), renderWeights.get(), renderWavePoints.get(), limitPreviews.get()]
         saveFile=open('saveFile.txt', 'w')
         for k in range(len(linesToWrite)):
             linesToWrite[k]=str(linesToWrite[k])
             linesToWrite[k]=linesToWrite[k]+"\n"
         saveFile.writelines(linesToWrite)
         saveFile.close()
-        if i!=0 and (randomWavePoints.get()!="False" or randomWeights.get()):
-            print(" "*100)
-            print("Level:", convertToLevel(levels[i-1]))
-            zombies_type_offset = ReadMemory("unsigned int", 0x6A9EC0, 0x768) + 0x54D4
-            zombies_type = ReadMemory("bool",zombies_type_offset,array=33)
-            for j in range(0, 33):
-                if(zombies_type[j]):
-                    print(zombies[j][0], str(ReadMemory("int", 0x69DA88 + 0x1C*j)), ReadMemory("int", 0x69DA94 + 0x1C*j),ReadMemory("int", 0x69DA90 + 0x1C*j))
-    print(str(i+1))
-    WriteMemory("int",plants_unlocked,0x651090)
-    if seeded.get() and not saved.get():
-        WriteMemory("int", [0 for j in range(1024)], rng_addr+0x10)
-        WriteMemory("int", rng_addr+0x1010, rng_addr)
-    newlevel=levels[i]
-    if(i == 0) and not saved.get():
-        try:
-            while(ReadMemory("int",0x6A9EC0,0x82C, 0x24) != 1): # current level
-                Sleep(0.1)
-        except:
-            print("oops")
-    if not noAutoSlots.get() or shopless.get():
-        WriteMemory("int",0,0x6A9EC0,0x82C, 0x28)
-    if randomZombies.get():
-        if i!=0:
-            currentZombies=randomiseZombies(zombiesToRandomise, i-1, levels)
-        currentZombies=randomiseZombies(zombiesToRandomise, i, levels)
-        if len(currentZombies)>0 and not saved.get():
-            if savePoint-1!=i:
-                linesToWrite=[str(levels[i])+"\n"]
-                for j in range(0, len(currentZombies)):
-                    linesToWrite.append(str(currentZombies[j])+"\n")
-                leftoverZombies=open('leftoverZombies.txt', 'w')
-                leftoverZombies.writelines(linesToWrite)
-                leftoverZombies.close()
-    if upgradeRewards.get():
-        if i!=0:
-            if(level_plants[lastlevel] == -1):
-                if randomisePlants.get():
-                    if len(upgradePlants)!=0:
-                        newUpgrade=random.choice(upgradePlants)
-                        upgradePlants.remove(newUpgrade)
-                        if newUpgrade!="nothing" and newUpgrade!="nothing2":
-                            WriteMemory("bool",True,0x6A9EC0,0x82C,newUpgrade)
-                else:
-                    if lastlevel!=49 and lastlevel!=50:
-                        WriteMemory("bool",True,0x6A9EC0,0x82C,upgradePlants[lastlevel//5])
-        lastlevel=newlevel
-    if imitater.get() and i != 0:
-        WriteMemory("bool",True,0x6A9EC0,0x82C,0x1E0)
-        WriteMemory("int", 0, 0x453aea)
-    if not saved.get():
-        WriteMemory("int",newlevel,0x6A9EC0,0x82C, 0x24)
-    if randomWeights.get():
-        randomiseWeights()
-    if randomWavePoints.get()!="False":
-        randomiseWavePoints()
-    if i!=0:
+        if randomZombies.get() and False:
+            if i!=0:
+                currentZombies=randomiseZombies(zombiesToRandomise, i-1, levels)
+            currentZombies=randomiseZombies(zombiesToRandomise, i, levels)
+            if len(currentZombies)>0 and not saved.get():
+                if savePoint-1!=i:
+                    linesToWrite=[str(levels[i])+"\n"]
+                    for j in range(0, len(currentZombies)):
+                        linesToWrite.append(str(currentZombies[j])+"\n")
+                    leftoverZombies=open('leftoverZombies.txt', 'w')
+                    leftoverZombies.writelines(linesToWrite)
+                    leftoverZombies.close()
+        if randomWeights.get():
+            randomiseWeights()
+        if randomWavePoints.get()!="False":
+            randomiseWavePoints(minigames=True)
         if randomCost.get():
             randomiseCost()
         if randomCooldowns.get():
             randomiseCooldown()
         if enableDave.get() != "False" and davePlantsCount.get() == "random(1-5)":
             randomiseDavePlantCount()
-    if startingWave.get()=="Random":
-        randomiseStartingWave(startingWave)
-    if not saved.get():
-        WriteMemory("int",newlevel,0x651190)
-    if randomVarsSystemEnabled and i!=0:
-        # optimization - we don't actually write random vars and strings when using jump-to-level, but still randomize then (so seed works)
-        WriteMemory("unsigned char", [12 for i in range(56)], 0x651308)
-        random_vars.randomize(levels[i], do_write=not saved.get())
-    if not shopless.get():
-        WriteMemory("bool",True,0x6A9EC0,0x82C,0x21C)
-        WriteMemory("bool",True,0x6A9EC0,0x82C,0x218)
-    if(i != 0) and not saved.get(): 
-        Sleep(1)
-    if(level_plants[newlevel] != -1):
-        plants_unlocked += 1
-    if(i >= 24 and plants_unlocked > 7 and not (shopless.get() or noAutoSlots.get())): # slots
-        WriteMemory("int",2,0x6A9EC0,0x82C,0x214)
-    elif(i >= 14 and plants_unlocked > 6 and not (shopless.get() or noAutoSlots.get())):
-        WriteMemory("int",1,0x6A9EC0,0x82C,0x214)
-    if(i == 0) and not saved.get():
-        while(game_ui() != 3):
+        if startingWave.get()=="Random":
+            randomiseStartingWave(startingWave)
+        if randomVarsSystemEnabled:
+            # optimization - we don't actually write random vars and strings when using jump-to-level, but still randomize then (so seed works)
+            WriteMemory("unsigned char", [12 for i in range(56)], 0x651308)
+            random_vars.randomize(-1, do_write=True)
+        Sleep(300)
+        if shopless.get():
+            WriteMemory("int",0,0x6A9EC0,0x82C, 0x28)
+        Sleep(400)
+        if shopless.get():
+            WriteMemory("int",0,0x6A9EC0,0x82C, 0x28)
+        while(game_ui() != 3 or ReadMemory("bool",0x6A9EC0,0x768, 0x5603)):
             Sleep(0.1)
-    if saved.get():
-        Sleep(1)
-    else:
-        Sleep(500)
-    if not noAutoSlots.get() or shopless.get():
-        WriteMemory("int",0,0x6A9EC0,0x82C, 0x28)
-    if saved.get():
-        Sleep(1)
-    else:
-        Sleep(500)
-    if not noAutoSlots.get() or shopless.get():
-        WriteMemory("int",0,0x6A9EC0,0x82C, 0x28)
-    while(game_ui() != 3 or ReadMemory("bool",0x6A9EC0,0x768, 0x5603)):
-        Sleep(0.1)
-    WriteMemory("int",i,0x65115c)
+        
+        
+else:
+    for i in range(50):
+        if i == 0:
+            WriteMemory("int", 50, 0x69F2CC) # quicken level 1-1
+            WriteMemory("int", 10, 0x41523D) # quicken level 1-1
+            WriteMemory("int", 10, 0x413F4B) # quicken level 1-1
+        elif i == 1:
+            WriteMemory("int", 150, 0x69F2CC) # reset from level 1-1
+            WriteMemory("int", 200, 0x413F4B) # reset from level 1-1
+        if saved.get():
+            if savePoint-1==i:
+                saved.set(False)
+        if not saved.get() and i!=0:
+            linesToWrite=[seed, (i+1), str(ReadMemory("int", 0x6A9EC0,0x82C,0x214)), str(ReadMemory("int",0x6A9EC0,0x82C, 0x28)), (challengeMode.get()), (shopless.get()), (noRestrictions.get()), (noAutoSlots.get()), (imitater.get()), (randomisePlants.get()), (seeded.get()), (upgradeRewards.get()), (randomWeights.get()), (randomWavePoints.get()), startingWave.get(), randomCost.get(), randomCooldowns.get(), costTextToggle.get(), randomZombies.get(), randomConveyors.get(), cooldownColoring.get(), enableDave.get(), davePlantsCount.get(), randomVarsCatZombieHealth.get(), randomVarsCatFireRate.get(), renderWeights.get(), renderWavePoints.get(), limitPreviews.get()]
+            saveFile=open('saveFile.txt', 'w')
+            for k in range(len(linesToWrite)):
+                linesToWrite[k]=str(linesToWrite[k])
+                linesToWrite[k]=linesToWrite[k]+"\n"
+            saveFile.writelines(linesToWrite)
+            saveFile.close()
+            if i!=0 and (randomWavePoints.get()!="False" or randomWeights.get()):
+                print(" "*100)
+                print("Level:", convertToLevel(levels[i-1]))
+                zombies_type_offset = ReadMemory("unsigned int", 0x6A9EC0, 0x768) + 0x54D4
+                zombies_type = ReadMemory("bool",zombies_type_offset,array=33)
+                for j in range(0, 33):
+                    if(zombies_type[j]):
+                        print(zombies[j][0], str(ReadMemory("int", 0x69DA88 + 0x1C*j)), ReadMemory("int", 0x69DA94 + 0x1C*j),ReadMemory("int", 0x69DA90 + 0x1C*j))
+        print(str(i+1))
+        WriteMemory("int",plants_unlocked,0x651090)
+        if seeded.get() and not saved.get():
+            WriteMemory("int", [0 for j in range(1024)], rng_addr+0x10)
+            WriteMemory("int", rng_addr+0x1010, rng_addr)
+        newlevel=levels[i]
+        if(i == 0) and not saved.get():
+            try:
+                while(ReadMemory("int",0x6A9EC0,0x82C, 0x24) != 1): # current level
+                    Sleep(0.1)
+            except:
+                print("oops")
+        if not noAutoSlots.get() or shopless.get():
+            WriteMemory("int",0,0x6A9EC0,0x82C, 0x28)
+        if randomZombies.get():
+            if i!=0:
+                currentZombies=randomiseZombies(zombiesToRandomise, i-1, levels)
+            currentZombies=randomiseZombies(zombiesToRandomise, i, levels)
+            if len(currentZombies)>0 and not saved.get():
+                if savePoint-1!=i:
+                    linesToWrite=[str(levels[i])+"\n"]
+                    for j in range(0, len(currentZombies)):
+                        linesToWrite.append(str(currentZombies[j])+"\n")
+                    leftoverZombies=open('leftoverZombies.txt', 'w')
+                    leftoverZombies.writelines(linesToWrite)
+                    leftoverZombies.close()
+        if upgradeRewards.get():
+            if i!=0:
+                if(level_plants[lastlevel] == -1):
+                    if randomisePlants.get():
+                        if len(upgradePlants)!=0:
+                            newUpgrade=upgrade_rng.choice(upgradePlants)
+                            upgradePlants.remove(newUpgrade)
+                            if newUpgrade!="nothing" and newUpgrade!="nothing2":
+                                WriteMemory("bool",True,0x6A9EC0,0x82C,newUpgrade)
+                    else:
+                        if lastlevel!=49 and lastlevel!=50:
+                            WriteMemory("bool",True,0x6A9EC0,0x82C,upgradePlants[lastlevel//5])
+            lastlevel=newlevel
+        if imitater.get() and i != 0:
+            WriteMemory("bool",True,0x6A9EC0,0x82C,0x1E0)
+            WriteMemory("int", 0, 0x453aea)
+        if not saved.get():
+            WriteMemory("int",newlevel,0x6A9EC0,0x82C, 0x24)
+        if randomWeights.get():
+            randomiseWeights()
+        if randomWavePoints.get()!="False":
+            randomiseWavePoints()
+        if i!=0:
+            if randomCost.get():
+                randomiseCost()
+            if randomCooldowns.get():
+                randomiseCooldown()
+            if enableDave.get() != "False" and davePlantsCount.get() == "random(1-5)":
+                randomiseDavePlantCount()
+        if startingWave.get()=="Random":
+            randomiseStartingWave(startingWave)
+        if not saved.get():
+            WriteMemory("int",newlevel,0x651190)
+        if randomVarsSystemEnabled and i!=0:
+            # optimization - we don't actually write random vars and strings when using jump-to-level, but still randomize then (so seed works)
+            WriteMemory("unsigned char", [12 for i in range(56)], 0x651308)
+            random_vars.randomize(levels[i], do_write=not saved.get())
+        if not shopless.get():
+            WriteMemory("bool",True,0x6A9EC0,0x82C,0x21C)
+            WriteMemory("bool",True,0x6A9EC0,0x82C,0x218)
+        if(i != 0) and not saved.get(): 
+            Sleep(1)
+        if(level_plants[newlevel] != -1):
+            plants_unlocked += 1
+        if(i >= 24 and plants_unlocked > 7 and not (shopless.get() or noAutoSlots.get())): # slots
+            WriteMemory("int",2,0x6A9EC0,0x82C,0x214)
+        elif(i >= 14 and plants_unlocked > 6 and not (shopless.get() or noAutoSlots.get())):
+            WriteMemory("int",1,0x6A9EC0,0x82C,0x214)
+        if(i == 0) and not saved.get():
+            while(game_ui() != 3):
+                Sleep(0.1)
+        if saved.get():
+            Sleep(1)
+        else:
+            Sleep(500)
+        if not noAutoSlots.get() or shopless.get():
+            WriteMemory("int",0,0x6A9EC0,0x82C, 0x28)
+        if saved.get():
+            Sleep(1)
+        else:
+            Sleep(500)
+        if not noAutoSlots.get() or shopless.get():
+            WriteMemory("int",0,0x6A9EC0,0x82C, 0x28)
+        while(game_ui() != 3 or ReadMemory("bool",0x6A9EC0,0x768, 0x5603)):
+            Sleep(0.1)
+        WriteMemory("int",i,0x65115c)
 
 WriteMemory("int",0,0x651190)
 
