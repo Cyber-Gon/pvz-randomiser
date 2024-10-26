@@ -223,6 +223,7 @@ davePlantsCount  = StringVar(value="3")
 randomVarsCatZombieHealth = StringVar(value="Off")
 randomVarsCatFireRate = StringVar(value="Off")
 limitPreviews    = BooleanVar(value=False)
+gamemode         = StringVar(value="adventure")
 
 seed=str(random.randint(1,999999999999))
 
@@ -243,6 +244,8 @@ if hasSave:
         fileInfo.append("False") #renderWavePoints
     if len(fileInfo)<28:
         fileInfo.append("False") #limitPreviews
+    if len(fileInfo)<29:
+        fileInfo.append("adventure") #limitPreviews
     challengeMode.set(  eval(fileInfo[4].strip()))
     shopless.set(       eval(fileInfo[5].strip()))
     noRestrictions.set( eval(fileInfo[6].strip()))
@@ -267,6 +270,7 @@ if hasSave:
     renderWeights.set(str(fileInfo[25].strip()))
     renderWavePoints.set(str(fileInfo[26].strip()))
     limitPreviews.set(str(fileInfo[27].strip()))
+    gamemode.set(str(fileInfo[28].strip()))
     if fileInfo[1]=="finished\n":
         hasSave=False
 
@@ -350,7 +354,7 @@ def shoplessButtonClick():
         manualMoneyButton.config(state=NORMAL)
 
 def continueButtonClick():
-    global seed, challengeMode, shopless, noRestrictions, noAutoSlots, imitater, randomisePlants, seeded, upgradeRewards, randomWeights, randomWavePoints, startingWave, randomCost, randomCooldowns, costTextToggle, randomZombies, randomConveyors, cooldownColoring, enableDave, davePlantsCount, randomVarsCatZombieHealth, randomVarsCatFireRate, renderWeights, renderWavePoints, limitPreviews, saved, savePoint, fileInfo, jumpLevel
+    global seed, challengeMode, shopless, noRestrictions, noAutoSlots, imitater, randomisePlants, seeded, upgradeRewards, randomWeights, randomWavePoints, startingWave, randomCost, randomCooldowns, costTextToggle, randomZombies, randomConveyors, cooldownColoring, enableDave, davePlantsCount, randomVarsCatZombieHealth, randomVarsCatFireRate, renderWeights, renderWavePoints, limitPreviews, gamemode, saved, savePoint, fileInfo, jumpLevel
     seed=fileInfo[0].strip()
     savePoint=int(fileInfo[1].strip())
     WriteMemory("int", int(fileInfo[2].strip()), 0x6A9EC0,0x82C,0x214) #slots
@@ -380,14 +384,30 @@ def continueButtonClick():
     renderWeights.set(str(fileInfo[25].strip()))
     renderWavePoints.set(str(fileInfo[26].strip()))
     limitPreviews.set(str(fileInfo[27].strip()))
+    gamemode.set(str(fileInfo[28].strip()))
     saved.set(True)
     jumpLevel=""
     window.destroy()
     
-def closeButtonClick():
+
+def AdventureClick():
+    gamemode.set('adventure')
     getSeed()
     getLevel()
     window.destroy()
+
+def MinigamesClick():
+    gamemode.set('minigames')
+    getSeed()
+    getLevel()
+    window.destroy()
+
+def NgPlusClick():
+    gamemode.set('ng+')
+    getSeed()
+    getLevel()
+    window.destroy()
+
 
 def informationButtonClick():
     outputText.delete(0.0, END)
@@ -591,9 +611,21 @@ randomVarsCatFireRateButton.bind('<<ComboboxSelected>>', lambda e: randomVarsCat
 randomVarsCatFireRateButton.grid(row=6, column=1, sticky=W)
 Hovertip(randomVarsCatFireRateButton, "Plant Random Fire rates - options change how strong and often fire rates are randomized.", 10)
 
-closeButton=Button(window, text="SUBMIT SETTINGS", width=16, command=closeButtonClick)
-closeButton.grid(row=0, column=6, sticky=W)
-Hovertip(closeButton, "Begin the game - press this, and go beat 1-1.", 10)
+# closeButton=Button(window, text="SUBMIT SETTINGS", width=16, command=closeButtonClick)
+# closeButton.grid(row=0, column=6, sticky=W)
+# Hovertip(closeButton, "Begin the game - press this, and go beat 1-1.", 10)
+
+adventureButton=Button(window, text="ADVENTURE", width=16, command=AdventureClick)
+adventureButton.grid(row=2, column=7, sticky=W)
+Hovertip(adventureButton, "Create a new profile in game, press this, and go beat 1-1 to get going", 10)
+
+minigamesButton=Button(window, text="MINI-GAMES \n+ SURVIVALS", width=16, command=MinigamesClick)
+minigamesButton.grid(row=4, column=7, sticky=W)
+Hovertip(minigamesButton, "Create a new profile in game, press this, then open 'help' menu in game to refresh, and go play", 10)
+
+ngPlusButton=Button(window, text="NEW GAME+", width=16, command=NgPlusClick)
+ngPlusButton.grid(row=6, column=7, sticky=W)
+Hovertip(ngPlusButton, "Create a new profile in game, press this, and go play seconds adventure", 10)
 
 informationButton=Button(window, text="INFORMATION", width=16, command=informationButtonClick)
 informationButton.grid(row=0, column=7, sticky=W)
@@ -607,7 +639,10 @@ Hovertip(entry, "Seed to use for randomiser and, if enabled, seeded mode.\nEvery
 #create a text box widget
 outputText=Text(window, width=120, height=15, wrap=WORD, background="yellow")
 outputText.grid(row=7, column=0, columnspan=10, sticky=W)
-outputText.insert(END, "How to play:\nCreate a new save file in game (don't start 1-1 yet)\nChoose and submit settings\nBeat 1-1 and then randomization will be enabled")
+outputText.insert(END, "How to play:\nCreate a new save file in game (don't start 1-1 yet).\nChoose settings.\nPress one of game modes buttons on the right.\n"
+                  +"If you start adventure, beat 1-1 and then randomization will be on.\nIf you start minigames+survivals, you have to update interface"
+                  +" (press \"Help\" in main menu for example) and then you can play mini-games or survivals in any order.\n"
+                  +"If you choose new game+, you do it the same as normal adventure mode.\n It's not recommended to play different mode other than selected one.")
 
 if randomCost.get():
     costTextButton.config(state=NORMAL)
@@ -619,6 +654,7 @@ if shopless.get():
 
 window.mainloop() #Run the event loop
 print(seed)
+print("Game mode:",          str(gamemode.get()))
 print("Challenge Mode:",     str(challengeMode.get()))
 print("Shopless:",           str(shopless.get()))
 print("No Restrictions:",    str(noRestrictions.get()))
@@ -1401,6 +1437,12 @@ LEVEL_STRINGS = ["Not a level",
     "5-1", "5-2", "5-3", "5-4", "5-5", "5-6", "5-7", "5-8", "5-9", "5-10"
 ]
 
+MINIGAMES_ZOMBIE_APPEARANCES = [[26,27], [0,2,3,4,5], [0,2,4], [0,2,4,5,6,7,15,20], [0,2,4,5,6,7], [0,2,4,12,14,15],
+    [0,2,4], [0,2,4], [0,2,4,5,6,7], [0,2,7,11], [0,4,7,16], [0,2,4,7], [12,13], [0,2,3,14], [0,2,4], [0,2,3,4,5,6,7,14,15,21],
+    [26,27,28,29,30,31], [0,2,3,4,5,6,8], [18], [0,2,4], [0,2,4], [0,2,3,4,7,15], [0,2,4], [0,2,4,6,7,15], [0,2,4],
+    [16], [0,2,4], [0,2,4], [0,2,4,6,16], [0,2,4], [0,2], [0,2,14,16], [0,2,4,21]]
+AQUATIC_MINIGAMES = [3, 5, 9, 12, 13, 15, 16, 25, 31]
+
 bytes_per_plant_string = 512 # should be a power of 2
 bytes_per_zombie_string = 512 # should be a power of 2
 bytes_per_game_string = 128 # should be a power of 2
@@ -1409,7 +1451,7 @@ n_of_zombie_strings = 33
 n_of_game_strings = 24 # more than 24 won't fit on screen
 
 plants=[[100, 750], [50, 750], [150, 5000], [50, 3000], [25, 3000], [175, 750], [150, 750], [200, 750], [0, 750], [25, 750], [75, 750], [75, 750], [75, 3000], [25, 750], [75, 5000], [125, 5000], [25, 750], [50, 3000], [325, 750], [25, 3000], [125, 5000], [100, 750], [175, 750], [125, 3000], [0, 3000], [25, 3000], [125, 750], [100, 750], [125, 750], [125, 750], [125, 3000], [100, 750], [100, 750], [25, 750], [100, 750], [75, 750], [50, 750], [100, 750], [50, 3000], [300, 750], [250, 5000], [150, 5000], [150, 5000], [225, 5000], [200, 5000], [50, 5000], [125, 5000], [500, 5000]]
-zombies=[['Basic', 1, 4000, 1, 1], ['Flag (ignore)', 1, 0, 1, 1], ['Cone', 3, 4000, 2, 1], ['Vaulter', 6, 2000, 2, 5], ['Bucket', 8, 3000, 4, 1], ['Newspaper', 11, 1000, 2, 1], ['Screen-Door', 13, 3500, 4, 5], ['Footballer', 16, 2000, 7, 5], ['Dancer', 18, 1000, 5, 5], ['Backup (ignore)', 18, 0, 1, 1], ['Ducky-Tube (ignore)', 21, 0, 1, 5], ['Snorkel', 23, 2000, 3, 10], ['Zomboni', 26, 2000, 7, 10], ['Bobsled', 26, 1500, 3, 10], ['Dolphin', 28, 1500, 3, 10], ['Jack', 31, 1000, 3, 10], ['Balloon', 33, 2000, 2, 10], ['Digger', 36, 1000, 4, 10], ['Pogo', 38, 1000, 4, 10], ['Yeti (ignore)', 40, 1, 4, 1], ['Bungee', 41, 1000, 3, 10], ['Ladder', 43, 1000, 4, 10], ['Catapult', 46, 1500, 5, 10], ['Gargantuar', 48, 1500, 10, 15], ['Imp', 1, 0, 10, 1], ['Zomboss', 50, 0, 10, 1], ['Peashooter', 99, 4000, 1, 1], ['Wall-Nut', 99, 3000, 4, 1], ['Jalapeno', 99, 1000, 3, 10], ['Gatling Pea', 99, 2000, 3, 10], ['Squash', 99, 2000, 3, 10], ['Tall Nut', 99, 2000, 7, 10], ['Giga Gargantuar', 48, 6000, 10, 15]]
+zombies=[['Basic', 1, 4000, 1, 1], ['Flag (ignore)', 1, 0, 1, 1], ['Cone', 3, 4000, 2, 1], ['Vaulter', 6, 2000, 2, 5], ['Bucket', 8, 3000, 4, 1], ['Newspaper', 11, 1000, 2, 1], ['Screen-Door', 13, 3500, 4, 5], ['Footballer', 16, 2000, 7, 5], ['Dancer', 18, 1000, 5, 5], ['Backup (ignore)', 18, 0, 1, 1], ['Ducky-Tube (ignore)', 21, 0, 1, 5], ['Snorkel', 23, 2000, 3, 10], ['Zomboni', 26, 2000, 7, 10], ['Bobsled', 26, 1500, 3, 10], ['Dolphin', 28, 1500, 3, 10], ['Jack', 31, 1000, 3, 10], ['Balloon', 33, 2000, 2, 10], ['Digger', 36, 1000, 4, 10], ['Pogo', 38, 1000, 4, 10], ['Yeti', 40, 1, 4, 1], ['Bungee', 41, 1000, 3, 10], ['Ladder', 43, 1000, 4, 10], ['Catapult', 46, 1500, 5, 10], ['Gargantuar', 48, 1500, 10, 15], ['Imp', 1, 0, 10, 1], ['Zomboss', 50, 0, 10, 1], ['Peashooter', 99, 4000, 1, 1], ['Wall-Nut', 99, 3000, 4, 1], ['Jalapeno', 99, 1000, 3, 10], ['Gatling Pea', 99, 2000, 3, 10], ['Squash', 99, 2000, 3, 10], ['Tall Nut', 99, 2000, 7, 10], ['Giga Gargantuar', 48, 6000, 10, 15]]
 
 plant_names_container = [x for x in SEED_STRINGS][:n_of_plant_strings-1] + ['Some plant'] # constant, so can pass string and not a list
 plant_cooldowns_container = { index: element for index,element in enumerate([[x[1]] for x in plants][:n_of_plant_strings-1]) } # not a constant, so passing a list to keep a reference
@@ -1417,6 +1459,13 @@ zombie_names_container = [x[0].replace(' (ignore)', '') for x in zombies][:n_of_
 wavepoints_container = { index: element for index,element in enumerate([[x[3]] for x in zombies][:n_of_zombie_strings]) } # not a constant, so passing a list to keep a reference
 zombie_weight_container = { index: element for index,element in enumerate([[x[2]] for x in zombies][:n_of_zombie_strings]) } # not a constant, so passing a list to keep a reference
 
+def settings_lines_to_save():
+    return [(challengeMode.get()), (shopless.get()), (noRestrictions.get()), (noAutoSlots.get()), (imitater.get()),
+        (randomisePlants.get()), (seeded.get()), (upgradeRewards.get()), (randomWeights.get()),
+        (randomWavePoints.get()), startingWave.get(), randomCost.get(), randomCooldowns.get(),
+        costTextToggle.get(), randomZombies.get(), randomConveyors.get(), cooldownColoring.get(),
+        enableDave.get(), davePlantsCount.get(), randomVarsCatZombieHealth.get(), randomVarsCatFireRate.get(),
+        renderWeights.get(), renderWavePoints.get(), limitPreviews.get(), gamemode.get()]
 
 def randomiseLevels(seed):
     global noRestrictions
@@ -1721,7 +1770,10 @@ def randomiseWeights():
                 weight=weights_rng.randint(1, 50)
             else:
                 weight=weights_rng.randint(1, 45)
-            if weight>50:
+
+            if i==19:
+                weight=weights_rng.randint(1, 30) # yeti's final weight
+            elif weight>50:
                 weight=weight*1000
             elif weight<5:
                 weight=weight*10
@@ -1738,11 +1790,11 @@ wavePointArray=[1, 1, 2, 2, 4, 2, 4, 7, 5, 0, 1, 3, 7, 3, 3, 3, 2, 4, 4, 4, 3, 4
 def randomiseWavePoints(minigames=False):
     global randomWavePoints, wavePointArray
     for i in range(2, 33):
-        if i==26 and minigames: # peashooter zombie in minigames have 1 point, because on Zombotany levels there are no normals
+        if i==26 and minigames: # peashooter zombie in minigames will always have 1 point, because on Zombotany levels there are no normals
             WriteMemory("int", 1, 0x69DA88 + 0x1C*i)
             if i in wavepoints_container:
                 wavepoints_container[i][0] = 1
-                continue
+            continue
         if i!=9 and i!=25:
             addWavePoint=0
             randomCheck=0
@@ -1864,36 +1916,39 @@ def generateZombies(levels, level_plants):
         has_instant           = 2 in plantsInOrder[0:i] or 17 in plantsInOrder[0:i] or 20 in plantsInOrder[0:i] or has_doom
         balloon_check = 26 in plantsInOrder[0:i] or 27 in plantsInOrder[0:i] or (2 in plantsInOrder[0:i] and has_doom) or (2 in plantsInOrder[0:i] and 20 in plantsInOrder[0:i]) or (20 in plantsInOrder[0:i] and has_doom)
         currentZombies=[]
-        if levels[i]!=50 and levels[i]!=15 and levels[i]!=35:
-            for j in range(2, 33):
-                if j!=9 and j!=10 and j!=24 and j!=25:
-                    if not zombies_rng.randint(0, 11):
-                        if (j==11 or j==14) and (levels[i]<21 or levels[i]>40):
-                            continue
-                        elif zombies[j][1]==levels[i]:
-                            continue
-                        elif levels[i]==45 and j in [11, 12, 13, 14, 16, 17, 18, 20, 22, 23, 32]:
-                            continue
-                        elif noRestrictions.get():
-                            currentZombies.append(j)
-                        elif (j==11 or j==14) and not(has_lily or has_seapeater):
-                            continue
-                        elif j==16 and not balloon_check:
-                            continue
-                        elif j==16 and levels[i] in [5, 10, 20, 25, 30, 40]:
-                            continue
-                        elif j==17 and levels[i]>40 and not (has_pot):
-                            continue
-                        elif j==23 and not (has_instant):
-                            continue
-                        elif j==32 and not (has_instant):
-                            continue
-                        else:
-                            if j==32:
-                                if not zombies_rng.randint(0, 6):
-                                    currentZombies.append(j)
-                            else:
-                                currentZombies.append(j)
+        if levels[i]==50 or levels[i]==15 or levels[i]==35:
+            continue
+        for j in range(2, 33):
+            if j==9 or j==10 or j==24 or j==25:
+                continue
+            elif zombies_rng.randint(0, 11) != 0:
+                continue
+            elif (j==11 or j==14) and (levels[i]<21 or levels[i]>40):
+                continue
+            elif zombies[j][1]==levels[i]:
+                continue
+            elif levels[i]==45 and j in [11, 12, 13, 14, 16, 17, 18, 20, 22, 23, 32]:
+                continue
+            elif noRestrictions.get():
+                currentZombies.append(j)
+            elif (j==11 or j==14) and not(has_lily or has_seapeater):
+                continue
+            elif j==16 and not balloon_check:
+                continue
+            elif j==16 and levels[i] in [5, 10, 20, 25, 30, 40]:
+                continue
+            elif j==17 and levels[i]>40 and not (has_pot):
+                continue
+            elif j==23 and not (has_instant):
+                continue
+            elif j==32 and not (has_instant):
+                continue
+            else:
+                if j==32:
+                    if not zombies_rng.randint(0, 6):
+                        currentZombies.append(j)
+                else:
+                    currentZombies.append(j)
         zombiesToRandomise.append(currentZombies)
     return zombiesToRandomise
 
@@ -1913,6 +1968,33 @@ def randomiseZombies(zombiesToRandomise, currentLevel, levels):
             WriteMemory("int", 1, 0x69DA8C + 0x1C*currentZombies[i])     
             WriteMemory("bool", not zombieState, 0x6A35B0 + 0xCC*currentZombies[i] + 0x4*levels[currentLevel])
         return currentZombies
+
+def randomiseZombiesMinigames():
+    base_address = 0x4258aa
+    for i in range(33):
+        address = base_address + i * 33
+        default_zombies = MINIGAMES_ZOMBIE_APPEARANCES[i]
+        result = [(1 if x in default_zombies else 0) for x in range(33)]
+        for j in range(2,33):
+            if j in default_zombies and 0 not in default_zombies: # levels like pogo party, bobsled, zombotany
+                continue
+            if j==9 or j==10 or j==24 or j==25:
+                continue
+            if (j==11 or j==14) and (i not in AQUATIC_MINIGAMES):
+                continue
+            if i==32 and j in [11, 12, 13, 14, 16, 17, 18, 20, 22, 23, 32]: # bungee blitz
+                continue
+            if j==16 and i in [1, 9, 17, 31]: # balloon
+                continue
+            if zombies_rng.randint(0, (9 if i != 12 and i != 25 and i != 18 else 15)) != 0: # bonanza, pogo, air raid are different
+                continue
+            if j==32:
+                if not zombies_rng.randint(0, 3):
+                    result[j] = 1
+            else:
+                result[j] = 1 - result[j]
+        WriteMemory("unsigned char", result, address)
+
 
 def writeConveyor(addr, conveyor_data):
     out    = [0 for i in range(56)]
@@ -3481,7 +3563,9 @@ if saved.get() and jumpLevel!="":
     for a in range(len(levels)):
         if levels[a]==jumpLevel:
             savePoint=a+1
-if True:
+
+if gamemode.get() != 'adventure':
+    # get golden sunflower + buy items
     WriteMemory("int", [2], 0x6A9EC0, 0x82c, 0x2c) # 2 adventure completions
     for i in range(33):
         WriteMemory("int", [1], 0x6A9EC0, 0x82c, 0x6c+4*i) # mini-games
@@ -3497,33 +3581,67 @@ if True:
         for i in range(9):
             WriteMemory("int", [1], 0x6A9EC0, 0x82c, 0x1c0+4*i) # shop
         WriteMemory("int",[4],0x6A9EC0,0x82C, 0x214) # slots
-        WriteMemory("int",[1],0x6A9EC0,0x82C,0x21C) #cleaners
+        WriteMemory("int",[1],0x6A9EC0,0x82C,0x21C) # cleaners
         WriteMemory("int",[1],0x6A9EC0,0x82C,0x218) # cleaners
         WriteMemory("int",[1],0x6A9EC0,0x82C,0x234) # first aid
         WriteMemory("int",[200],0x6A9EC0,0x82C, 0x28) # money
-    saved.set(False)
+    WriteMemory("unsigned char", [0x38], 0x42df5d) # limbo
     plants_unlocked = 40
-    WriteMemory("int",plants_unlocked,0x651090) # needed for Dave
+    WriteMemory("int",plants_unlocked,0x651090) # needed for Dave I think
+
+if gamemode.get() == 'minigames':
+    if randomZombies.get():
+        WriteMemory("unsigned char", [ # minigames random zombies
+            0x57,                          # push edi
+            0x56,                          # push esi
+            0xB9, 0x21,0x00,0x00,0x00,     # mov ecx,00000021
+            0x83, 0xEA, 0x10,              # sub edx,10
+            0x0F,0xAF, 0xD1,               # imul edx,ecx
+            0x8B, 0x7E, 0x04,              # mov edi,[esi+04]
+            0x81, 0xC7, 0xD4,0x54,0x00,0x00, # add edi,000054D4
+            0x8D, 0xB2, 0xAA,0x58,0x42,0x00, # lea esi,[edx+popcapgame1.exe+258AA]
+            0xF3, 0xA4,                    # repe movsb 
+            0x5E,                          # pop esi
+            0x5F,                          # pop edi
+            0xE9, 0x73,0x04,0x00,0x00,     # jmp popcapgame1.exe+25D1D
+            ], 0x425885)
+        WriteMemory("unsigned char",[0xEB], 0x42585C) # survivals enable first flag rando
+        WriteMemory("unsigned char",[0x66, 0x0F, 0x1F, 0x44, 0x00, 0x00,], 0x425752) # survivals allow digger on roof
+        WriteMemory("unsigned char",[0x66, 0x0F, 0x1F, 0x44, 0x00, 0x00,], 0x42575B) # survivals allow dancer on roof
+        WriteMemory("unsigned char",[0x66, 0x0F, 0x1F, 0x44, 0x00, 0x00,], 0x42576F) # survivals allow zamboni on graves
+        WriteMemory("unsigned char",[0x66, 0x0F, 0x1F, 0x44, 0x00, 0x00,], 0x425799) # survivals allow bungee everywhere
+        if noRestrictions.get():
+            WriteMemory("unsigned char",[0x66, 0x90,], 0x4257C0) # survivals allow giga gargs always
+        else:
+            WriteMemory("unsigned char",[0x07,], 0x4257BA) # survivals allow giga gargs after 7 flags instead of default 10
+        WriteMemory("unsigned char",[0x66, 0x90,], 0x4257DD) # survivals allow zombies after snorkel spawn on day-pool normal survivals
+        WriteMemory("unsigned char",[0x66, 0x90,], 0x4257E2) # survivals allow bobsleds
+        WriteMemory("unsigned char",[0x66, 0x90,], 0x4257F6) # survivals allow zombotanies
+        WriteMemory("unsigned char",[0x66, 0x90,], 0x4257FB) # survivals allow zombotanies
+        WriteMemory("unsigned char",[0x66, 0x90,], 0x425800) # survivals allow zombotanies
+        WriteMemory("unsigned char",[0x66, 0x90,], 0x425805) # survivals allow zombotanies
+        WriteMemory("unsigned char",[0x66, 0x90,], 0x42580A) # survivals allow zombotanies
+        WriteMemory("unsigned char",[0x66, 0x90,], 0x42580F) # survivals allow zombotanies
+
+    if enableDave.get() != 'False':
+        WriteMemory("unsigned char",[0xEB],0x483EC3) # Dave seeing stars fix
+    if savePoint > 150:
+        savePoint = 150
     for i in range(1000000):
-        linesToWrite=[seed, "2", "0", "0", (challengeMode.get()), (shopless.get()), (noRestrictions.get()), (noAutoSlots.get()), (imitater.get()), (randomisePlants.get()), (seeded.get()), (upgradeRewards.get()), (randomWeights.get()), (randomWavePoints.get()), startingWave.get(), randomCost.get(), randomCooldowns.get(), costTextToggle.get(), randomZombies.get(), randomConveyors.get(), cooldownColoring.get(), enableDave.get(), davePlantsCount.get(), randomVarsCatZombieHealth.get(), randomVarsCatFireRate.get(), renderWeights.get(), renderWavePoints.get(), limitPreviews.get()]
-        saveFile=open('saveFile.txt', 'w')
-        for k in range(len(linesToWrite)):
-            linesToWrite[k]=str(linesToWrite[k])
-            linesToWrite[k]=linesToWrite[k]+"\n"
-        saveFile.writelines(linesToWrite)
-        saveFile.close()
-        if randomZombies.get() and False:
-            if i!=0:
-                currentZombies=randomiseZombies(zombiesToRandomise, i-1, levels)
-            currentZombies=randomiseZombies(zombiesToRandomise, i, levels)
-            if len(currentZombies)>0 and not saved.get():
-                if savePoint-1!=i:
-                    linesToWrite=[str(levels[i])+"\n"]
-                    for j in range(0, len(currentZombies)):
-                        linesToWrite.append(str(currentZombies[j])+"\n")
-                    leftoverZombies=open('leftoverZombies.txt', 'w')
-                    leftoverZombies.writelines(linesToWrite)
-                    leftoverZombies.close()
+        if saved.get():
+            if savePoint-1==i:
+                saved.set(False)
+        if not saved.get():
+            linesToWrite=[seed, str(i+1), "0", "0", *settings_lines_to_save()]
+            saveFile=open('saveFile.txt', 'w')
+            for k in range(len(linesToWrite)):
+                linesToWrite[k]=str(linesToWrite[k])
+                linesToWrite[k]=linesToWrite[k]+"\n"
+            saveFile.writelines(linesToWrite)
+            saveFile.close()
+        print(str(i+1))
+        if randomZombies.get():
+            randomiseZombiesMinigames()
         if randomWeights.get():
             randomiseWeights()
         if randomWavePoints.get()!="False":
@@ -3539,31 +3657,46 @@ if True:
         if randomVarsSystemEnabled:
             # optimization - we don't actually write random vars and strings when using jump-to-level, but still randomize then (so seed works)
             WriteMemory("unsigned char", [12 for i in range(56)], 0x651308)
-            random_vars.randomize(-1, do_write=True)
-        Sleep(300)
+            random_vars.randomize(-1, do_write=not saved.get())
+        if saved.get():
+            Sleep(1)
+        else:
+            Sleep(500)
         if shopless.get():
             WriteMemory("int",0,0x6A9EC0,0x82C, 0x28)
-        Sleep(400)
+        if saved.get():
+            Sleep(1)
+        else:
+            Sleep(500)
         if shopless.get():
             WriteMemory("int",0,0x6A9EC0,0x82C, 0x28)
-        while(game_ui() != 3 or ReadMemory("bool",0x6A9EC0,0x768, 0x5603)):
+        sleep_cond = True
+        while sleep_cond:
             Sleep(0.1)
-        
-        
+            try:
+                sleep_cond = game_ui() != 3 or ReadMemory("int",0x6A9EC0,0x768) == 0 or \
+                    (ReadMemory("int",0x6A9EC0,0x768, 0x5600) < 100 and \
+                    ReadMemory("int",0x6A9EC0,0x768, 0x5604) < 100)
+                #0x5600 is fadeout timer, 0x5604 is next survival stage timer
+            except:
+                print('caught exception')
+                sleep_cond = True
+             
 else:
     for i in range(50):
-        if i == 0:
-            WriteMemory("int", 50, 0x69F2CC) # quicken level 1-1
-            WriteMemory("int", 10, 0x41523D) # quicken level 1-1
-            WriteMemory("int", 10, 0x413F4B) # quicken level 1-1
-        elif i == 1:
-            WriteMemory("int", 150, 0x69F2CC) # reset from level 1-1
-            WriteMemory("int", 200, 0x413F4B) # reset from level 1-1
+        if gamemode.get() == 'adventure':
+            if i == 0:
+                WriteMemory("int", 50, 0x69F2CC) # quicken level 1-1
+                WriteMemory("int", 10, 0x41523D) # quicken level 1-1
+                WriteMemory("int", 10, 0x413F4B) # quicken level 1-1
+            elif i == 1:
+                WriteMemory("int", 150, 0x69F2CC) # reset from level 1-1
+                WriteMemory("int", 200, 0x413F4B) # reset from level 1-1
         if saved.get():
             if savePoint-1==i:
                 saved.set(False)
         if not saved.get() and i!=0:
-            linesToWrite=[seed, (i+1), str(ReadMemory("int", 0x6A9EC0,0x82C,0x214)), str(ReadMemory("int",0x6A9EC0,0x82C, 0x28)), (challengeMode.get()), (shopless.get()), (noRestrictions.get()), (noAutoSlots.get()), (imitater.get()), (randomisePlants.get()), (seeded.get()), (upgradeRewards.get()), (randomWeights.get()), (randomWavePoints.get()), startingWave.get(), randomCost.get(), randomCooldowns.get(), costTextToggle.get(), randomZombies.get(), randomConveyors.get(), cooldownColoring.get(), enableDave.get(), davePlantsCount.get(), randomVarsCatZombieHealth.get(), randomVarsCatFireRate.get(), renderWeights.get(), renderWavePoints.get(), limitPreviews.get()]
+            linesToWrite=[seed, (i+1), str(ReadMemory("int", 0x6A9EC0,0x82C,0x214)), str(ReadMemory("int",0x6A9EC0,0x82C, 0x28)), *settings_lines_to_save()]
             saveFile=open('saveFile.txt', 'w')
             for k in range(len(linesToWrite)):
                 linesToWrite[k]=str(linesToWrite[k])
@@ -3579,7 +3712,8 @@ else:
                     if(zombies_type[j]):
                         print(zombies[j][0], str(ReadMemory("int", 0x69DA88 + 0x1C*j)), ReadMemory("int", 0x69DA94 + 0x1C*j),ReadMemory("int", 0x69DA90 + 0x1C*j))
         print(str(i+1))
-        WriteMemory("int",plants_unlocked,0x651090)
+        if gamemode.get() == 'adventure':
+            WriteMemory("int",plants_unlocked,0x651090)
         if seeded.get() and not saved.get():
             WriteMemory("int", [0 for j in range(1024)], rng_addr+0x10)
             WriteMemory("int", rng_addr+0x1010, rng_addr)
@@ -3604,7 +3738,7 @@ else:
                     leftoverZombies=open('leftoverZombies.txt', 'w')
                     leftoverZombies.writelines(linesToWrite)
                     leftoverZombies.close()
-        if upgradeRewards.get():
+        if upgradeRewards.get() and gamemode.get() == 'adventure':
             if i!=0:
                 if(level_plants[lastlevel] == -1):
                     if randomisePlants.get():
@@ -3617,7 +3751,7 @@ else:
                         if lastlevel!=49 and lastlevel!=50:
                             WriteMemory("bool",True,0x6A9EC0,0x82C,upgradePlants[lastlevel//5])
             lastlevel=newlevel
-        if imitater.get() and i != 0:
+        if imitater.get() and i != 0 and gamemode.get() == 'adventure':
             WriteMemory("bool",True,0x6A9EC0,0x82C,0x1E0)
             WriteMemory("int", 0, 0x453aea)
         if not saved.get():
@@ -3626,7 +3760,7 @@ else:
             randomiseWeights()
         if randomWavePoints.get()!="False":
             randomiseWavePoints()
-        if i!=0:
+        if i!=0 or gamemode.get() == 'ng+':
             if randomCost.get():
                 randomiseCost()
             if randomCooldowns.get():
@@ -3637,7 +3771,7 @@ else:
             randomiseStartingWave(startingWave)
         if not saved.get():
             WriteMemory("int",newlevel,0x651190)
-        if randomVarsSystemEnabled and i!=0:
+        if randomVarsSystemEnabled and (i!=0 or gamemode.get() == 'ng+'):
             # optimization - we don't actually write random vars and strings when using jump-to-level, but still randomize then (so seed works)
             WriteMemory("unsigned char", [12 for i in range(56)], 0x651308)
             random_vars.randomize(levels[i], do_write=not saved.get())
@@ -3646,11 +3780,11 @@ else:
             WriteMemory("bool",True,0x6A9EC0,0x82C,0x218)
         if(i != 0) and not saved.get(): 
             Sleep(1)
-        if(level_plants[newlevel] != -1):
+        if gamemode.get() == 'adventure' and (level_plants[newlevel] != -1):
             plants_unlocked += 1
-        if(i >= 24 and plants_unlocked > 7 and not (shopless.get() or noAutoSlots.get())): # slots
+        if(i >= 24 and not (shopless.get() or noAutoSlots.get())): # slots
             WriteMemory("int",2,0x6A9EC0,0x82C,0x214)
-        elif(i >= 14 and plants_unlocked > 6 and not (shopless.get() or noAutoSlots.get())):
+        elif(i >= 14 and not (shopless.get() or noAutoSlots.get())):
             WriteMemory("int",1,0x6A9EC0,0x82C,0x214)
         if(i == 0) and not saved.get():
             while(game_ui() != 3):
@@ -3673,7 +3807,7 @@ else:
 
 WriteMemory("int",0,0x651190)
 
-linesToWrite=[seed, "finished", str(ReadMemory("int", 0x6A9EC0,0x82C,0x214)), str(ReadMemory("int",0x6A9EC0,0x82C, 0x28)), (challengeMode.get()), (shopless.get()), (noRestrictions.get()), (noAutoSlots.get()), (imitater.get()), (randomisePlants.get()), (seeded.get()), (upgradeRewards.get()), (randomWeights.get()), (randomWavePoints.get()), startingWave.get(), randomCost.get(), randomCooldowns.get(), costTextToggle.get(), randomZombies.get(), randomConveyors.get(), cooldownColoring.get(), enableDave.get(), davePlantsCount.get(), randomVarsCatZombieHealth.get(), randomVarsCatFireRate.get(), renderWeights.get(), renderWavePoints.get(), limitPreviews.get()]
+linesToWrite=[seed, "finished", str(ReadMemory("int", 0x6A9EC0,0x82C,0x214)), str(ReadMemory("int",0x6A9EC0,0x82C, 0x28)), *settings_lines_to_save()]
 saveFile=open('saveFile.txt', 'w')
 for k in range(len(linesToWrite)):
     linesToWrite[k]=str(linesToWrite[k])
