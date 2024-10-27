@@ -1761,13 +1761,15 @@ def nightAverage():
     print(nightAverage/100000, lastTotal)
 
 
-def randomiseWeights():
+def randomiseWeights(minigames=False):
     for i in range(0, 33):
         if i!=1 and i!=9 and i!=25:
-            if i>2:
+            if minigames and i == 26: # peashooter zombies in minigames are like normals
+                weight=weights_rng.randint(1, 45)
+            elif i>2:
                 weight=weights_rng.randint(1, 60)
-            elif i==23:
-                weight=weights_rng.randint(1, 50)
+            #elif i==23:
+            #    weight=weights_rng.randint(1, 50)
             else:
                 weight=weights_rng.randint(1, 45)
 
@@ -1908,6 +1910,9 @@ def generateZombies(levels, level_plants):
     for i in range(0, len(levels)):
         plantsInOrder.append(level_plants[levels[i]])
     for i in range(1, len(levels)):
+        if levels[i]==50 or levels[i]==15 or levels[i]==35:
+            zombiesToRandomise.append([]) # no rando on those levels
+            continue
         has_lily              = 16 in plantsInOrder[0:i]
         has_pool_shooter      = 29 in plantsInOrder[0:i] or 18 in plantsInOrder[0:i]
         has_seapeater         = (24 in plantsInOrder[0:i] or 19 in plantsInOrder[0:i]) and has_pool_shooter #threepeater or starfruit + sea shroom or kelp
@@ -1916,12 +1921,10 @@ def generateZombies(levels, level_plants):
         has_instant           = 2 in plantsInOrder[0:i] or 17 in plantsInOrder[0:i] or 20 in plantsInOrder[0:i] or has_doom
         balloon_check = 26 in plantsInOrder[0:i] or 27 in plantsInOrder[0:i] or (2 in plantsInOrder[0:i] and has_doom) or (2 in plantsInOrder[0:i] and 20 in plantsInOrder[0:i]) or (20 in plantsInOrder[0:i] and has_doom)
         currentZombies=[]
-        if levels[i]==50 or levels[i]==15 or levels[i]==35:
-            continue
         for j in range(2, 33):
             if j==9 or j==10 or j==24 or j==25:
                 continue
-            elif zombies_rng.randint(0, 11) != 0:
+            elif zombies_rng.randint(0, 0) != 0:
                 continue
             elif (j==11 or j==14) and (levels[i]<21 or levels[i]>40):
                 continue
@@ -3643,7 +3646,7 @@ if gamemode.get() == 'minigames':
         if randomZombies.get():
             randomiseZombiesMinigames()
         if randomWeights.get():
-            randomiseWeights()
+            randomiseWeights(minigames=True)
         if randomWavePoints.get()!="False":
             randomiseWavePoints(minigames=True)
         if randomCost.get():
