@@ -1924,7 +1924,7 @@ def generateZombies(levels, level_plants):
         for j in range(2, 33):
             if j==9 or j==10 or j==24 or j==25:
                 continue
-            elif zombies_rng.randint(0, 0) != 0:
+            elif zombies_rng.randint(0, 11) != 0:
                 continue
             elif (j==11 or j==14) and (levels[i]<21 or levels[i]>40):
                 continue
