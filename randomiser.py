@@ -31,7 +31,7 @@ try:
         import struct
         import time
         from os import listdir
-        libc = ctypes.CDLL("libc.so.6",use_errno=True)
+        libc = ctypes.CDLL("libc.so.6", use_errno=True)
         
         from ctypes import c_int     as INT
         from ctypes import c_void_p  as VOIDP
@@ -109,7 +109,7 @@ try:
             
             return pvz_memfd
         
-        def ReadMemory(data_type, *address, array=1): #most of this is stolen from pvzscripts
+        def ReadMemory(data_type, *address, array=1):  # most of this is stolen from pvzscripts
             level      = len(address)
             offset     = VOIDP()
             buffer     = UINT()
@@ -138,7 +138,7 @@ try:
             else:
                 return result
         
-        def WriteMemory(data_type, values, *address): #most of this is stolen from pvzscripts too
+        def WriteMemory(data_type, values, *address):  # most of this is stolen from pvzscripts too
             if not isinstance(values, (tuple, list)):
                 values = [values]
 
@@ -958,6 +958,26 @@ class FireRateVarStr(VarStr):
     
     def __str__(self) -> str:
         val = self.var.current_main_value()
+        ranges = self.var.value_ranges[:]
+        if self.unstable_range in ranges:
+            ranges.remove(self.unstable_range)
+        min_val = 9999
+        max_val = 0
+        for i in ranges:
+            j = self.modify_value_func(i[0])
+            k = self.modify_value_func(i[1])
+            min_val = min(min_val, min(j,k))
+            max_val = max(max_val, max(j,k))
+        def_val = self.modify_value_func(self.var.default)
+        rng_val = self.modify_value_func(val)
+        out_val = 0.5
+        if rng_val > def_val:
+            out_val = 0.5 + (rng_val-def_val)/(max_val-def_val)*0.5
+        elif rng_val < def_val:
+            out_val = 0.5 - (rng_val-def_val)/(min_val-def_val)*0.5
+        if out_val < 0 or out_val > 1:
+            out_val = 0.5
+        WriteMemory("unsigned char", int(out_val*8.9999999)*3, 0x651308 + int(self.var.name[12:]))
         if self.unstable_range[0] <= val <= self.unstable_range[1]:
             return self.unstable_str
         return super().__str__()
@@ -2574,21 +2594,24 @@ WriteMemory("unsigned char", [
 ], 0x4881c1)
 WriteMemory("unsigned char", 0x20, 0x4881d8)
 WriteMemory("unsigned char", [
-0xdd, 0xd8,                               #fstp   %st(0)
-0x31, 0xc0,                               #xorl   %eax,              %eax
-0x89, 0x44, 0x24, 0x4c,                   #movl   %eax,        0x4c(%esp)
-0x89, 0x44, 0x24, 0x50,                   #movl   %eax,        0x50(%esp)
-0x89, 0x44, 0x24, 0x54,                   #movl   %eax,        0x54(%esp)
-0xb0, 0xff,                               #movb   $0xff,              %al
-0x89, 0x44, 0x24, 0x58,                   #movl   %eax,        0x58(%esp)
-0x0f, 0xb6, 0x95, 0x90, 0x12, 0x65, 0x00, #movzbl 0x651290(%ebp),    %edx
-0xd0, 0xe2,                               #shlb   $0x1,               %dl
-0x19, 0xc9,                               #sbbl   %ecx,              %ecx
-0x89, 0x54, 0x8c, 0x54,                   #movl   %edx, 0x54(%esp,%ecx,4)
-0x8b, 0x35, 0x98, 0x74, 0x6a, 0x00,       #movl   0x6a7498,          %esi
-0x8d, 0x54, 0x24, 0x60,                   #leal   0x60(%esp),        %edx
-0x8d, 0x7c, 0x24, 0x28,                   #leal   0x28(%esp),        %edi
-0x0f, 0x1f, 0x40, 0x00,                   #nop    (4 bytes)
+0xdd, 0xd8,                         #fstp  %st(0)
+0x31, 0xc0,                         #xorl  %eax,              %eax
+0x8d, 0x7c, 0x24, 0x4c,             #leal  0x4c(%esp),        %edi
+0xab,                               #stosd
+0xab,                               #stosd
+0xab,                               #stosd
+0xb0, 0xff,                         #movb  $0xff,              %al
+0xab,                               #stosd
+0x8a, 0x85, 0x90, 0x12, 0x65, 0x00, #movb  0x651290(%ebp),    %edx
+0xd0, 0xe0,                         #shlb  $0x1,               %al
+0x19, 0xc9,                         #sbbl  %ecx,              %ecx
+0x89, 0x44, 0x8c, 0x54,             #movl  %eax, 0x54(%esp,%ecx,4)
+0x8b, 0xfe,                         #movl  %esi,              %edi
+0x66, 0x0f, 0x1f, 0x44, 0x00, 0x00, #nop   (6 bytes)
+0x8b, 0x35, 0x98, 0x74, 0x6a, 0x00, #movl  0x6a7498,          %esi
+0x0f, 0x1f, 0x44, 0x00, 0x00,       #nop   (5 bytes)
+0x8d, 0x54, 0x24, 0x60,             #leal  0x60(%esp),        %edx
+0x8d, 0x7c, 0x24, 0x28,             #leal  0x28(%esp),        %edi
 ], 0x4880ba)
 WriteMemory("unsigned char", [
 0x0f, 0xb6, 0x95, 0x90, 0x12, 0x65, 0x00, #movzbl 0x651290(%ebp),   %edx
@@ -3228,7 +3251,7 @@ WriteMemory("unsigned char", [
 0xe8, 0xc5, 0x51, 0xf3, 0xff,                   #call   0x586d10             #SetColorizeImages #586d10-651b4b
 0xc3                                            #retl
 ], 0x651ad0)
-if randomVarsCatFireRate.get() != "Off" and False:
+if randomVarsCatFireRate.get() != "Off":
     WriteMemory("unsigned char", [
     0xe8, 0xe7, 0x99, 0x1c, 0x00 #call 0x651ad0
     ], 0x4880e4)
