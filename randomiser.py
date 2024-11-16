@@ -19,6 +19,9 @@ try:
         from   pvz.extra import *
         
         def dealloc_rngmem():
+            WriteMemory("unsigned int", 0x00000006, 0x5a9936) #raw rng
+            WriteMemory("unsigned int", 0xfffffefb, 0x5a9a41) #int rng
+            WriteMemory("unsigned int", 0xfffffed5, 0x5a9a67) #flt rng
             try:
                 VirtualFreeEx(pvz_handle, rng_addr, 0, 0x8000)
             except:
@@ -2797,14 +2800,14 @@ if seeded.get():
     else:
         rng_addr = VirtualAllocEx(pvz_handle, None, 0x30000, 0x1000, 0x40)
         atexit.register(dealloc_rngmem)
-    WriteMemory("int", 0x651e26-0x5a993a, 0x5a9936) #raw rng
-    WriteMemory("int", 0x651e2a-0x5a9a45, 0x5a9a41) #int rng
-    WriteMemory("int", 0x651e2e-0x5a9a6b, 0x5a9a67) #flt rng
     WriteMemory("int", rng_addr+0x10, 0x651e26+0x58)
     WriteMemory("int", rng_addr,      0x651e26+0x8c)
     WriteMemory("int", rng_addr,      0x651e26+0x94)
     WriteMemory("int", rng_addr+0x10, 0x651e26+0x9b)
     WriteMemory("int", rng_addr+0x10, 0x651e26+0xa2)
+    WriteMemory("int", 0x651e26-0x5a993a, 0x5a9936) #raw rng
+    WriteMemory("int", 0x651e2a-0x5a9a45, 0x5a9a41) #int rng
+    WriteMemory("int", 0x651e2e-0x5a9a6b, 0x5a9a67) #flt rng
 
 
 
