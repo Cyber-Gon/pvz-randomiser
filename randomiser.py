@@ -3689,8 +3689,8 @@ if randomVarsSystemEnabled:
     # Rendering strings on board
     string_print_x_coord = 50
     string_print_y_coord = 116 # can't be higher than 127 with current implementation!
-    string_print_x_coord_seed_selection = 850
-    string_print_y_coord_seed_selection = 50 # can't be higher than 127 with current implementation!
+    string_print_x_coord_seed_selection = 860
+    string_print_y_coord_seed_selection = 105 # can't be higher than 127 with current implementation!
     WriteMemory("unsigned char", [
         0xA1,*list(string_stuff_address.to_bytes(4,"little")),0x85,0xC0,0x74,0x7C,0x8B,0x4C,0x24,0x08,0xA1,0xEC,
         0x72,0x6A,0x00,0x89,0x41,0x40,0x68,0xFF,0x00,0x00,0x00,0x68,0xFF,0x00,0x00,
