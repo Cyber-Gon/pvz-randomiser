@@ -227,6 +227,7 @@ randomVarsCatZombieHealth = StringVar(value="Off")
 randomVarsCatFireRate = StringVar(value="Off")
 limitPreviews    = BooleanVar(value=False)
 gamemode         = StringVar(value="adventure")
+randomWaveCount  = StringVar(value="False")
 
 seed=str(random.randint(1,999999999999))
 
@@ -248,7 +249,9 @@ if hasSave:
     if len(fileInfo)<28:
         fileInfo.append("False") #limitPreviews
     if len(fileInfo)<29:
-        fileInfo.append("adventure") #limitPreviews
+        fileInfo.append("adventure") #gamemode
+    if len(fileInfo)<30:
+        fileInfo.append("False") #randomWavecount
     challengeMode.set(  eval(fileInfo[4].strip()))
     shopless.set(       eval(fileInfo[5].strip()))
     noRestrictions.set( eval(fileInfo[6].strip()))
@@ -274,6 +277,7 @@ if hasSave:
     renderWavePoints.set(str(fileInfo[26].strip()))
     limitPreviews.set(str(fileInfo[27].strip()))
     gamemode.set(str(fileInfo[28].strip()))
+    randomWaveCount.set(str(fileInfo[29].strip()))
     if fileInfo[1]=="finished\n":
         hasSave=False
 
@@ -357,7 +361,7 @@ def shoplessButtonClick():
         manualMoneyButton.config(state=NORMAL)
 
 def continueButtonClick():
-    global seed, challengeMode, shopless, noRestrictions, noAutoSlots, imitater, randomisePlants, seeded, upgradeRewards, randomWeights, randomWavePoints, startingWave, randomCost, randomCooldowns, costTextToggle, randomZombies, randomConveyors, cooldownColoring, enableDave, davePlantsCount, randomVarsCatZombieHealth, randomVarsCatFireRate, renderWeights, renderWavePoints, limitPreviews, gamemode, saved, savePoint, fileInfo, jumpLevel
+    global seed, challengeMode, shopless, noRestrictions, noAutoSlots, imitater, randomisePlants, seeded, upgradeRewards, randomWeights, randomWavePoints, startingWave, randomCost, randomCooldowns, costTextToggle, randomZombies, randomConveyors, cooldownColoring, enableDave, davePlantsCount, randomVarsCatZombieHealth, randomVarsCatFireRate, renderWeights, renderWavePoints, limitPreviews, gamemode, randomWaveCount, saved, savePoint, fileInfo, jumpLevel
     seed=fileInfo[0].strip()
     savePoint=int(fileInfo[1].strip())
     WriteMemory("int", int(fileInfo[2].strip()), 0x6A9EC0,0x82C,0x214) #slots
@@ -388,6 +392,7 @@ def continueButtonClick():
     renderWavePoints.set(str(fileInfo[26].strip()))
     limitPreviews.set(str(fileInfo[27].strip()))
     gamemode.set(str(fileInfo[28].strip()))
+    randomWaveCount.set(str(fileInfo[29].strip()))
     saved.set(True)
     jumpLevel=""
     window.destroy()
@@ -576,6 +581,18 @@ enableDaveButton.bind('<<ComboboxSelected>>', lambda e: enableDaveChanged(enable
 enableDaveButton.grid(row=4, column=5, sticky=W)
 Hovertip(enableDaveButton, "Makes Crazy Dave pick some plants for you", 10)
 
+randomWavecountLabel=Label(window, text="RANDOM LEVEL LENGTH:")
+randomWavecountLabel.grid(row=1, column=6, sticky=W)
+randomWavecountButton=ttk.Combobox(window, text="RANDOM LEVEL LENGTH:", width=16, textvariable=randomWaveCount)
+randomWavecountButton["values"] = ["False", "Flag count only", "On"]
+randomWavecountButton.state(["readonly"])
+randomWavecountButton.bind('<<ComboboxSelected>>', lambda e: randomWavecountButton.selection_clear())
+randomWavecountButton.grid(row=2, column=6, sticky=W)
+Hovertip(randomWavecountButton, """Randomizes the amount of zombie waves on most of levels;
+"Flag count only" means that every flag is still 10 waves long, but the amount of flags is random;
+"On" means that both flag count and waves per flag is randomized.
+Works only in adventure mode.""", 10)
+
 daveAmountLabel=Label(window, text="DAVE PLANTS COUNT:")
 daveAmountLabel.grid(row=5, column=5, sticky=W)
 daveAmountButton=ttk.Combobox(window, text="DAVE PLANTS COUNT", width=16, textvariable=davePlantsCount )#command=randomConveyorButtonClick)
@@ -682,6 +699,7 @@ print("Crazy Dave:",         str(enableDave.get()))
 print("Dave Plants Count:",  str(davePlantsCount.get()))
 print("Zombie Health Random:",str(randomVarsCatZombieHealth.get()))
 print("Fire Rate Random:",   str(randomVarsCatFireRate.get()))
+print("Random Level Length:",str(randomWaveCount.get()))
 
 
 ######### RANDOM VARS SYSTEM ########
@@ -935,6 +953,15 @@ class SimpleOutputString(OutputStringBase):
             return f"error in SimpleOutputString format_str.format, format={self.format_str}"
 
 
+class FlagCountString(SimpleOutputString):
+    def __init__(self, value_container: list[int], current_level_container: list[int], format_str: str, modify_value_func = None):
+        super().__init__(value_container, format_str, modify_value_func)
+        self.current_level_container = current_level_container
+
+    def is_active(self):
+        return self.current_level_container[0] not in [-1, 0, 1, 15, 35, 50]
+
+
 class VarStr(OutputStringBase):
     def __init__(self, var: RandomVariable, format_str: str, format_value_type: int = FORMAT_ACTUAL_VALUE, format_more_less_words=['more', 'less'], modify_value_func = None):
         super().__init__(format_str, modify_value_func)
@@ -1034,17 +1061,18 @@ class IndexedStrContainer:
 
 
 class NonIndexedStrContainer:
-    def __init__(self, name: str, address: int, max_bytes_per_string: int, string_count: int, n_of_lines_output_address: int):
+    def __init__(self, name: str, address: int, max_bytes_per_string: int, string_count: int, n_of_lines_output_address: int, second_n_of_lines: int):
         self.name = name
         self.address = address
         self.bytes_per_string = max_bytes_per_string
         self.string_count = string_count
         self.n_of_lines_output_address = n_of_lines_output_address
-        self.vars = []
+        self.second_n_of_lines = second_n_of_lines
+        self.strings = []
         self.n_of_lines_written = 0
 
     def add_var(self, var: OutputStringBase):
-        self.vars.append(var)
+        self.strings.append(var)
 
     def construct_string(self, var: OutputStringBase):
         if var.is_active():
@@ -1065,7 +1093,7 @@ class NonIndexedStrContainer:
 
     def update_strings(self, WriteMemory):
         free_index = 0
-        for v in self.vars:
+        for v in self.strings:
             if not v.is_active():
                 continue
             string = self.construct_string(v)
@@ -1074,13 +1102,14 @@ class NonIndexedStrContainer:
             if free_index >= self.string_count:
                 break
         self.n_of_lines_written = free_index
-        self.write_n_of_lines(WriteMemory, free_index, self.n_of_lines_output_address)
+        self.write_n_of_lines(WriteMemory, free_index, self.n_of_lines_output_address, self.second_n_of_lines)
 
     def get_amount_of_lines(self):
         return self.n_of_lines_written
     
-    def write_n_of_lines(self, WriteMemory, value, address):
-        WriteMemory("int", value, address)
+    def write_n_of_lines(self, WriteMemory, value, address1, address2):
+        WriteMemory("int", value, address1)
+        WriteMemory("int", max(value-1, 0), address2)
 
 
 @dataclass
@@ -1401,7 +1430,7 @@ class RandomVars(VarContainer):
 ######### END OF RANDOM VARS SYSTEM ########
 
 
-daveActualPlantCount = 3 if davePlantsCount.get() == "random(1-5)" else int(davePlantsCount.get())
+daveActualPlantCount = 3 if enableDave.get() == "False" or davePlantsCount.get() == "random(1-5)" else int(davePlantsCount.get())
 actualRandomVarsZombieHealth = ["Off", "Very weak", "Weak", "Average", "Strong", "Very Strong"].index(randomVarsCatZombieHealth.get())
 actualRandomVarsFireRate = ["Off", "Very weak", "Weak", "Average", "Strong", "Very Strong"].index(randomVarsCatFireRate.get())
 randomVarsSystemEnabled = actualRandomVarsZombieHealth > 0 or actualRandomVarsFireRate > 0 or renderWeights.get() or renderWavePoints.get()
@@ -1414,6 +1443,7 @@ startingwave_rng = random.Random(seed+'startingwave')
 zombies_rng = random.Random(seed+'zombies')
 dave_rng = random.Random(seed+'dave')
 upgrade_rng = random.Random(seed+'upgrade')
+wavecount_rng = random.Random(seed+'wavecount')
 # level order and plants use random.seed to reseed global random object, so I don't make separate Random for them
 
 LEVEL_PLANTS = [
@@ -1460,6 +1490,12 @@ LEVEL_STRINGS = ["Not a level",
     "5-1", "5-2", "5-3", "5-4", "5-5", "5-6", "5-7", "5-8", "5-9", "5-10"
 ]
 
+default_flags = [1, 1, 1, 1, 1, 1, 2, 1, 2, 2, 1, 2, 1, 2, 1, 1, 2, 1, 2, 2, 1, 2, 2, 3, 2, 2, 3, 2, 3, 3, 1, 2, 1, 2, 2, 1, 2, 1, 2, 2, 1, 2, 2, 3, 2, 2, 3, 2, 3, 3]
+default_wavecount = [4, 6, 8, 10, 8] + [default_flags[x] * 10 for x in range(5, 50)]
+default_flags = {k+1: v for k, v in enumerate(default_flags)}
+default_wavecount = {k+1: v for k, v in enumerate(default_wavecount)}
+default_waves_per_flag = {x+1: 10 for x in range(50)}
+
 MINIGAMES_ZOMBIE_APPEARANCES = [[26,27], [0,2,3,4,5], [0,2,4], [0,2,4,5,6,7,15,20], [0,2,4,5,6,7], [0,2,4,12,14,15],
     [0,2,4], [0,2,4], [0,2,4,5,6,7], [0,2,7,11], [0,4,7,16], [0,2,4,7], [12,13], [0,2,3,14], [0,2,4], [0,2,3,4,5,6,7,14,15,21],
     [26,27,28,29,30,31], [0,2,3,4,5,6,8], [18], [0,2,4], [0,2,4], [0,2,3,4,7,15], [0,2,4], [0,2,4,6,7,15], [0,2,4],
@@ -1481,6 +1517,9 @@ plant_cooldowns_container = { index: element for index,element in enumerate([[x[
 zombie_names_container = [x[0].replace(' (ignore)', '') for x in zombies][:n_of_zombie_strings] # constant, so can pass string and not a list
 wavepoints_container = { index: element for index,element in enumerate([[x[3]] for x in zombies][:n_of_zombie_strings]) } # not a constant, so passing a list to keep a reference
 zombie_weight_container = { index: element for index,element in enumerate([[x[2]] for x in zombies][:n_of_zombie_strings]) } # not a constant, so passing a list to keep a reference
+current_level_container = [-1]
+current_level_flag_count = [1]
+current_level_waves_per_flag = [10]
 
 def settings_lines_to_save():
     return [(challengeMode.get()), (shopless.get()), (noRestrictions.get()), (noAutoSlots.get()), (imitater.get()),
@@ -1488,15 +1527,17 @@ def settings_lines_to_save():
         (randomWavePoints.get()), startingWave.get(), randomCost.get(), randomCooldowns.get(),
         costTextToggle.get(), randomZombies.get(), randomConveyors.get(), cooldownColoring.get(),
         enableDave.get(), davePlantsCount.get(), randomVarsCatZombieHealth.get(), randomVarsCatFireRate.get(),
-        renderWeights.get(), renderWavePoints.get(), limitPreviews.get(), gamemode.get()]
+        renderWeights.get(), renderWavePoints.get(), limitPreviews.get(), gamemode.get(), randomWaveCount.get()]
 
-def randomiseLevels(seed):
+def randomiseLevels(seed, ngplus=False):
     global noRestrictions
     random.seed(seed)
+    if ngplus:
+        r = [x for x in range(2, 51)]
+        random.shuffle(r)
+        return [1] + r
     firstLevels=[]
     levels=[1]
-    toughLevelCheck=0
-    balloonCheck=0
     if noRestrictions.get():
         for i in range(2, 51):
             levels.append(i)
@@ -1511,7 +1552,7 @@ def randomiseLevelsAndPlants(seed):
     
     plants = [1]
     levels = [1]
-    unused_plants   = [i        for i in range(2,40)]
+    unused_plants   = [i for i in range(2,40)]
     if challengeMode.get() or noRestrictions.get():
         level_plants    = [(-1,1.0) for i in range(0,51)]
     else:
@@ -1606,79 +1647,81 @@ def getAvailableStages(plants, used_levels=[]):
         
         has_puff              = 8  in plant_set
         has_lily              = 16 in plant_set
+        has_blover            = 27 in plant_set
         has_pool_shooter      = 29 in plant_set or 18 in plant_set
         has_seapeater         = (24 in plant_set or 19 in plant_set) and has_pool_shooter #threepeater or starfruit + sea shroom or kelp
         has_fog_plants        = has_puff and (has_lily or 24 in plant_set)
         has_pot               = 33 in plant_set
         has_roof_plant        = 32 in plant_set or 39 in plant_set or has_pot
         
-        if has_puff:
-            level_set.add(11)
-        if has_puff and tough_check >= 3:
-            level_set.add(12)
-        if has_puff:
-            level_set.add(13)
-        if has_puff and tough_check >= 3:
-            level_set.add(14)
-        if has_puff:
-            level_set.add(16)
-        if has_puff and tough_check >= 3:
-            level_set.add(17)
-        if has_puff:
-            level_set.add(18)
-        if has_puff and tough_check >= 3:
-            level_set.add(19)
+        # night levels: puff for 1-flags; puff + tough_check >= 3 for 2-flags; or puff + tough_check >= 5
+        for i in range(11, 20):
+            if has_puff:
+                if wavecount_per_level[i] < 16 or (wavecount_per_level[i] < 32 and tough_check >= 3) or tough_check >= 5:
+                    level_set.add(i)
+
+        # pool levels:
+        #   if no snorkels and dolphins, either lily or has_pool_shooter is enough
+        #   if has snorkel, lily is required
+        #   if has dolphin, either lily or has_seapeater is enough
+        #   there's no level with snorkel+dolphin
+        #   if 1-flag, or weak 2-flag, no tough check
+        #   if strong 2-flag, or weak 3-flag, tough_check >= 3 is required
+        #   if strong 3-flag, or 4+ flags, tough_check >= 5 is required
+        for i in range(21, 30):
+            if i == 25:
+                continue
+            snorkel = i in [23, 24, 27]
+            dolphin = i in [28, 29]
+            one_flag = wavecount_per_level[i] < 16
+            two_flag = 16 <= wavecount_per_level[i] < 28
+            three_flag = 28 <= wavecount_per_level[i] < 40
+            a_lot_of_flags = 40 <= wavecount_per_level[i] 
+            aquatic_zombie_check_passed = (not snorkel and not dolphin and (has_lily or has_pool_shooter)) \
+                or (snorkel and has_lily) or (dolphin and (has_lily or has_seapeater))
+            tough_check_passed = (one_flag or (two_flag and i in [21,23,28])) \
+                or (((two_flag and i in [22,24,26,27,29]) or (three_flag and i in [21,23,28])) and tough_check >= 3) \
+                or (((three_flag and i in [22,24,26,27,29]) or a_lot_of_flags) and tough_check >= 5)
+            if aquatic_zombie_check_passed and tough_check_passed:
+                level_set.add(i)
         
-        if has_lily or has_pool_shooter:
-            level_set.add(21)
-        if (has_lily or has_pool_shooter) and tough_check >= 3:
-            level_set.add(22)
-        if has_lily:
-            level_set.add(23)
-        if has_lily and tough_check >= 5:
-            level_set.add(24)
-        if (has_lily or has_pool_shooter) and tough_check >= 3:
-            level_set.add(26)
-        if has_lily and tough_check >= 5:
-            level_set.add(27)
-        if has_lily or has_seapeater:
-            level_set.add(28)
-        if (has_lily or has_seapeater) and tough_check >= 5:
-            level_set.add(29)
+        # fog levels: 
+        #   balloon on level with 11 or more waves requires balloon_check and (lily or blover)
+        #   1-flag requires has_fog_plants
+        #   2-flag requires has_puff and (has_lily or has_seapeater) instead
+        #   3-flag or more requires has_puff and has_lily instead
+        #   no tough check for 1-flag, weak 2-flag is tough_check >= 3, strong 2-flag or anything more than 2-flag is tough_check >= 5
+        for i in range(31, 40):
+            if i == 35:
+                continue
+            one_flag = wavecount_per_level[i] < 16
+            two_flag = 16 <= wavecount_per_level[i] < 28
+            a_lot_of_flags = 28 <= wavecount_per_level[i] 
+            balloon_test = i not in [33, 34, 39] or wavecount_per_level[i] < 11 or (balloon_check >= 2 and (has_lily or has_blover))
+            plant_test = (one_flag and has_fog_plants) \
+                or (two_flag and has_puff and (has_lily or has_seapeater)) \
+                or (a_lot_of_flags and has_puff and has_lily)
+            tough_check_passed = one_flag \
+                or (two_flag and i in [31, 32, 33, 34, 36, 38] and tough_check >= 3) \
+                or tough_check >= 5
+            if balloon_test and plant_test and tough_check_passed:
+                level_set.add(i)
         
-        if has_fog_plants:
-            level_set.add(31)
-        if has_puff and (has_lily or has_seapeater) and tough_check >= 3:
-            level_set.add(32)
-        if has_fog_plants:
-            level_set.add(33)
-        if has_puff and has_lily and balloon_check >= 2 and tough_check >= 3:
-            level_set.add(34)
-        if has_fog_plants:
-            level_set.add(36)
-        if has_puff and (has_lily or has_seapeater) and tough_check >= 5:
-            level_set.add(37)
-        if has_fog_plants:
-            level_set.add(38)
-        if has_puff and has_lily and balloon_check >= 2 and tough_check >= 5:
-            level_set.add(39)
-        
-        if has_roof_plant or len(used_levels) > 10:
-            level_set.add(41)
-        if has_pot and tough_check >= 3:
-            level_set.add(42)
-        if has_roof_plant and tough_check >= 3:
-            level_set.add(43)
-        if has_pot and tough_check >= 5:
-            level_set.add(44)
-        if has_roof_plant and tough_check >= 3:
-            level_set.add(46)
-        if has_pot and tough_check >= 5:
-            level_set.add(47)
-        if has_pot and tough_check >= 3:
-            level_set.add(48)
-        if has_pot and tough_check >= 5:
-            level_set.add(49)
+        # Roof levels:
+        #   levels 5-2, 5-4, 5-8, 5-9 require pot; has_roof_plant is enough for others if they're < 3 flags; 3+ flags always require pot
+        #   2-flags have tough_check >= 3; 3+ flags tough_check >= 5
+        #   specifically 5-1 can be played with len(used_levels) > 10, but only if it's still 1-flag
+        for i in range(41, 50):
+            if i == 45:
+                continue
+            one_flag = wavecount_per_level[i] < 16
+            two_flag = 16 <= wavecount_per_level[i] < 28
+            a_lot_of_flags = 28 <= wavecount_per_level[i]
+            plant_test = has_pot or (i in [41, 43, 46, 47] and not a_lot_of_flags and has_roof_plant)
+            tough_check_passed = one_flag or (two_flag and tough_check >= 3) or (a_lot_of_flags and tough_check >= 5)
+            five_one_special_test = i == 41 and one_flag and (has_roof_plant or len(used_levels) > 10)
+            if (plant_test and tough_check_passed) or five_one_special_test:
+                level_set.add(i)
     
     for i in used_levels:
         if i in level_set:
@@ -1686,7 +1729,10 @@ def getAvailableStages(plants, used_levels=[]):
     
     return level_set
 
+# this function is for no random plants only, and it weights and picks levels from a passed set of available stages
 def addLevel(levels, firstLevels):
+    # levels are levels which are available based on current plant set
+    # firstLevels are levels which were picked already
     global noRestrictions
     newLevel=1
     count=0
@@ -1926,6 +1972,105 @@ def randomiseDavePlantCount():
             ], 
             0x484045)
 
+def randomiseWaveCount():
+    # with current implementation it's impossible to make 2 flag with < 10 total waves (vanilla code will force it to be 1 flag)
+
+    # add_level mutates changeable_levels and flags_balance, and adds results to flags_per_level, waves_per_flag, wavecount_per_level dictionaries
+    def add_level(level, flag_count):
+        try:
+            changeable_levels.remove(level)
+        except:
+            pass
+        flags_balance[0] += flag_count - default_flags[level]
+        flags_per_level[level] = flag_count
+        # unchangeable levels, but with some extra logic for bowling:
+        if (default_wavecount[level] < 10 and randomWaveCount.get() == "Flag count only") or level in untouchable:
+            flags_per_level[level] = default_flags[level]
+            waves_per_flag[level] = 10 # default value
+            wavecount_per_level[level] = default_wavecount[level]
+            if level == 5 and randomWaveCount.get() != "Flag count only": # that's nuts
+                wavecount_per_level[level] = wavecount_rng.choice([6, 7, 7, 8, 8, 9, 9, 10, 11, 12])
+                waves_per_flag[level] = wavecount_per_level[level]
+        # 1-2 and 1-3 with random waves per flag:
+        elif default_wavecount[level] < 10 and randomWaveCount.get() == "On":
+            default = default_wavecount[level]
+            wavecount_per_level[level] = wavecount_rng.choice([int(default / 2), default - 2, default - 1, default, default + 1, default + 2, 10])
+            waves_per_flag[level] = wavecount_per_level[level]
+        # most of levels go here without random waves per flag:
+        elif randomWaveCount.get() == "Flag count only":
+            waves_per_flag[level] = 10 # default value
+            wavecount_per_level[level] = waves_per_flag[level] * flags_per_level[level]
+        # most of levels go here with random waves per flag:
+        else:
+            if wavecount_rng.randint(1, 100) <= 45: # 40.5% chance for different waves per flag
+                waves_per_flag[level] = wavecount_rng.randint(6, 15)
+            else:
+                waves_per_flag[level] = 10
+            wavecount_per_level[level] = waves_per_flag[level] * flags_per_level[level]
+
+    untouchable = [1, 5, 15, 35, 50] # bowling wave count still can be modified in add_level
+    if randomConveyors.get() != "It's Raining Seeds":
+        untouchable.append(25)
+    changeable_levels = [x for x in range(1, 51) if x not in untouchable] # modified in add_level
+    flags_per_level = {1: 1}
+    waves_per_flag = {1: 10} # 10 is globally default value in vanilla (levels with < 10 waves just have a special condition)
+    wavecount_per_level = {1: 4}
+    flags_balance = [0] # needs to be a list because it's modified in add_level
+
+    # choose 1 3-flag to promoto to 5-flag
+    # choose 2 3-flag to demote to 1-flag
+    # choose 2 2-flags to promote to 4-flag
+    # choose 2 1-flags to promote to 3-flag
+    # But: conveyors are forbidden to go up by 2 flags or down by 2 flags,
+    #   (3-4, 3-7, 3-9, 5-4, 5-7, 5-9 are quite likely to move +- 2 flags because of that).
+    # + levels 1-2, 1-3, 1-5 are fobidden to go up in amount of flags
+    # that makes balance = +6 flags
+    # choose 6 other levels to demote by 1 flag to restore the balance
+    # choose 6 other levels to demote by 1 flag and 6 other levels to promote by 1 flag
+    # 25 levels to change in total
+    for l in untouchable:
+        add_level(l, default_flags[l])
+
+    flexible_three_flags = [24, 27, 29, 44, 47, 49]
+    plus_or_minus_two_flags = wavecount_rng.sample(flexible_three_flags, 3)
+    add_level(plus_or_minus_two_flags[0], 5)
+    add_level(plus_or_minus_two_flags[1], 1)
+    add_level(plus_or_minus_two_flags[2], 1)
+
+    four_flag_candidates = [x for x in range(1, 51) if default_flags[x] == 2 and x not in untouchable and x % 5 != 0]
+    four_flags = wavecount_rng.sample(four_flag_candidates, 2)
+    add_level(four_flags[0], 4)
+    add_level(four_flags[1], 4)
+
+    three_flag_candidates = [x for x in range(1, 51) if default_flags[x] == 1 and default_wavecount[x] >= 10\
+        and x not in untouchable and x % 5 != 0 and (x != 41 or randomisePlants.get())]
+    three_flags = wavecount_rng.sample(three_flag_candidates, 2)
+    add_level(three_flags[0], 3)
+    add_level(three_flags[1], 3)
+
+    remove_flag_candidates = [x for x in changeable_levels if default_flags[x] > 1]
+    flag_removals = wavecount_rng.sample(remove_flag_candidates, 6)
+    for l in flag_removals:
+        add_level(l, default_flags[l] - 1)
+        
+    random_removals_candidates = [x for x in changeable_levels if default_flags[x] > 1]
+    random_flag_removals = wavecount_rng.sample(random_removals_candidates, 6)
+    for l in random_flag_removals:
+        add_level(l, default_flags[l] - 1)
+
+    random_extra_flag_candidates = [x for x in changeable_levels if default_wavecount[x] >= 10 and (x != 41 or randomisePlants.get())]
+    random_extra_flags = wavecount_rng.sample(random_extra_flag_candidates, 6)
+    for l in random_extra_flags:
+        add_level(l, default_flags[l] + 1)
+
+    remaining_levels = [x for x in changeable_levels] # add_level mutates changeable_levels, so we can't just use for loop
+    for l in remaining_levels:
+        add_level(l, default_flags[l])
+    
+    assert len(changeable_levels) == 0 and flags_balance[0] == 0
+
+    return (flags_per_level, wavecount_per_level, waves_per_flag)
+
 
 def generateZombies(levels, level_plants):
     zombiesToRandomise=[[]]
@@ -1965,9 +2110,10 @@ def generateZombies(levels, level_plants):
                 continue
             elif j==17 and levels[i]>40 and not (has_pot):
                 continue
-            elif j==23 and not (has_instant):
+            # gargs and giga-gargs are excluded from extremenly long levels + can get removed from 5-8 and 5-9 in that case
+            elif j==23 and (not has_instant or (wavecount_per_level[levels[i]] > 45 and levels[i] not in [48,49])):
                 continue
-            elif j==32 and not (has_instant):
+            elif j==32 and (not has_instant or (wavecount_per_level[levels[i]] > 45 and levels[i] not in [48,49])):
                 continue
             else:
                 if j==32:
@@ -2238,11 +2384,19 @@ def randomiseConveyors(in_seed):
 
 #showAverage()
 #nightAverage()
-if randomisePlants.get():
-    levels, level_plants = randomiseLevelsAndPlants(seed)
+if randomWaveCount.get() != "False" and gamemode.get() == "adventure":
+    (flags_per_level, wavecount_per_level, waves_per_flag) = randomiseWaveCount()
 else:
-    levels = randomiseLevels(seed)
+    (flags_per_level, wavecount_per_level, waves_per_flag) = (default_flags, default_wavecount, default_waves_per_flag)
+if gamemode.get() != 'adventure':
+    levels = randomiseLevels(seed, gamemode.get() == "ng+")
     level_plants = LEVEL_PLANTS
+else:
+    if randomisePlants.get():
+        levels, level_plants = randomiseLevelsAndPlants(seed)
+    else:
+        levels = randomiseLevels(seed)
+        level_plants = LEVEL_PLANTS
 plants_array  = [-1,0]
 plants_array2 = []
 for i in levels:
@@ -3347,13 +3501,13 @@ WriteMemory("unsigned char", [
             0x75, 0x16, # original code  
             ],
             0x483F1A)
-if enableDave.get() != 'False':
+if enableDave.get() != 'False' or gamemode.get() == 'ng+':
     WriteMemory("unsigned char", [
         0x66, 0x90, # nop 2 // removes jump if this is first adventure
         ], 
         0x483F2A)
     WriteMemory("unsigned char", [
-        0x66, 0x90, # nop 2 // removes jump if this is adventure
+        0x66, 0x90, # nop 2 // removes jump if this is not an adventure
         ], 
         0x483F1A)
     WriteMemory("unsigned char", [
@@ -3470,17 +3624,24 @@ if randomVarsSystemEnabled:
         string_stuff_address: int = 0x215010
     # +0: printing on board enabled (hotkey-toggleable)
     # +4: n of lines outputted onto board (since it doesn't support newline character) written by container
+    # +8: n of lines outputted onto selection screen, which is n of lines on board minus 1
     # +0x100: hotkey code
-    # +0x200: printing on lawn code
+    # +0x120: printing on lawn code
+    # +0x1C0: printing on selection screen code
     hotkey_code_address = string_stuff_address + 0x100
-    string_code_address = string_stuff_address + 0x200
+    string_code_address = string_stuff_address + 0x120
+    string_code_address_2 = string_stuff_address + 0x1C0 # used to print on selection screen
     plants_string_address = string_stuff_address + 4 * 1024
     zombies_string_address = plants_string_address + 26 * 1024
     game_string_address = zombies_string_address + 18 * 1024
     plants_string_container = IndexedStrContainer("plants", plants_string_address, bytes_per_plant_string, n_of_plant_strings)
     zombies_string_container = IndexedStrContainer("zombies", zombies_string_address, bytes_per_zombie_string, n_of_zombie_strings)
-    game_string_container = NonIndexedStrContainer("game", game_string_address, bytes_per_game_string, n_of_game_strings, string_stuff_address+4)
+    game_string_container = NonIndexedStrContainer("game", game_string_address, bytes_per_game_string, n_of_game_strings, string_stuff_address+4, string_stuff_address+8)
     game_string_container.add_var(SimpleOutputString(["Press Enter to show/hide"], "{}"))
+    if randomWaveCount.get() != "False" and gamemode.get() == 'adventure':
+        game_string_container.add_var(FlagCountString(current_level_flag_count, current_level_container, "Flags: {}"))
+    if randomWaveCount.get() == "On" and gamemode.get() == 'adventure':
+        game_string_container.add_var(FlagCountString(current_level_waves_per_flag, current_level_container, "Waves per flag: {}"))
     for index, el in enumerate(plant_names_container):
         plants_string_container.add_var(SimpleOutputString(el, "{}"), [index])
     for index, el in enumerate(zombie_names_container):
@@ -3526,23 +3687,44 @@ if randomVarsSystemEnabled:
         ],
         0x40E7E8)
     # Rendering strings on board
+    string_print_x_coord = 50
+    string_print_y_coord = 116 # can't be higher than 127 with current implementation!
+    string_print_x_coord_seed_selection = 850
+    string_print_y_coord_seed_selection = 50 # can't be higher than 127 with current implementation!
     WriteMemory("unsigned char", [
-        0xA1,*list(string_stuff_address.to_bytes(4,"little")),0x85,0xC0,0x74,0x79,0x8B,0x4C,0x24,0x08,0xA1,0x30,
-        0x76,0x6A,0x00,0x89,0x41,0x40,0x68,0xFF,0x00,0x00,0x00,0x68,0xFF,0x00,0x00,
+        0xA1,*list(string_stuff_address.to_bytes(4,"little")),0x85,0xC0,0x74,0x7C,0x8B,0x4C,0x24,0x08,0xA1,0xEC,
+        0x72,0x6A,0x00,0x89,0x41,0x40,0x68,0xFF,0x00,0x00,0x00,0x68,0xFF,0x00,0x00,
         0x00,0x68,0xFF,0x00,0x00,0x00,0x68,0xFF,0x00,0x00,0x00,0x8B,0xC4,0xE8,
         *list((0x586CC0-string_code_address-0x30).to_bytes(4,"little",signed=True)),
         0x83,0xC4,0x10,0x56,0x8B,0x35,*list((string_stuff_address+4).to_bytes(4,"little")),0x68,
-        *list(game_string_address.to_bytes(4,"little")),0x6A,0x74,0x85,0xF6,0x74,0x39,0x83,0xEC,0x1C,0x8B,0xCC,0x8B,0x44,
-        0x24,0x20,0x50,0xE8,*list((0x404450-string_code_address-0x54).to_bytes(4,"little",signed=True)),0x50,0x8B,0x54,0x24,0x20,0x52,0x6A,
-        0x32,0x50,0x8B,0x44,0x24,0x40,0xE8,*list((0x587120-string_code_address-0x66).to_bytes(4,"little",signed=True)),
-        0x59,0xE8,*list((0x404420-string_code_address-0x6C).to_bytes(4,"little",signed=True)),
-        0x83,0xC4,0x1C,0x5A,0x83,0xC2,0x10,0x58,0x05,*list(bytes_per_game_string.to_bytes(4,"little",signed=True)),0x50,0x52,
-        0x4E,0x75,0xC7,0x83,0xC4,0x08,0x5E,0x6A,0xFF,0x64,0xA1,0x00,0x00,0x00,0x00,
-        0xE9,*list((0x41AA48-string_code_address-0x8F).to_bytes(4,"little",signed=True)),
+        *list(game_string_address.to_bytes(4,"little")),0x6A,string_print_y_coord,0x85,0xF6,0x74,0x3C,0x83,0xEC,0x1C,0x8B,0xCC,0x8B,0x44,
+        0x24,0x20,0x50,0xE8,*list((0x404450-string_code_address-0x54).to_bytes(4,"little",signed=True)),0x50,0x8B,0x54,0x24,0x20,0x52,0x68,
+        *(string_print_x_coord.to_bytes(4,"little",signed=True)),0x50,0x8B,0x44,0x24,0x40,0xE8,*list((0x587120-string_code_address-0x69).to_bytes(4,"little",signed=True)),
+        0x59,0xE8,*list((0x404420-string_code_address-0x6F).to_bytes(4,"little",signed=True)),
+        0x83,0xC4,0x1C,0x5A,0x83,0xC2,0x16,0x58,0x05,*list(bytes_per_game_string.to_bytes(4,"little",signed=True)),0x50,0x52,
+        0x4E,0x75,0xC4,0x83,0xC4,0x08,0x5E,
+        0xE9,*list((0x41AA45-string_code_address-0x8A).to_bytes(4,"little",signed=True)),
         ],
         string_code_address)
+    # Rendering strings on selection screen
+    WriteMemory("unsigned char", [
+        0xB8,0x01,0x00,0x00,0x00,0x85,0xC0,0x74,0x7C,0x8B,0x4C,0x24,0x08,0xA1,0x30,
+        0x76,0x6A,0x00,0x89,0x41,0x40,0x68,0xFF,0x00,0x00,0x00,0x68,0x00,0x00,0x00,
+        0x00,0x68,0x00,0x00,0x00,0x00,0x68,0xFF,0x00,0x00,0x00,0x8B,0xC4,0xE8,
+        *list((0x586CC0-string_code_address_2-0x30).to_bytes(4,"little",signed=True)),
+        0x83,0xC4,0x10,0x56,0x8B,0x35,*list((string_stuff_address+8).to_bytes(4,"little")),0x68,
+        *list((game_string_address+bytes_per_game_string).to_bytes(4,"little")),0x6A,string_print_y_coord_seed_selection,0x85,0xF6,0x74,0x3C,0x83,0xEC,0x1C,0x8B,0xCC,0x8B,0x44,
+        0x24,0x20,0x50,0xE8,*list((0x404450-string_code_address_2-0x54).to_bytes(4,"little",signed=True)),0x50,0x8B,0x54,0x24,0x20,0x52,0x68,
+        *(string_print_x_coord_seed_selection.to_bytes(4,"little",signed=True)),0x50,0x8B,0x44,0x24,0x40,0xE8,*list((0x587120-string_code_address_2-0x69).to_bytes(4,"little",signed=True)),
+        0x59,0xE8,*list((0x404420-string_code_address_2-0x6F).to_bytes(4,"little",signed=True)),
+        0x83,0xC4,0x1C,0x5A,0x83,0xC2,0x10,0x58,0x05,*list(bytes_per_game_string.to_bytes(4,"little",signed=True)),0x50,0x52,
+        0x4E,0x75,0xC4,0x83,0xC4,0x08,0x5E,0x6A,0xFF,0x64,0xA1,0x00,0x00,0x00,0x00,0x68,0xD8,0xE5,0x64,0x00,
+        0xE9,*list((0x41AA4D-string_code_address_2-0x97).to_bytes(4,"little",signed=True)),
+        ],
+        string_code_address_2)
     WriteMemory("unsigned char", [
         0xE9, *list((string_code_address-0x41AA45).to_bytes(4,"little",signed=True)),
+        0xE9, *list((string_code_address_2-0x41AA4A).to_bytes(4,"little",signed=True)),
         0x0F, 0x1F, 0x00,
         ],
         0x41AA40)
@@ -3586,6 +3768,9 @@ WriteMemory("int", plants_array, 0x651094)
 WriteMemory("int", plants_array2, 0x651194) #ends at 0x65125c
 WriteMemory("int",0,0x65115c)
 upgradePlants=[0x1C4, 0x1C2, 0x1C8, 0x1D4, 0x1CC, 0x1D8, 0x1E0, 0x1D0, 0x1DC, "nothing", "nothing2"] #twin, gatling, gloom, gold, cattail, spike, imitater, winter, cob
+WriteMemory("unsigned int", [wavecount_per_level[x] for x in sorted(list(wavecount_per_level.keys()))], 0x6A34E8) # waves per level; that also resets them to default if randomWavecount is off
+WriteMemory("unsigned int", 10, 0x40907B) # reset waves per flag
+WriteMemory("unsigned int", 10, 0x4090D2) # reset waves per flag
 if startingWave.get()=="Instant":
     randomiseStartingWave(startingWave.get())
 if saved.get() and jumpLevel!="":
@@ -3713,14 +3898,17 @@ if gamemode.get() == 'minigames':
              
 else:
     for i in range(50):
+        current_level_container[0] = levels[i]
         if gamemode.get() == 'adventure':
             if i == 0:
                 WriteMemory("int", 50, 0x69F2CC) # quicken level 1-1
                 WriteMemory("int", 10, 0x41523D) # quicken level 1-1
                 WriteMemory("int", 10, 0x413F4B) # quicken level 1-1
+                WriteMemory("int", 2, 0x6A34E8) # quicken level 1-1
             elif i == 1:
                 WriteMemory("int", 150, 0x69F2CC) # reset from level 1-1
                 WriteMemory("int", 200, 0x413F4B) # reset from level 1-1
+                WriteMemory("int", 4, 0x6A34E8) # reset from level 1-1
         if saved.get():
             if savePoint-1==i:
                 saved.set(False)
@@ -3789,6 +3977,11 @@ else:
             randomiseWeights()
         if randomWavePoints.get()!="False":
             randomiseWavePoints()
+        if randomWaveCount.get() != "False" and gamemode.get() == 'adventure':
+            WriteMemory("unsigned int", [waves_per_flag[levels[i]]], 0x40907B)
+            WriteMemory("unsigned int", [waves_per_flag[levels[i]]], 0x4090D2)
+            current_level_flag_count[0] = flags_per_level[levels[i]]
+            current_level_waves_per_flag[0] = waves_per_flag[levels[i]]
         if i!=0 or gamemode.get() == 'ng+':
             if randomCost.get():
                 randomiseCost()
@@ -3830,8 +4023,24 @@ else:
             Sleep(500)
         if not noAutoSlots.get() or shopless.get():
             WriteMemory("int",0,0x6A9EC0,0x82C, 0x28)
-        while(game_ui() != 3 or ReadMemory("bool",0x6A9EC0,0x768, 0x5603)):
+        sleep_cond = True
+        while sleep_cond:
             Sleep(0.1)
+            try:
+                sleep_cond = game_ui() != 3 or ReadMemory("bool",0x6A9EC0,0x768, 0x5603)
+            except:
+                print('caught exception')
+                sleep_cond = True
+            if not sleep_cond and not saved.get():
+                Sleep(5)
+                try:
+                    old_sleep_cond = sleep_cond
+                    sleep_cond = game_ui() != 3 or ReadMemory("bool",0x6A9EC0,0x768, 0x5603)
+                    if old_sleep_cond != sleep_cond:
+                        print('caught restart bug')
+                except:
+                    print('caught exception')
+                    sleep_cond = True
         WriteMemory("int",i,0x65115c)
 
 WriteMemory("int",0,0x651190)
