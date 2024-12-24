@@ -1,12 +1,13 @@
 from   tkinter import *
 from   tkinter import ttk
+from tkinter.ttk import Style
 import platform
 import math
 import abc
 import copy
 from dataclasses import dataclass
 from inspect import signature
-from statistics import mean
+from statistics import mean, median
 from idlelib.tooltip import Hovertip
 import atexit
 
@@ -29,7 +30,14 @@ try:
     else:
         LINUX   = True
         WINDOWS = False
-        
+
+        class MockMemoryLock:
+            def acquire():
+                pass
+            def release():
+                pass
+        memory_lock = MockMemoryLock()
+
         import ctypes
         import struct
         import time
@@ -228,6 +236,8 @@ randomVarsCatFireRate = StringVar(value="Off")
 limitPreviews    = BooleanVar(value=False)
 gamemode         = StringVar(value="adventure")
 randomWaveCount  = StringVar(value="False")
+randomWorld      = BooleanVar(value=True)
+randomWorldChance=IntVar(value=33)
 
 seed=str(random.randint(1,999999999999))
 
@@ -252,6 +262,10 @@ if hasSave:
         fileInfo.append("adventure") #gamemode
     if len(fileInfo)<30:
         fileInfo.append("False") #randomWavecount
+    if len(fileInfo)<31:
+        fileInfo.append("False") #randomWorld
+    if len(fileInfo)<32:
+        fileInfo.append("33") #randomWorldChance
     challengeMode.set(  eval(fileInfo[4].strip()))
     shopless.set(       eval(fileInfo[5].strip()))
     noRestrictions.set( eval(fileInfo[6].strip()))
@@ -278,6 +292,8 @@ if hasSave:
     limitPreviews.set(str(fileInfo[27].strip()))
     gamemode.set(str(fileInfo[28].strip()))
     randomWaveCount.set(str(fileInfo[29].strip()))
+    randomWorld.set(str(fileInfo[30].strip()))
+    randomWorldChance.set(int(fileInfo[31].strip()))
     if fileInfo[1]=="finished\n":
         hasSave=False
 
@@ -361,7 +377,7 @@ def shoplessButtonClick():
         manualMoneyButton.config(state=NORMAL)
 
 def continueButtonClick():
-    global seed, challengeMode, shopless, noRestrictions, noAutoSlots, imitater, randomisePlants, seeded, upgradeRewards, randomWeights, randomWavePoints, startingWave, randomCost, randomCooldowns, costTextToggle, randomZombies, randomConveyors, cooldownColoring, enableDave, davePlantsCount, randomVarsCatZombieHealth, randomVarsCatFireRate, renderWeights, renderWavePoints, limitPreviews, gamemode, randomWaveCount, saved, savePoint, fileInfo, jumpLevel
+    global seed, savePoint, jumpLevel
     seed=fileInfo[0].strip()
     savePoint=int(fileInfo[1].strip())
     WriteMemory("int", int(fileInfo[2].strip()), 0x6A9EC0,0x82C,0x214) #slots
@@ -393,6 +409,8 @@ def continueButtonClick():
     limitPreviews.set(str(fileInfo[27].strip()))
     gamemode.set(str(fileInfo[28].strip()))
     randomWaveCount.set(str(fileInfo[29].strip()))
+    randomWorld.set(str(fileInfo[30].strip()))
+    randomWorldChance.set(int(fileInfo[31].strip()))
     saved.set(True)
     jumpLevel=""
     window.destroy()
@@ -593,6 +611,14 @@ Hovertip(randomWavecountButton, """Randomizes the amount of zombie waves on most
 "On" means that both flag count and waves per flag is randomized.
 Works only in adventure mode.""", 10)
 
+randomWorldButton=Checkbutton(window, text="RANDOM WORLD", width=16, variable=randomWorld, anchor="w")#command=cooldownButtonClick)
+randomWorldButton.grid(row=3, column=6, sticky=W)
+Hovertip(randomWorldButton, "Randomizes world (day, night, pool, fog, roof) for most levels, doesn't work for minigames mode", 10)
+
+randomWorldSlider = Scale(window, from_=0, to=100, orient=HORIZONTAL, length=115, label="Random world chance", variable=randomWorldChance)
+randomWorldSlider.config(font=('Arial', 8))
+randomWorldSlider.grid(row=4, column=6, sticky=W)
+
 daveAmountLabel=Label(window, text="DAVE PLANTS COUNT:")
 daveAmountLabel.grid(row=5, column=5, sticky=W)
 daveAmountButton=ttk.Combobox(window, text="DAVE PLANTS COUNT", width=16, textvariable=davePlantsCount )#command=randomConveyorButtonClick)
@@ -700,6 +726,8 @@ print("Dave Plants Count:",  str(davePlantsCount.get()))
 print("Zombie Health Random:",str(randomVarsCatZombieHealth.get()))
 print("Fire Rate Random:",   str(randomVarsCatFireRate.get()))
 print("Random Level Length:",str(randomWaveCount.get()))
+print("Random Worlds:",      str(randomWorld.get()))
+print("Random World Chance:",str(randomWorldChance.get()))
 
 
 ######### RANDOM VARS SYSTEM ########
@@ -959,7 +987,8 @@ class FlagCountString(SimpleOutputString):
         self.current_level_container = current_level_container
 
     def is_active(self):
-        return self.current_level_container[0] not in [-1, 0, 1, 15, 35, 50]
+        # -1 is for minigames
+        return self.current_level_container[0] not in untouchable_wavecount and self.current_level_container[0] != -1
 
 
 class VarStr(OutputStringBase):
@@ -1391,7 +1420,7 @@ class RandomVars(VarContainer):
         if self.any_category_enabled:
             class StartingSunVar(DiscreteVar):
                 def test(self, random: random.Random, chance, level):
-                    if (level - 1) // 10 in [1,3]:
+                    if gamemode.get() != 'minigames' and (level_worlds[level] == 1 or level_worlds[level] == 3 or level_worlds[level] == 5):
                         chance = (chance / 100)**0.5 * 100 # increase chance on night levels
                     return super().test(random, chance, level)
             self.vars.append(VarWithStrIndices(
@@ -1433,7 +1462,7 @@ class RandomVars(VarContainer):
 daveActualPlantCount = 3 if enableDave.get() == "False" or davePlantsCount.get() == "random(1-5)" else int(davePlantsCount.get())
 actualRandomVarsZombieHealth = ["Off", "Very weak", "Weak", "Average", "Strong", "Very Strong"].index(randomVarsCatZombieHealth.get())
 actualRandomVarsFireRate = ["Off", "Very weak", "Weak", "Average", "Strong", "Very Strong"].index(randomVarsCatFireRate.get())
-randomVarsSystemEnabled = actualRandomVarsZombieHealth > 0 or actualRandomVarsFireRate > 0 or renderWeights.get() or renderWavePoints.get()
+randomVarsSystemEnabled = True
 
 weights_rng = random.Random(seed+'weight')
 cost_rng = random.Random(seed+'cost')
@@ -1444,6 +1473,7 @@ zombies_rng = random.Random(seed+'zombies')
 dave_rng = random.Random(seed+'dave')
 upgrade_rng = random.Random(seed+'upgrade')
 wavecount_rng = random.Random(seed+'wavecount')
+worlds_rng = random.Random(seed+'worlds')
 # level order and plants use random.seed to reseed global random object, so I don't make separate Random for them
 
 LEVEL_PLANTS = [
@@ -1456,17 +1486,17 @@ LEVEL_PLANTS = [
 ]
 
 CONVEYOR_DEFAULTS = {
-    "1-10": (0x422f60, [( 0, 20), ( 2, 20), ( 3, 15), ( 7, 20), ( 5, 10), ( 6,  5), ( 4, 10)]),
-    "2-10": (0x422f98, [(11, 20), (14, 15), (15, 15), (12, 10), (13, 15), (10, 15), ( 8, 10)]),
-    "3-10": (0x422fd0, [(16, 25), (17,  5), (18, 25), (19,  5), (20, 10), (21, 10), (22, 10), (23, 10)]),
-    "4-10": (0x423008, [(16, 25), (24, 10), (31,  5), (27,  5), (26, 15), (29, 25), (28,  5), (30, 10)]),
-    "5-10": (0x423040, [(33, 55), (39, 10), (20, 12), (32, 10), (34,  5), (14,  8)]),
+    "1-10": (0x422f60, [( 0, 20), ( 2, 20), ( 3, 15), ( 7, 20), ( 5, 10), ( 6,  5), ( 4, 10)], 10),
+    "2-10": (0x422f98, [(11, 20), (14, 15), (15, 15), (12, 10), (13, 15), (10, 15), ( 8, 10)], 20),
+    "3-10": (0x422fd0, [(16, 25), (17,  5), (18, 25), (19,  5), (20, 10), (21, 10), (22, 10), (23, 10)], 30),
+    "4-10": (0x423008, [(16, 25), (24, 10), (31,  5), (27,  5), (26, 15), (29, 25), (28,  5), (30, 10)], 40),
+    "5-10": (0x423040, [(33, 55), (39, 10), (20, 12), (32, 10), (34,  5), (14,  8)], 50),
     "shov": (0x423078, [( 0,100)]),
     "wnb2": (0x4230b0, [( 3, 85), (49, 15), (50, 15)]),
-    "wnb1": (0x4230e8, [( 3, 85), (49, 15)]),
-    "btlz": (0x423120, [(16, 25), ( 3, 15), ( 0, 25), ( 2, 35)]),
+    "wnb1": (0x4230e8, [( 3, 85), (49, 15)], 5),
+    "btlz": (0x423120, [(16, 25), ( 3, 15), ( 0, 25), ( 2, 35)], 25),
     "strm": (0x423158, [(16, 30), (26, 10), ( 0, 20), ( 8, 15), ( 2, 25)]),
-    " 5-5": (0x423190, [(33, 50), ( 6, 25), (30, 15), ( 2, 10)]),
+    " 5-5": (0x423190, [(33, 50), ( 6, 25), (30, 15), ( 2, 10)], 45),
     "prtl": (0x4231c8, [( 0, 25), ( 7, 20), (22, 10), (26, 15), ( 3, 15), ( 2, 15)]),
     "clmn": (0x423200, [(33,155), (39,  5), ( 6,  5), (30, 15), (20, 10), (17, 10)]),
     "invs": (0x423238, [( 0, 25), ( 3, 15), (34,  5), (17, 15), (16, 30), (14, 10)]),
@@ -1496,6 +1526,17 @@ default_flags = {k+1: v for k, v in enumerate(default_flags)}
 default_wavecount = {k+1: v for k, v in enumerate(default_wavecount)}
 default_waves_per_flag = {x+1: 10 for x in range(50)}
 
+# these can be changed in randomiseLevelWorlds
+day_levels = set(range(1, 11))
+night_levels = set(range(11, 21))
+pool_levels = set(range(21, 31))
+fog_levels = set(range(31, 41))
+roof_levels = set(range(41, 50))
+roof_night_levels = {50}
+world_counts = [10, 10, 10, 10, 9, 1]
+
+default_worlds = {**{k:(k-1)//10 for k in range(1, 50)}, 35:1, 50:5}
+
 MINIGAMES_ZOMBIE_APPEARANCES = [[26,27], [0,2,3,4,5], [0,2,4], [0,2,4,5,6,7,15,20], [0,2,4,5,6,7], [0,2,4,12,14,15],
     [0,2,4], [0,2,4], [0,2,4,5,6,7], [0,2,7,11], [0,4,7,16], [0,2,4,7], [12,13], [0,2,3,14], [0,2,4], [0,2,3,4,5,6,7,14,15,21],
     [26,27,28,29,30,31], [0,2,3,4,5,6,8], [18], [0,2,4], [0,2,4], [0,2,3,4,7,15], [0,2,4], [0,2,4,6,7,15], [0,2,4],
@@ -1512,7 +1553,7 @@ n_of_game_strings = 24 # more than 24 won't fit on screen
 plants=[[100, 750], [50, 750], [150, 5000], [50, 3000], [25, 3000], [175, 750], [150, 750], [200, 750], [0, 750], [25, 750], [75, 750], [75, 750], [75, 3000], [25, 750], [75, 5000], [125, 5000], [25, 750], [50, 3000], [325, 750], [25, 3000], [125, 5000], [100, 750], [175, 750], [125, 3000], [0, 3000], [25, 3000], [125, 750], [100, 750], [125, 750], [125, 750], [125, 3000], [100, 750], [100, 750], [25, 750], [100, 750], [75, 750], [50, 750], [100, 750], [50, 3000], [300, 750], [250, 5000], [150, 5000], [150, 5000], [225, 5000], [200, 5000], [50, 5000], [125, 5000], [500, 5000]]
 zombies=[['Basic', 1, 4000, 1, 1], ['Flag (ignore)', 1, 0, 1, 1], ['Cone', 3, 4000, 2, 1], ['Vaulter', 6, 2000, 2, 5], ['Bucket', 8, 3000, 4, 1], ['Newspaper', 11, 1000, 2, 1], ['Screen-Door', 13, 3500, 4, 5], ['Footballer', 16, 2000, 7, 5], ['Dancer', 18, 1000, 5, 5], ['Backup (ignore)', 18, 0, 1, 1], ['Ducky-Tube (ignore)', 21, 0, 1, 5], ['Snorkel', 23, 2000, 3, 10], ['Zomboni', 26, 2000, 7, 10], ['Bobsled', 26, 1500, 3, 10], ['Dolphin', 28, 1500, 3, 10], ['Jack', 31, 1000, 3, 10], ['Balloon', 33, 2000, 2, 10], ['Digger', 36, 1000, 4, 10], ['Pogo', 38, 1000, 4, 10], ['Yeti', 40, 1, 4, 1], ['Bungee', 41, 1000, 3, 10], ['Ladder', 43, 1000, 4, 10], ['Catapult', 46, 1500, 5, 10], ['Gargantuar', 48, 1500, 10, 15], ['Imp', 1, 0, 10, 1], ['Zomboss', 50, 0, 10, 1], ['Peashooter', 99, 4000, 1, 1], ['Wall-Nut', 99, 3000, 4, 1], ['Jalapeno', 99, 1000, 3, 10], ['Gatling Pea', 99, 2000, 3, 10], ['Squash', 99, 2000, 3, 10], ['Tall Nut', 99, 2000, 7, 10], ['Giga Gargantuar', 48, 6000, 10, 15]]
 
-plant_names_container = [x for x in SEED_STRINGS][:n_of_plant_strings-1] + ['Some plant'] # constant, so can pass string and not a list
+plant_names_container = SEED_STRINGS[:n_of_plant_strings-1] + ['Some plant'] # constant, so can pass string and not a list
 plant_cooldowns_container = { index: element for index,element in enumerate([[x[1]] for x in plants][:n_of_plant_strings-1]) } # not a constant, so passing a list to keep a reference
 zombie_names_container = [x[0].replace(' (ignore)', '') for x in zombies][:n_of_zombie_strings] # constant, so can pass string and not a list
 wavepoints_container = { index: element for index,element in enumerate([[x[3]] for x in zombies][:n_of_zombie_strings]) } # not a constant, so passing a list to keep a reference
@@ -1527,13 +1568,14 @@ def settings_lines_to_save():
         (randomWavePoints.get()), startingWave.get(), randomCost.get(), randomCooldowns.get(),
         costTextToggle.get(), randomZombies.get(), randomConveyors.get(), cooldownColoring.get(),
         enableDave.get(), davePlantsCount.get(), randomVarsCatZombieHealth.get(), randomVarsCatFireRate.get(),
-        renderWeights.get(), renderWavePoints.get(), limitPreviews.get(), gamemode.get(), randomWaveCount.get()]
+        renderWeights.get(), renderWavePoints.get(), limitPreviews.get(), gamemode.get(), randomWaveCount.get(), randomWorld.get(),
+        randomWorldChance.get()]
 
 def randomiseLevels(seed, ngplus=False):
     global noRestrictions
     random.seed(seed)
     if ngplus:
-        r = [x for x in range(2, 51)]
+        r = list(range(2, 51))
         random.shuffle(r)
         return [1] + r
     firstLevels=[]
@@ -1605,11 +1647,11 @@ def randomiseLevelsAndPlants(seed):
     
     levels = [1]
     plants = [1]
-    world_weights = [0.93, 1.0, 1.0, 1.0, 1.0]
+    world_weights = [0.93, 1.0, 1.0, 1.0, 1.0, 0.8]
     for i in range(1,50):
         available_levels = sorted(list(getAvailableStages(plants, levels)))
-        chosen_level     = random.choices(available_levels, weights=[level_plants[i][1]*world_weights[int((i-1)/10)] for i in available_levels])[0]
-        world_weights[int((chosen_level-1)/10)] -= 0.07
+        chosen_level     = random.choices(available_levels, weights=[level_plants[l][1]*world_weights[level_worlds[l]] for l in available_levels])[0]
+        world_weights[level_worlds[chosen_level]] -= 0.07 * 10 / world_counts[level_worlds[chosen_level]]
         levels.append(chosen_level)
         plants.append(level_plants[chosen_level][0])
     
@@ -1626,6 +1668,11 @@ def getDefaultPlantArrayFromLevels(levels):
 
 def getAvailableStages(plants, used_levels=[]):
     global noRestrictions, challengeMode
+    # buckets, screendoors, ladders, pogos, catapults:
+    buckets_are_present = [8, 9, 12, 13, 14, 17, 19, 22, 24, 27, 29, 37, 38, 39, 42, 43, 44, 46, 47, 49]
+    playable_non_pot = [2, 3, 4, 6, 7, 11, 13, 14, 18, 19, 21, 23, 28, 31, 33, 34, 41, 43, 46, 47]
+    # footballers, zambonis, catapults, gargs:
+    footballers_are_present = [16, 17, 22, 26, 27, 29, 32, 44, 46, 47, 48, 49]
     if len(used_levels) == 0:
         level_set = {1}
     elif noRestrictions.get():
@@ -1634,99 +1681,149 @@ def getAvailableStages(plants, used_levels=[]):
         11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
         21, 22, 23, 24, 25, 26, 27, 28, 29, 30,
         31, 32, 33, 34, 35, 36, 37, 38, 39, 40,
-        41, 42, 43, 44, 45, 46, 47, 48, 49, 50}
+        41, 42, 43, 44, 45, 46, 47, 48, 49, 50 }
     else:
-        level_set = {2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20, 25, 30, 35, 40, 45, 50}
+        level_set = {5, 10, 15, 20, 25, 30, 35, 40, 45, 50} # conveyors
         plant_set = set(plants)
         
         tough_check   = len(plant_set & {2, 6, 7, 15, 17, 20, 29, 31, 35, 39}) #cherry bomb, chomper, repeater, doom, squash, jalapeno, starfruit, magnet, coffee bean, melon pult
-        balloon_check = len(plant_set & {2, 15, 20}) + 2 * len(plant_set & {26, 27})
         
         if challengeMode.get():
             tough_check = 9999
         
         has_puff              = 8  in plant_set
         has_lily              = 16 in plant_set
-        has_blover            = 27 in plant_set
         has_pool_shooter      = 29 in plant_set or 18 in plant_set
         has_seapeater         = (24 in plant_set or 19 in plant_set) and has_pool_shooter #threepeater or starfruit + sea shroom or kelp
         has_fog_plants        = has_puff and (has_lily or 24 in plant_set)
         has_pot               = 33 in plant_set
         has_roof_plant        = 32 in plant_set or 39 in plant_set or has_pot
-        
-        # night levels: puff for 1-flags; puff + tough_check >= 3 for 2-flags; or puff + tough_check >= 5
-        for i in range(11, 20):
-            if has_puff:
-                if wavecount_per_level[i] < 16 or (wavecount_per_level[i] < 32 and tough_check >= 3) or tough_check >= 5:
-                    level_set.add(i)
+
+        # generalized tough check rules:
+        #   1 flag: no check
+        #   2 flag without bucket-type zombies: no check; but fog/roof-night level: check >= 3
+        #   2 flag and bucket-type zombies are present: check >= 3; (don't care about football-type zombies); fog/roof-night level: check >= 5
+        #   3 flag without bucket or football type of zombies: check >= 3; fog/roof-night level: check >= 4
+        #   3 flag and either bucket or football type of zombies are present: check >= 4;  fog/roof-night level: check >= 5
+        #   3 flag and both bucket and football type of zombies are present: check >= 5;  fog/roof-night level: check >= 5
+        #   4 flag without bucket or football type of zombies: check >= 4; fog/roof-night level: check >= 5
+        #   4 flag with either bucket or football type of zombies: check >= 5
+        #   5 flag: check >= 6
+
+        def tough_check_test(level):
+            one_flag = wavecount_per_level[level] < 16
+            two_flag = 16 <= wavecount_per_level[level] < 28
+            three_flag = 28 <= wavecount_per_level[level] < 40
+            four_flag = 40 <= wavecount_per_level[level] < 50
+            if one_flag:
+                requirement = 0
+            elif two_flag and level not in buckets_are_present:
+                requirement = 0
+                if level in fog_levels or level in roof_night_levels:
+                    requirement = 2 # 1 will be added later
+            elif two_flag and level in buckets_are_present:
+                requirement = 3
+                if level in fog_levels or level in roof_night_levels:
+                    requirement = 4 # 1 will be added later
+            elif three_flag and level not in buckets_are_present and level not in footballers_are_present:
+                requirement = 3
+            elif three_flag and level in buckets_are_present and level in footballers_are_present:
+                requirement = 5
+            elif three_flag and (level in buckets_are_present or level in footballers_are_present):
+                requirement = 4
+            elif four_flag and (level not in buckets_are_present and level not in footballers_are_present):
+                requirement = 4
+            elif four_flag:
+                requirement = 5
+            else:
+                requirement = 6
+            if (level in fog_levels or level in roof_night_levels) and requirement < 5:
+                requirement += 1
+            return tough_check >= requirement
+
+        def balloon_test(level):
+            if level not in [33, 34, 39]:
+                return True
+            if wavecount_per_level[level] < 11 and startingWave.get() != "Instant":
+                return True
+            has_doom = 15 in plant_set and (35 in plant_set or level_worlds[level] in [1,3,5])
+            balloon_check = len(plant_set & {2, 20}) + 2 * len(plant_set & {26, 27}) + int(has_doom)
+            unreliable_cactus = balloon_check == 2 and 26 in plant_set and 16 not in plant_set
+            # if cactus is the only counter without lily, check for pool/fog
+            result = balloon_check >= 2 and (level_worlds[level] not in [2,3] or not unreliable_cactus)
+            return result
+
+        # day levels: nothing special
+        for l in day_levels.difference({1}):
+            if tough_check_test(l) and balloon_test(l):
+                level_set.add(l)
+                
+        # night levels: puff required
+        if has_puff:
+            for l in night_levels:
+                if tough_check_test(l) and balloon_test(l):
+                    level_set.add(l)
 
         # pool levels:
         #   if no snorkels and dolphins, either lily or has_pool_shooter is enough
         #   if has snorkel, lily is required
-        #   if has dolphin, either lily or has_seapeater is enough
-        #   there's no level with snorkel+dolphin
-        #   if 1-flag, or weak 2-flag, no tough check
-        #   if strong 2-flag, or weak 3-flag, tough_check >= 3 is required
-        #   if strong 3-flag, or 4+ flags, tough_check >= 5 is required
-        for i in range(21, 30):
-            if i == 25:
+        #   if has dolphin, either lily or has_seapeater is enough - but more than 30 waves require lily
+        #   snorkel + dolphin require lily
+        for l in pool_levels:
+            a_lot_of_flags = wavecount_per_level[l] > 30
+            snorkel = l in snorkel_levels
+            dolphin = l in dolphin_levels
+            if dolphin and not has_lily and a_lot_of_flags:
                 continue
-            snorkel = i in [23, 24, 27]
-            dolphin = i in [28, 29]
-            one_flag = wavecount_per_level[i] < 16
-            two_flag = 16 <= wavecount_per_level[i] < 28
-            three_flag = 28 <= wavecount_per_level[i] < 40
-            a_lot_of_flags = 40 <= wavecount_per_level[i] 
             aquatic_zombie_check_passed = (not snorkel and not dolphin and (has_lily or has_pool_shooter)) \
-                or (snorkel and has_lily) or (dolphin and (has_lily or has_seapeater))
-            tough_check_passed = (one_flag or (two_flag and i in [21,23,28])) \
-                or (((two_flag and i in [22,24,26,27,29]) or (three_flag and i in [21,23,28])) and tough_check >= 3) \
-                or (((three_flag and i in [22,24,26,27,29]) or a_lot_of_flags) and tough_check >= 5)
-            if aquatic_zombie_check_passed and tough_check_passed:
-                level_set.add(i)
+                or (snorkel and not dolphin and has_lily) or (dolphin and not snorkel and (has_lily or has_seapeater)) \
+                or (snorkel and dolphin and has_lily)
+            if aquatic_zombie_check_passed and tough_check_test(l) and balloon_test(l):
+                level_set.add(l)
         
         # fog levels: 
-        #   balloon on level with 11 or more waves requires balloon_check and (lily or blover)
         #   1-flag requires has_fog_plants
         #   2-flag requires has_puff and (has_lily or has_seapeater) instead
         #   3-flag or more requires has_puff and has_lily instead
-        #   no tough check for 1-flag, weak 2-flag is tough_check >= 3, strong 2-flag or anything more than 2-flag is tough_check >= 5
-        for i in range(31, 40):
-            if i == 35:
-                continue
-            one_flag = wavecount_per_level[i] < 16
-            two_flag = 16 <= wavecount_per_level[i] < 28
-            a_lot_of_flags = 28 <= wavecount_per_level[i] 
-            balloon_test = i not in [33, 34, 39] or wavecount_per_level[i] < 11 or (balloon_check >= 2 and (has_lily or has_blover))
-            plant_test = (one_flag and has_fog_plants) \
-                or (two_flag and has_puff and (has_lily or has_seapeater)) \
-                or (a_lot_of_flags and has_puff and has_lily)
-            tough_check_passed = one_flag \
-                or (two_flag and i in [31, 32, 33, 34, 36, 38] and tough_check >= 3) \
-                or tough_check >= 5
-            if balloon_test and plant_test and tough_check_passed:
-                level_set.add(i)
+        if has_puff:
+            for l in fog_levels:
+                one_flag = wavecount_per_level[l] < 16
+                two_flag = 16 <= wavecount_per_level[l] < 28
+                a_lot_of_flags = 28 <= wavecount_per_level[l]
+                plant_test = (one_flag and has_fog_plants) \
+                    or (two_flag and has_puff and (has_lily or has_seapeater)) \
+                    or (a_lot_of_flags and has_puff and has_lily)
+                snorkel = l in snorkel_levels
+                dolphin = l in dolphin_levels
+                aquatic_zombie_check_passed = (not snorkel and not dolphin and (has_lily or has_pool_shooter)) \
+                    or (snorkel and not dolphin and has_lily) or (dolphin and not snorkel and (has_lily or has_seapeater)) \
+                    or (snorkel and dolphin and has_lily)
+                if plant_test and aquatic_zombie_check_passed and balloon_test(l) and tough_check_test(l):
+                    level_set.add(l)
         
         # Roof levels:
-        #   levels 5-2, 5-4, 5-8, 5-9 require pot; has_roof_plant is enough for others if they're < 3 flags; 3+ flags always require pot
-        #   2-flags have tough_check >= 3; 3+ flags tough_check >= 5
-        #   specifically 5-1 can be played with len(used_levels) > 10, but only if it's still 1-flag
-        for i in range(41, 50):
-            if i == 45:
-                continue
-            one_flag = wavecount_per_level[i] < 16
-            two_flag = 16 <= wavecount_per_level[i] < 28
-            a_lot_of_flags = 28 <= wavecount_per_level[i]
-            plant_test = has_pot or (i in [41, 43, 46, 47] and not a_lot_of_flags and has_roof_plant)
-            tough_check_passed = one_flag or (two_flag and tough_check >= 3) or (a_lot_of_flags and tough_check >= 5)
-            five_one_special_test = i == 41 and one_flag and (has_roof_plant or len(used_levels) > 10)
-            if (plant_test and tough_check_passed) or five_one_special_test:
-                level_set.add(i)
-    
-    for i in used_levels:
-        if i in level_set:
-            level_set.remove(i)
-    
+        # some levels require pot and catapults are enough for some (if < 3 flags)
+        # digger levels not allowed if no pot
+        # special case for 5-1 (or random level with 5 pots if it's 1 flag)
+        for l in roof_levels:
+            one_flag = wavecount_per_level[l] < 16
+            a_lot_of_flags = 24 <= wavecount_per_level[l]
+            plant_test = has_pot or (l in playable_non_pot and not a_lot_of_flags and has_roof_plant)
+            digger_test = has_pot or l not in [36,37]
+            five_one_special_test = l == level_with_5_pots and one_flag and (has_roof_plant or len(used_levels) > 10)
+            if ((plant_test and tough_check_test(l)) or five_one_special_test) and balloon_test(l) and digger_test:
+                level_set.add(l)
+
+        # Roof night levels:
+        # puff and pot required + sunshroom or catapult
+        if has_puff and has_pot and (9 in plant_set or has_roof_plant):
+            for l in roof_night_levels:
+                if tough_check_test(l) and balloon_test(l):
+                    level_set.add(l)
+
+    for l in used_levels:
+        if l in level_set:
+            level_set.remove(l)
     return level_set
 
 # this function is for no random plants only, and it weights and picks levels from a passed set of available stages
@@ -1744,15 +1841,16 @@ def addLevel(levels, firstLevels):
                 newLevel = random.choice(levels)
         else:
             newLevel = random.choice(levels)
-        if 11 in levels and newLevel in [12, 13, 14, 16, 17, 18, 19, 31, 32, 33, 34, 36, 37, 38, 39]: #if 2-1 hasn't been played and the next level is a night/fog level with seed select
+        night_non_conveyors_non_2_1_levels = [l for l in (night_levels | fog_levels | roof_night_levels) if l != 11 and l % 5 != 0]
+        if 11 in levels and newLevel in night_non_conveyors_non_2_1_levels: #if 2-1 hasn't been played and the next level is a night/fog level with seed select
             nightTimeLevels=[]
             count=0
             nightCount=0
             for i in range(0, len(levels)):
-                if levels[i] in [12, 13, 14, 16, 17, 18, 19, 31, 32, 33, 34, 36, 37, 38, 39]:
+                if levels[i] in night_non_conveyors_non_2_1_levels:
                     nightTimeLevels.append(levels[i])
             for j in range(0, len(firstLevels)):
-                if firstLevels[j] in [12, 13, 14, 16, 17, 18, 19, 31, 32, 33, 34, 36, 37, 38, 39]:
+                if firstLevels[j] in night_non_conveyors_non_2_1_levels:
                     nightCount+=1
             countTarget=nightCount//3
             nightTimeLevels.append(11)
@@ -1972,30 +2070,35 @@ def randomiseDavePlantCount():
             ], 
             0x484045)
 
+untouchable_wavecount = [1, 15, 35, 50]
+
 def randomiseWaveCount():
     # with current implementation it's impossible to make 2 flag with < 10 total waves (vanilla code will force it to be 1 flag)
+    global untouchable_wavecount
 
     # add_level mutates changeable_levels and flags_balance, and adds results to flags_per_level, waves_per_flag, wavecount_per_level dictionaries
     def add_level(level, flag_count):
+        global untouchable_wavecount
         try:
             changeable_levels.remove(level)
         except:
             pass
         flags_balance[0] += flag_count - default_flags[level]
         flags_per_level[level] = flag_count
-        # unchangeable levels, but with some extra logic for bowling:
-        if (default_wavecount[level] < 10 and randomWaveCount.get() == "Flag count only") or level in untouchable:
+        # unchangeable levels
+        if level in untouchable_wavecount:
             flags_per_level[level] = default_flags[level]
-            waves_per_flag[level] = 10 # default value
+            waves_per_flag[level] = 10 # default value - leave it at 10
             wavecount_per_level[level] = default_wavecount[level]
-            if level == 5 and randomWaveCount.get() != "Flag count only": # that's nuts
+        # 1-2, 1-3 and 1-5 with random waves per flag (if random waves per flag is disabled, they will be in untouchable list)
+        elif default_wavecount[level] < 10:
+            if level == 5:
                 wavecount_per_level[level] = wavecount_rng.choice([6, 7, 7, 8, 8, 9, 9, 10, 11, 12])
                 waves_per_flag[level] = wavecount_per_level[level]
-        # 1-2 and 1-3 with random waves per flag:
-        elif default_wavecount[level] < 10 and randomWaveCount.get() == "On":
-            default = default_wavecount[level]
-            wavecount_per_level[level] = wavecount_rng.choice([int(default / 2), default - 2, default - 1, default, default + 1, default + 2, 10])
-            waves_per_flag[level] = wavecount_per_level[level]
+            else:
+                default = default_wavecount[level]
+                wavecount_per_level[level] = wavecount_rng.choice([int(default / 2), default - 2, default - 1, default, default + 1, default + 2, 10])
+                waves_per_flag[level] = wavecount_per_level[level]
         # most of levels go here without random waves per flag:
         elif randomWaveCount.get() == "Flag count only":
             waves_per_flag[level] = 10 # default value
@@ -2008,10 +2111,15 @@ def randomiseWaveCount():
                 waves_per_flag[level] = 10
             wavecount_per_level[level] = waves_per_flag[level] * flags_per_level[level]
 
-    untouchable = [1, 5, 15, 35, 50] # bowling wave count still can be modified in add_level
+    if randomWaveCount.get() == "Flag count only":
+        untouchable_wavecount.extend([2, 3])
+    if randomWaveCount.get() == "Flag count only" or level_worlds[5] not in [0, 1]:
+        untouchable_wavecount.append(5)
     if randomConveyors.get() != "It's Raining Seeds":
-        untouchable.append(25)
-    changeable_levels = [x for x in range(1, 51) if x not in untouchable] # modified in add_level
+        untouchable_wavecount.append(25)
+    if not randomisePlants.get():
+        untouchable_wavecount.append(41)
+    changeable_levels = [x for x in range(1, 51) if x not in untouchable_wavecount] # modified in add_level
     flags_per_level = {1: 1}
     waves_per_flag = {1: 10} # 10 is globally default value in vanilla (levels with < 10 waves just have a special condition)
     wavecount_per_level = {1: 4}
@@ -2028,7 +2136,7 @@ def randomiseWaveCount():
     # choose 6 other levels to demote by 1 flag to restore the balance
     # choose 6 other levels to demote by 1 flag and 6 other levels to promote by 1 flag
     # 25 levels to change in total
-    for l in untouchable:
+    for l in untouchable_wavecount:
         add_level(l, default_flags[l])
 
     flexible_three_flags = [24, 27, 29, 44, 47, 49]
@@ -2037,13 +2145,13 @@ def randomiseWaveCount():
     add_level(plus_or_minus_two_flags[1], 1)
     add_level(plus_or_minus_two_flags[2], 1)
 
-    four_flag_candidates = [x for x in range(1, 51) if default_flags[x] == 2 and x not in untouchable and x % 5 != 0]
+    four_flag_candidates = [x for x in range(1, 51) if default_flags[x] == 2 and x not in untouchable_wavecount and x % 5 != 0]
     four_flags = wavecount_rng.sample(four_flag_candidates, 2)
     add_level(four_flags[0], 4)
     add_level(four_flags[1], 4)
 
     three_flag_candidates = [x for x in range(1, 51) if default_flags[x] == 1 and default_wavecount[x] >= 10\
-        and x not in untouchable and x % 5 != 0 and (x != 41 or randomisePlants.get())]
+        and x not in untouchable_wavecount and x % 5 != 0 and (x != 41 or randomisePlants.get())]
     three_flags = wavecount_rng.sample(three_flag_candidates, 2)
     add_level(three_flags[0], 3)
     add_level(three_flags[1], 3)
@@ -2058,12 +2166,12 @@ def randomiseWaveCount():
     for l in random_flag_removals:
         add_level(l, default_flags[l] - 1)
 
-    random_extra_flag_candidates = [x for x in changeable_levels if default_wavecount[x] >= 10 and (x != 41 or randomisePlants.get())]
+    random_extra_flag_candidates = [x for x in changeable_levels if default_wavecount[x] >= 10]
     random_extra_flags = wavecount_rng.sample(random_extra_flag_candidates, 6)
     for l in random_extra_flags:
         add_level(l, default_flags[l] + 1)
 
-    remaining_levels = [x for x in changeable_levels] # add_level mutates changeable_levels, so we can't just use for loop
+    remaining_levels = changeable_levels[:] # add_level mutates changeable_levels, so we can't just use for loop
     for l in remaining_levels:
         add_level(l, default_flags[l])
     
@@ -2072,48 +2180,466 @@ def randomiseWaveCount():
     return (flags_per_level, wavecount_per_level, waves_per_flag)
 
 
+def randomiseLevelWorlds():
+    global day_levels, night_levels, pool_levels, fog_levels, roof_levels, roof_night_levels, world_counts
+
+    def filter_candidates(level, candidates):
+        candidates = set(candidates)
+        if level == 5:
+            candidates.discard(3)
+            candidates.discard(4)
+            candidates.discard(5)
+            if shopless.get() or gamemode.get() != "adventure":
+                candidates.discard(2) # no pool cleaners or level too long in ng+
+        if level == 15:
+            candidates.discard(4)
+            candidates.discard(5)
+        if level == 25:
+            candidates.discard(4)
+            candidates.discard(5)
+        if level == 45: # bungee drops are bugged with pool (work fine on day/night apparently)
+            candidates.discard(2)
+            candidates.discard(3)
+        return list(candidates)
+    
+    worlds = {}
+    untouchable = {1, 2, 3, 4, 35, 50}
+    if not randomisePlants.get():
+        untouchable.add(41)
+    if randomConveyors.get() == "False":
+        for i in range(1, 51):
+            if i % 5 == 0:
+                untouchable.add(i)
+    balance = [0, 0, 0, 0, 0]
+    levels = list(range(1,51))
+    worlds_rng.shuffle(levels)
+    for i in levels:
+        if i in untouchable or worlds_rng.randint(1, 100) > randomWorldChance.get():
+            worlds[i] = default_worlds[i]
+            continue
+        candidates = filter_candidates(i, [k for k,v in enumerate(balance) if v < 0 and k != default_worlds[i]])
+        if len(candidates) == 0:
+            candidates = filter_candidates(i, [k for k,v in enumerate(balance) if v == 0 and k != default_worlds[i]])
+        if len(candidates) > 0:
+            new_world = worlds_rng.choice(candidates)
+        else:
+            candidates = filter_candidates(i, [x for x in range(5) if x != default_worlds[i]])
+            max_balance = max(balance) + 1
+            new_world = worlds_rng.choices(candidates, weights=[max_balance-balance[x] for x in candidates])[0]
+        balance[default_worlds[i]] -= 1
+        balance[new_world] += 1
+        worlds[i] = new_world
+    roof_with_5_pots = 41 if worlds[41] == 4 else worlds_rng.choice([k for k,v in worlds.items() if v == 4 and k % 5 != 0])
+    # change some fog levels to roof night, because fog is boring
+    roof_night_candidates = [k for k,v in worlds.items() if v == 3 and k not in untouchable and k not in [5,25]]
+    if len(roof_night_candidates) > 1:
+        roof_night_levels = worlds_rng.sample(roof_night_candidates, 2)
+        for l in roof_night_levels:
+            worlds[l] = 5
+    assert len(worlds) == 50
+    assert worlds[roof_with_5_pots] == 4
+    day_levels = {k for k,v in worlds.items() if v == 0}
+    night_levels = {k for k,v in worlds.items() if v == 1}
+    pool_levels = {k for k,v in worlds.items() if v == 2}
+    fog_levels = {k for k,v in worlds.items() if v == 3}
+    roof_levels = {k for k,v in worlds.items() if v == 4}
+    roof_night_levels = {k for k,v in worlds.items() if v == 5}
+    world_counts = [len(day_levels), len(night_levels), len(pool_levels), len(fog_levels), len(roof_levels), len(roof_night_levels)]
+    return (worlds, roof_with_5_pots)
+
+def reset_zombie_spawn():
+    zombies_allowed = [
+		[
+			1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+			1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+			1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+			1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+			1, 1, 1, 1, 1, 1, 1, 1, 1, 1,],
+		    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+			1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+			1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+			1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+			1, 1, 1, 1, 1, 1, 1, 1, 1, 1,],
+		    [0, 0, 1, 1, 1, 1, 1, 1, 1, 1,
+			0, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+			1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+			1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+			1, 1, 1, 1, 1, 1, 1, 1, 1, 1,],
+			[0, 0, 0, 0, 0, 1, 1, 0, 1, 1,
+			0, 0, 0, 1, 1, 0, 0, 0, 0, 0,
+			0, 0, 0, 1, 0, 0, 0, 0, 1, 0,
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			0, 1, 0, 0, 0, 0, 0, 0, 0, 0,],
+			[0, 0, 0, 0, 0, 0, 0, 1, 1, 1,
+			0, 1, 0, 0, 1, 0, 0, 0, 0, 0,
+			0, 1, 0, 1, 0, 0, 1, 0, 1, 1,
+			0, 0, 0, 0, 0, 0, 1, 0, 1, 1,
+			0, 1, 0, 0, 1, 0, 0, 0, 1, 1,],
+			[0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			1, 1, 0, 0, 1, 0, 0, 0, 0, 0,
+			0, 1, 0, 1, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
+			[0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 1, 1, 0, 0, 1, 0, 1, 1,
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
+			[0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 1, 1, 0, 0, 1,
+			0, 1, 0, 0, 1, 0, 0, 0, 0, 0,
+			0, 1, 0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 1, 0, 0, 0, 0, 0, 0,],
+			[0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 0, 1, 1, 1,
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
+			[0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 0, 1, 1, 1,
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+	        [],
+			[0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 1, 1, 1, 0, 1, 0, 0, 1,
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
+			[0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 1, 1, 0, 1, 1,
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
+			[0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 1, 1, 0, 1, 1,
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
+			[0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 0, 1, 1, 1,
+			0, 0, 0, 1, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
+			[0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			1, 1, 0, 0, 0, 0, 1, 0, 0, 1,
+			0, 0, 0, 0, 0, 0, 0, 0, 1, 1,],
+			[0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 1, 1, 0, 0, 0, 0, 1, 1,
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
+			[0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 1, 1, 0, 0, 1,
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
+			[0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 0, 1, 1, 1,
+			0, 0, 0, 1, 0, 0, 0, 0, 0, 0,],
+            [],
+			[0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			1, 1, 0, 0, 0, 0, 1, 0, 1, 1,],
+			[0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 1, 1, 1, 0, 1, 0, 1, 1,],
+			[0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 1, 1, 0, 1, 1,],
+			[0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 0, 1, 1, 1,],
+			[0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 0, 1, 1, 1,],
+            [], [], [], [], [], [], [], []
+    ]
+    write_list = []
+    for idx,val in enumerate(zombies_allowed):
+        write_list.append(idx)
+        if len(val) == 0:
+            write_list.extend([0] * 50)
+        else:
+            write_list.extend(val)
+        WriteMemory("int", write_list, 0x6A35B0)
+
+def reset_from_random_worlds():
+    snorkel = [1 if i in [23, 24, 25, 27, 30] else 0 for i in range(1,51)] #default snorkels
+    dolphin = [1 if i in [28, 29, 30, 34] else 0 for i in range(1,51)] # default dolphins
+    WriteMemory("int", snorkel, 0x6A35B4 + 0xCC*11)
+    WriteMemory("int", dolphin, 0x6A35B4 + 0xCC*14)
+    WriteMemory("int", 23, 0x69DA8C + 0x1C*11) # starting level
+    WriteMemory("int", 28, 0x69DA8C + 0x1C*14) # starting level
+    # default code for choosing level world
+    WriteMemory("unsigned char", 
+    [
+        0x83, 0xFA, 0x0A, 0x7F, 0x0F, 0xC7, 0x86, 0x4C, 0x55, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xE9,
+        0x97, 0x00, 0x00, 0x00, 0x83, 0xFA, 0x14, 0x7F, 0x0B, 0x89, 0xAE, 0x4C, 0x55, 0x00, 0x00, 0xE9,
+        0x87, 0x00, 0x00, 0x00, 0x83, 0xFA, 0x1E,
+    ], 0x40A58A)
+    # default graves
+    WriteMemory("unsigned char", [11] ,0x40A94D)
+    WriteMemory("unsigned char", [12] ,0x40A956)
+    WriteMemory("unsigned char", [13] ,0x40A95F)
+    WriteMemory("unsigned char", [14] ,0x40A968)
+    WriteMemory("unsigned char", [16] ,0x40A971)
+    WriteMemory("unsigned char", [17] ,0x40A983)
+    WriteMemory("unsigned char", [18] ,0x40A97A)
+    WriteMemory("unsigned char", [19] ,0x40A988)
+    WriteMemory("unsigned char", [20] ,0x40A98D)
+    # default fog
+    WriteMemory("unsigned char", [31] ,0x41C1E9)
+    WriteMemory("unsigned char", [32] ,0x41C1EE)
+    WriteMemory("unsigned char", [36] ,0x41C1F3)
+    WriteMemory("unsigned char", [37] ,0x41C1F8)
+    WriteMemory("unsigned char", [40] ,0x41C1FD)
+    WriteMemory("unsigned char", [31] ,0x40B96B)
+    WriteMemory("unsigned char", [32] ,0x40B970)
+    WriteMemory("unsigned char", [36] ,0x40B975)
+    WriteMemory("unsigned char", [37] ,0x40B97A)
+    WriteMemory("unsigned char", [40] ,0x40B97F)
+    WriteMemory("unsigned char", [31] ,0x41A492)
+    WriteMemory("unsigned char", [32] ,0x41A49C)
+    WriteMemory("unsigned char", [36] ,0x41A4AB)
+    WriteMemory("unsigned char", [37] ,0x41A4AF)
+    WriteMemory("unsigned char", [40] ,0x41A4B4)
+    # default pool ambush
+    WriteMemory("unsigned char", [21] ,0x412916)
+    WriteMemory("unsigned char", [22] ,0x41291B)
+    WriteMemory("unsigned char", [31] ,0x412920)
+    WriteMemory("unsigned char", [32] ,0x412925)
+    WriteMemory("unsigned char", [23] ,0x41292A)
+    WriteMemory("unsigned char", [24] ,0x41292F)
+    WriteMemory("unsigned char", [25] ,0x412934)
+    WriteMemory("unsigned char", [33] ,0x412939)
+    WriteMemory("unsigned char", [34] ,0x41293E)
+    WriteMemory("unsigned char", [35] ,0x412943)
+    # default roof ambush
+    WriteMemory("unsigned char", [41] ,0x412C4E)
+    WriteMemory("unsigned char", [42] ,0x412C53)
+    WriteMemory("unsigned char", [43] ,0x412C58)
+    WriteMemory("unsigned char", [44] ,0x412C5D)
+    WriteMemory("unsigned char", [45] ,0x412C62)
+    # pots
+    WriteMemory("unsigned char", [41] ,0x43B709)
+    WriteMemory("unsigned char", [42] ,0x43B71D)
+    WriteMemory("unsigned char", [43] ,0x43B72C)
+    WriteMemory("unsigned char", [50] ,0x43B731)
+
+def redistribute_aquatic_zombies():
+    # snorkel appears on 5 of pool levels, and none of fog levels
+    # dolphins appear on 3 of pool levels, and 1 of fog levels
+    # we also set starting level to 60 to make sure they don't spawn on 3-3/3-8
+
+    # set starting level to 60 to be sure
+    if 23 not in pool_levels and 23 not in fog_levels:
+        WriteMemory("int", 60, 0x69DA8C + 0x1C*11)
+        zombies[11][1] = 60
+    if 28 not in pool_levels and 28 not in fog_levels:
+        WriteMemory("int", 60, 0x69DA8C + 0x1C*14)
+        zombies[14][1] = 60
+    
+    # find snorkels and dolphins which are allowed to stay
+    snorkel_levels = (pool_levels & {23, 24, 25, 27, 30}) | (fog_levels & {23, 24, 25, 27, 30})
+    snorkel_count = len(snorkel_levels)
+    dolphin_levels = (pool_levels & {28, 29, 30, 34}) | (fog_levels & {28, 29, 30, 34})
+    dolphin_count = len(dolphin_levels)
+    # add remaining snorkels and dolphins - 1-5 is forbidden from having them
+    snorkel_potential_levels = pool_levels.difference({5, 23, 24, 25, 27, 30})
+    dolphin_potential_levels = pool_levels.difference({5, 28, 29, 30, 34})
+    dolphin_add_to_fog_level = 34 not in fog_levels
+    for i in range(5 - snorkel_count):
+        level = worlds_rng.choice(list(snorkel_potential_levels))
+        snorkel_levels.add(level)
+        snorkel_potential_levels.remove(level)
+    for i in range(4 - dolphin_count - int(dolphin_add_to_fog_level)):
+        level = worlds_rng.choice(list(dolphin_potential_levels))
+        dolphin_levels.add(level)
+        dolphin_potential_levels.remove(level)
+    if dolphin_add_to_fog_level:
+        potential_levels = fog_levels.difference({5, 34})
+        level = worlds_rng.choice(list(potential_levels))
+        dolphin_levels.add(level)
+    # write levels to memory
+    for i in range(1,51):
+        WriteMemory("int", int(i in snorkel_levels), 0x6A35B0 + 0xCC*11 + 4*i)
+        WriteMemory("int", int(i in dolphin_levels), 0x6A35B0 + 0xCC*14 + 4*i)
+    return (snorkel_levels, dolphin_levels)
+    
+def randomiseGraves():
+    # graves are restored in reset_from_random_worlds
+    # there are 3 slots for a bit of graves, 2 for average graves, and 3 for a lot of graves - everything else gets max graves (default 2-10)
+    # I don't want to write code for preserving min graves for 2-1 if it's night, but changing it if it's not night, etc for other night levels
+    night_non_conveyors = [l for l in night_levels if l % 5 != 0]
+    worlds_rng.shuffle(night_non_conveyors)
+    a_bit_of_graves = night_non_conveyors[:3]
+    average_graves = night_non_conveyors[3:5]
+    a_lot_of_graves = night_non_conveyors[5:8] # slices don't throw if index out of bounds
+    # writing exactly 1 byte per number
+    WriteMemory("unsigned char", [a_bit_of_graves[0] if len(a_bit_of_graves) > 0 else 0] ,0x40A94D)
+    WriteMemory("unsigned char", [a_bit_of_graves[1] if len(a_bit_of_graves) > 1 else 0] ,0x40A956)
+    WriteMemory("unsigned char", [a_bit_of_graves[2] if len(a_bit_of_graves) > 2 else 0] ,0x40A95F)
+    WriteMemory("unsigned char", [average_graves[0] if len(average_graves) > 0 else 0] ,0x40A968)
+    WriteMemory("unsigned char", [average_graves[1] if len(average_graves) > 1 else 0] ,0x40A971)
+    WriteMemory("unsigned char", [a_lot_of_graves[0] if len(a_lot_of_graves) > 0 else 0] ,0x40A983)
+    WriteMemory("unsigned char", [a_lot_of_graves[1] if len(a_lot_of_graves) > 1 else 0] ,0x40A97A)
+    WriteMemory("unsigned char", [a_lot_of_graves[2] if len(a_lot_of_graves) > 2 else 0] ,0x40A988)
+    WriteMemory("unsigned char", [0] ,0x40A98D) # max graves, but we change >= 20 condition to >= 0 to actually catch every other level
+
+def randomiseFog():
+    # fog is restored in reset_from_random_worlds
+    # there's one level with min fog, range of levels with average fog, and a range with max fog
+    # if 1-5 is a fog, it is guaranteed to be min fog - else random conveyor other than 4-10 - else 4-1 is min fog - else random level
+    # the rest of levels are split in half at median point between average and big fog
+    if level_worlds[5] == 3:
+        min_fog = 5
+    else:
+        fog_conveyors = [l for l in fog_levels if l % 5 == 0 and l != 40]
+        if len(fog_conveyors) > 0:
+            min_fog = worlds_rng.choice(fog_conveyors)
+        else:
+            if level_worlds[31] == 3:
+                min_fog = 3
+            else:
+                candidates = [l for l in fog_levels if l != 40]
+                min_fog = worlds_rng.choice(candidates)
+    remaining_fog_levels = [l for l in fog_levels if l != min_fog and l != 40]
+    median_point = int(median(remaining_fog_levels))
+    # there are 3 places where we need to write it, because of some inlined function calls
+    # LeftFogColumn
+    WriteMemory("unsigned char", [min_fog] ,0x41C1E9)
+    WriteMemory("unsigned char", [0] ,0x41C1EE)
+    WriteMemory("unsigned char", [median_point] ,0x41C1F3)
+    WriteMemory("unsigned char", [median_point+1] ,0x41C1F8)
+    WriteMemory("unsigned char", [60] ,0x41C1FD)
+    # InitLevel
+    WriteMemory("unsigned char", [min_fog] ,0x40B96B)
+    WriteMemory("unsigned char", [0] ,0x40B970)
+    WriteMemory("unsigned char", [median_point] ,0x40B975)
+    WriteMemory("unsigned char", [median_point+1] ,0x40B97A)
+    WriteMemory("unsigned char", [60] ,0x40B97F)
+    # ClearFogAroundPlant
+    WriteMemory("unsigned char", [min_fog] ,0x41A492)
+    WriteMemory("unsigned char", [0] ,0x41A49C)
+    WriteMemory("unsigned char", [median_point] ,0x41A4AB)
+    WriteMemory("unsigned char", [median_point+1] ,0x41A4AF)
+    WriteMemory("unsigned char", [60] ,0x41A4B4)
+
+def randomisePoolAmbush():
+    # is restored in reset_from_random_worlds
+    # 2 pool levels + 2 fog levels with min ambush, 3 pool + 3 fog levels with average ambush, and the rest is max ambush
+    pool = list(pool_levels)
+    fog = list(fog_levels)
+    worlds_rng.shuffle(pool)
+    worlds_rng.shuffle(fog)
+    min_ambush = pool[:2] + fog[:2]
+    average_ambush = pool[2:5] + fog[2:5]
+    WriteMemory("unsigned char", [min_ambush[0] if len(min_ambush) > 0 else 0] ,0x412916)
+    WriteMemory("unsigned char", [min_ambush[1] if len(min_ambush) > 1 else 0] ,0x41291B)
+    WriteMemory("unsigned char", [min_ambush[2] if len(min_ambush) > 2 else 0] ,0x412920)
+    WriteMemory("unsigned char", [min_ambush[3] if len(min_ambush) > 3 else 0] ,0x412925)
+    WriteMemory("unsigned char", [average_ambush[0] if len(average_ambush) > 0 else 0] ,0x41292A)
+    WriteMemory("unsigned char", [average_ambush[1] if len(average_ambush) > 1 else 0] ,0x41292F)
+    WriteMemory("unsigned char", [average_ambush[2] if len(average_ambush) > 2 else 0] ,0x412934)
+    WriteMemory("unsigned char", [average_ambush[3] if len(average_ambush) > 3 else 0] ,0x412939)
+    WriteMemory("unsigned char", [average_ambush[4] if len(average_ambush) > 4 else 0] ,0x41293E)
+    WriteMemory("unsigned char", [average_ambush[5] if len(average_ambush) > 5 else 0] ,0x412943)
+
+def randomiseRoofAmbush():
+    # is restored in reset_from_random_worlds
+    # 2 levels with min ambush, 3 levels with average, the rest is max ambush
+    candidates = list(roof_levels | roof_night_levels)
+    worlds_rng.shuffle(candidates)
+    min_ambush = candidates[:2]
+    average_ambush = candidates[2:5]
+    WriteMemory("unsigned char", [min_ambush[0] if len(min_ambush) > 0 else 0] ,0x412C4E)
+    WriteMemory("unsigned char", [min_ambush[1] if len(min_ambush) > 1 else 0] ,0x412C53)
+    WriteMemory("unsigned char", [average_ambush[0] if len(average_ambush) > 0 else 0] ,0x412C58)
+    WriteMemory("unsigned char", [average_ambush[1] if len(average_ambush) > 1 else 0] ,0x412C5D)
+    WriteMemory("unsigned char", [average_ambush[2] if len(average_ambush) > 2 else 0] ,0x412C62)
+
+def randomisePots():
+    # is restored in reset_from_random_worlds
+    # level with 5 pots is predetermined because it can be used in level order generation and world/wavecount rando
+    # level with 4 pots is random, everything else will have 3 pots.
+    # game doesn't check whether level is roof before calling the function we modify, so we set range of levels to 0-0,
+    # so it never triggers - and down the line code comes to else if (mBoard->StageHasRoof()), where it will make 3 pots
+    WriteMemory("unsigned char", [level_with_5_pots] ,0x43B709)
+    candidates = [l for l in (roof_levels | roof_night_levels) if l != level_with_5_pots]
+    four_pots = worlds_rng.choice(candidates)
+    WriteMemory("unsigned char", [four_pots] ,0x43B71D)
+    WriteMemory("unsigned char", [0] ,0x43B72C)
+    WriteMemory("unsigned char", [0] ,0x43B731)
+
 def generateZombies(levels, level_plants):
     zombiesToRandomise=[[]]
     plantsInOrder=[]
     for i in range(0, len(levels)):
         plantsInOrder.append(level_plants[levels[i]])
     for i in range(1, len(levels)):
-        if levels[i]==50 or levels[i]==15 or levels[i]==35:
+        level = levels[i]
+        if level==50 or level==15 or level==35:
             zombiesToRandomise.append([]) # no rando on those levels
             continue
-        has_lily              = 16 in plantsInOrder[0:i]
-        has_pool_shooter      = 29 in plantsInOrder[0:i] or 18 in plantsInOrder[0:i]
-        has_seapeater         = (24 in plantsInOrder[0:i] or 19 in plantsInOrder[0:i]) and has_pool_shooter #threepeater or starfruit + sea shroom or kelp
-        has_pot               = 33 in plantsInOrder[0:i]
-        has_doom              = 15 in plantsInOrder[0:i] and 35 in plantsInOrder[0:i]
-        has_instant           = 2 in plantsInOrder[0:i] or 17 in plantsInOrder[0:i] or 20 in plantsInOrder[0:i] or has_doom
-        balloon_check = 26 in plantsInOrder[0:i] or 27 in plantsInOrder[0:i] or (2 in plantsInOrder[0:i] and has_doom) or (2 in plantsInOrder[0:i] and 20 in plantsInOrder[0:i]) or (20 in plantsInOrder[0:i] and has_doom)
+        current_plants = set(plantsInOrder[0:i])
+        has_lily              = 16 in current_plants
+        has_pool_shooter      = 29 in current_plants or 18 in current_plants
+        has_seapeater         = (24 in current_plants or 19 in current_plants) and has_pool_shooter #threepeater or starfruit + sea shroom or kelp
+        has_pot               = 33 in current_plants
+        has_doom              = 15 in current_plants and (35 in current_plants or level_worlds[level] in [1,3,5])
+        has_instant           = 2 in current_plants or 17 in current_plants or 20 in current_plants or has_doom
+        balloon_check = len(current_plants & {2, 20}) + 2 * len(current_plants & {26, 27}) + int(has_doom)
+        unreliable_cactus = balloon_check == 2 and 26 in current_plants and 16 not in current_plants
+        # if cactus is the only counter, check for pool/fog
+        balloon_test = balloon_check >= 2 and (level_worlds[level] not in [2,3] or not unreliable_cactus)
         currentZombies=[]
         for j in range(2, 33):
+            if level == 5: # let's not make conveyor basically impossible to beat even in no restriction
+                if j == 11 or j == 14:
+                    continue
             if j==9 or j==10 or j==24 or j==25:
                 continue
             elif zombies_rng.randint(0, 11) != 0:
                 continue
-            elif (j==11 or j==14) and (levels[i]<21 or levels[i]>40):
+            elif (j==11 or j==14) and level_worlds not in [2,3]:
                 continue
-            elif zombies[j][1]==levels[i]:
+            elif zombies[j][1]==level:
                 continue
-            elif levels[i]==45 and j in [11, 12, 13, 14, 16, 17, 18, 20, 22, 23, 32]:
+            elif level==45 and j in [11, 12, 13, 14, 16, 17, 18, 20, 22, 23, 32]:
                 continue
             elif noRestrictions.get():
                 currentZombies.append(j)
-            elif (j==11 or j==14) and not(has_lily or has_seapeater):
+            elif j==11 and not has_lily:
                 continue
-            elif j==16 and not balloon_check:
+            elif j==14 and not (has_lily or has_seapeater):
                 continue
-            elif j==16 and levels[i] in [5, 10, 20, 25, 30, 40]:
+            elif j==14 and wavecount_per_level[level] >= 30 and not has_lily:
                 continue
-            elif j==17 and levels[i]>40 and not (has_pot):
+            elif j==16 and not balloon_test:
                 continue
-            # gargs and giga-gargs are excluded from extremenly long levels + can get removed from 5-8 and 5-9 in that case
-            elif j==23 and (not has_instant or (wavecount_per_level[levels[i]] > 45 and levels[i] not in [48,49])):
+            elif j==16 and level % 5 == 0:
                 continue
-            elif j==32 and (not has_instant or (wavecount_per_level[levels[i]] > 45 and levels[i] not in [48,49])):
+            elif j==17 and level_worlds[level] in [4,5] and not has_pot:
+                continue
+            # gargs and giga-gargs are excluded from extremenly long levels + can get removed from 5-9 in such case
+            elif j==23 and (not has_instant or (wavecount_per_level[level] > 45 and level not in [48,49])):
+                continue
+            elif j==32 and (not has_instant or wavecount_per_level[level] > 45):
                 continue
             else:
                 if j==32:
@@ -2125,21 +2651,14 @@ def generateZombies(levels, level_plants):
     return zombiesToRandomise
 
 def randomiseZombies(zombiesToRandomise, currentLevel, levels):
-    if levels=="leftovers":
-        for i in range(0, len(zombiesToRandomise)):
-            zombieState=ReadMemory("bool", 0x6A35B0 + 0xCC*zombiesToRandomise[i] + 0x4*currentLevel)
-            WriteMemory("int", 1, 0x69DA8C + 0x1C*zombiesToRandomise[i])     
-            WriteMemory("bool", not zombieState, 0x6A35B0 + 0xCC*zombiesToRandomise[i] + 0x4*currentLevel)
-        return zombiesToRandomise
-    else:
-        for i in range(0, 33):
-            WriteMemory("int", zombies[i][1], 0x69DA8C + 0x1C*i)
-        currentZombies=zombiesToRandomise[currentLevel]
-        for i in range(0, len(currentZombies)):
-            zombieState=ReadMemory("bool", 0x6A35B0 + 0xCC*currentZombies[i] + 0x4*levels[currentLevel])
-            WriteMemory("int", 1, 0x69DA8C + 0x1C*currentZombies[i])     
-            WriteMemory("bool", not zombieState, 0x6A35B0 + 0xCC*currentZombies[i] + 0x4*levels[currentLevel])
-        return currentZombies
+    for i in range(0, 33):
+        WriteMemory("int", zombies[i][1], 0x69DA8C + 0x1C*i)
+    currentZombies=zombiesToRandomise[currentLevel]
+    for i in range(0, len(currentZombies)):
+        zombieState=ReadMemory("bool", 0x6A35B0 + 0xCC*currentZombies[i] + 0x4*levels[currentLevel])
+        WriteMemory("int", 1, 0x69DA8C + 0x1C*currentZombies[i])     
+        WriteMemory("bool", not zombieState, 0x6A35B0 + 0xCC*currentZombies[i] + 0x4*levels[currentLevel])
+    return currentZombies
 
 def randomiseZombiesMinigames():
     base_address = 0x4258aa
@@ -2166,7 +2685,6 @@ def randomiseZombiesMinigames():
             else:
                 result[j] = 1 - result[j]
         WriteMemory("unsigned char", result, address)
-
 
 def writeConveyor(addr, conveyor_data):
     out    = [0 for i in range(56)]
@@ -2198,13 +2716,9 @@ def randomiseConveyors(in_seed):
         r_plant_set = {38}    #every level should have marigolds!
         r_dict      = {38: 2} #with a weight of like 2 tho
 
-        for i in to_randomise:
+        for i in to_randomise: # loading default plants for this level
             d_plant_set.add(i[0])
             d_dict[i[0]] = i[1]
-        
-        has_water           = 16 in d_plant_set
-        on_roof             = 33 in d_plant_set
-        at_night            = len(d_plant_set & {8, 10,11,12,13,14,15,24,31}) > 0   #puff, fume, grave buster, hypno, scaredy, ice, doom, seashroom, magnet
         
         d_balloon_counters  = sorted(list(d_plant_set & {26,27,43}))                #cactus, blover, cattail
         d_pea_s_plants      = sorted(list(d_plant_set & {0, 5, 8, 13,24,28,32,34})) #peashooter, snow pea, puff, scaredy, seashroom, split pea, cabbage, kernel
@@ -2216,6 +2730,32 @@ def randomiseConveyors(in_seed):
         d_passthrough       = sorted(list(d_plant_set & {6, 11,16,22,32,33,49,50}))    #chomper, grave buster, lily, torchwood, cabbage, pot, explode o nut, giant wallnut        
         blackened_chance = random.choices([0.2,1.0],weights=[1,19])[0]
         peter_chance     = random.choices([0.2,1.0],weights=[1,19])[0]
+        
+        if randomWorld.get() and len(CONVEYOR_DEFAULTS[level]) > 2 and gamemode.get() != 'minigames': # has an extra field specifying adventure mode level
+            has_water = level_worlds[CONVEYOR_DEFAULTS[level][2]] in [2,3]
+            on_roof = level_worlds[CONVEYOR_DEFAULTS[level][2]] in [4,5]
+            at_night = level_worlds[CONVEYOR_DEFAULTS[level][2]] in [1,3,5]
+            # removing lily/pot/buster from d_passthrough if they are not allowed
+            if not has_water and 16 in d_passthrough:
+                d_passthrough.remove(16)
+            if not on_roof and 33 in d_passthrough:
+                d_passthrough.remove(33)
+            if (not at_night or (at_night and has_water)) and 11 in d_passthrough:
+                d_passthrough.remove(11)
+            if has_water and 16 not in d_passthrough:
+                d_passthrough.append(16)
+                d_dict[16] = 40
+            if on_roof and 33 not in d_passthrough:
+                d_passthrough.append(33)
+                d_dict[33] = 80
+            if at_night and not has_water and 11 not in d_passthrough:
+                d_passthrough.append(11)
+                d_dict[11] = 25
+        else:
+            has_water           = 16 in d_plant_set
+            on_roof             = 33 in d_plant_set
+            at_night            = len(d_plant_set & {8,10,11,12,13,14,15,24,31}) > 0   #puff, fume, grave buster, hypno, scaredy, ice, doom, seashroom, magnet
+        
 
         if randomConveyors.get()!="It's Raining Seeds":
 
@@ -2231,9 +2771,10 @@ def randomiseConveyors(in_seed):
                     for i in d_balloon_counters:
                         balloon_weights += d_dict[i]/wmul[allowed_b_counters.index(i)]
                     balloon_weights *= random.uniform(0.9,1.3) * blackened_chance
-                    r_balloon_counters = random.sample(allowed_b_counters, k=len(d_balloon_counters))
-                    r_balloon_weights  = randspread(int(balloon_weights),len(d_balloon_counters))
-                    for i in range(len(d_balloon_counters)):
+                    n_of_plants = min(len(d_balloon_counters), len(allowed_b_counters))
+                    r_balloon_counters = random.sample(allowed_b_counters, k=n_of_plants)
+                    r_balloon_weights  = randspread(int(balloon_weights), n_of_plants)
+                    for i in range(n_of_plants):
                         r_plant_set.add(r_balloon_counters[i])
                         r_dict[r_balloon_counters[i]] = int(r_balloon_weights[i]*wmul[allowed_b_counters.index(r_balloon_counters[i])])
                 
@@ -2245,9 +2786,10 @@ def randomiseConveyors(in_seed):
                     if 26 in r_dict:
                         peas_weight = max(0,peas_weight-r_dict[26])
                     peas_weight  *= random.uniform(0.6,1.4)
-                    r_peas        = random.sample(allowed_peas, k=len(d_pea_s_plants))
-                    r_pea_weights = randspread(int(peas_weight),len(d_pea_s_plants))
-                    for i in range(len(d_pea_s_plants)):
+                    n_of_plants = min(len(d_pea_s_plants), len(allowed_peas))
+                    r_peas        = random.sample(allowed_peas, k=n_of_plants)
+                    r_pea_weights = randspread(int(peas_weight), n_of_plants)
+                    for i in range(n_of_plants):
                         r_plant_set.add(r_peas[i])
                         if r_peas[i] in r_dict:
                             r_dict[r_peas[i]] += r_pea_weights[i]
@@ -2273,9 +2815,10 @@ def randomiseConveyors(in_seed):
                     for i in d_znuts:
                         nuts_weight += d_dict[i]
                     nuts_weight  *= random.uniform(0.6,1.4)
-                    r_nuts        = random.sample(allowed_nuts, k=len(d_znuts))
-                    r_nut_weights = randspread(int(nuts_weight),len(d_znuts))
-                    for i in range(len(d_znuts)):
+                    n_of_plants = min(len(d_znuts), len(allowed_nuts))
+                    r_nuts        = random.sample(allowed_nuts, k=n_of_plants)
+                    r_nut_weights = randspread(int(nuts_weight), n_of_plants)
+                    for i in range(n_of_plants):
                         r_plant_set.add(r_nuts[i])
                         r_dict[r_nuts[i]]  = r_nut_weights[i]
                 
@@ -2290,9 +2833,10 @@ def randomiseConveyors(in_seed):
                             else:
                                 instas_weight += d_dict[i]/2.5
                         instas_weight     *= random.uniform(0.6,1.4)
-                        r_instas           = random.sample(allowed_instas, k=len(d_instas))
-                        r_instas_weights   = randspread(int(instas_weight),len(d_instas))
-                        for i in range(len(d_instas)):
+                        n_of_plants = min(len(d_instas), len(allowed_instas))
+                        r_instas           = random.sample(allowed_instas, k=n_of_plants)
+                        r_instas_weights   = randspread(int(instas_weight), n_of_plants)
+                        for i in range(n_of_plants):
                             r_plant_set.add(r_instas[i])
                             r_dict[r_instas[i]] = int(r_instas_weights[i]*wmul[allowed_instas.index(r_instas[i])])
                     
@@ -2306,9 +2850,10 @@ def randomiseConveyors(in_seed):
                             else:
                                 ginstas_weight += d_dict[i]/2.5
                         ginstas_weight     *= random.uniform(0.9,1.3)
-                        r_ginstas           = random.sample(allowed_ginstas, k=len(d_ginstas))
-                        r_ginstas_weights   = randspread(int(ginstas_weight),len(d_ginstas))
-                        for i in range(len(d_ginstas)):
+                        n_of_plants = min(len(d_ginstas), len(allowed_ginstas))
+                        r_ginstas           = random.sample(allowed_ginstas, k=n_of_plants)
+                        r_ginstas_weights   = randspread(int(ginstas_weight),n_of_plants)
+                        for i in range(n_of_plants):
                             r_plant_set.add(r_ginstas[i])
                             r_dict[r_ginstas[i]] = int(r_ginstas_weights[i]*wmul[allowed_ginstas.index(r_ginstas[i])])
                     random_bs = random.sample([(36,10),(37,3),(25,4),(28,8),(21,8),(38, 8),(22, 8),(33, 8)], int((random.random()**2)*4)) #garlic, umbrella leaf, plantern, split pea, spikeweed, more marigolds, torchwood, pot
@@ -2340,13 +2885,15 @@ def randomiseConveyors(in_seed):
             
         else:
             if level!= "5-10" and level!="wnb1" and level!="wnb2":
-                r_plant_set={0,2,3,4,5,6,7,8,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,42,43,44,46,47} #no sunflower, sun shroom, plantern, twin sun, or gold magnet
-                r_dict={0:5, 2:5, 3:5, 4:5, 5:5, 6:5, 7:5, 8:2, 10:2, 11:2, 12:2, 13:2, 14:2, 15:2, 16:0, 17:5, 18:5, 19:0, 20:6, 21:5, 22:5, 23:5, 24:0, 26:5, 27:0, 28:5, 29:5, 30:5, 31:5, 32:5, 33:0, 34:5, 35:80, 36:5, 37:5, 38:5, 39:5, 40:3, 42:3, 43:3, 44:3, 46:3, 47:2}
+                r_plant_set={0,2,3,4,5,6,7,8,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,42,43,44,46,47} #no sunflower, sun shroom, twin sun, or gold magnet
+                r_dict={0:5, 2:5, 3:5, 4:5, 5:5, 6:5, 7:5, 8:2, 10:2, 11:2, 12:2, 13:2, 14:2, 15:2, 16:0, 17:5, 18:5, 19:0, 20:6, 21:5, 22:5, 23:5, 24:0, 25:0, 26:5, 27:0, 28:5, 29:5, 30:5, 31:5, 32:5, 33:0, 34:5, 35:80, 36:5, 37:5, 38:5, 39:5, 40:3, 42:3, 43:3, 44:3, 46:3, 47:2}
                 if has_water:
                     r_dict[16]=60
                     r_dict[19]=5
                     if at_night:
                         r_dict[24]=5
+                        if level != "4-10": # 4-10 hardcoded to not have fog, but with random worlds other conveyors can have fog
+                            r_dict[25]=7 # add plantern
                 if at_night:
                     for i in range(8, 16):
                         if i!=9 and not(i==11 and has_water):
@@ -2356,7 +2903,7 @@ def randomiseConveyors(in_seed):
                                 r_dict[i]=5
                     r_dict[31]=5
                 if on_roof:
-                    r_dict[33]=100
+                    r_dict[33]=200
                     r_dict[32]=20
                     r_dict[34]=20
                     r_dict[39]=20
@@ -2366,7 +2913,7 @@ def randomiseConveyors(in_seed):
                     r_dict[27]=20
             elif level == "5-10":
                 r_plant_set={0,2,3,5,6,7,8,10,12,13,14,15,17,18,20,23,26,28,29,30,31,32,33,34,36,37,38,39,40,44,47}
-                r_dict={0:1, 2:5, 3:1, 5:4, 6:1, 7:8, 8:1, 10:10, 12:1, 13:4, 14:50, 15:10, 17:1, 18:3, 20:70, 23:1, 26:1, 28:1, 29:1, 30:3, 31:1, 32:21, 33:504, 34:37, 36:1, 37:2, 38:2, 39:40, 40:80, 44:15, 47:160} #garbage:22, semi-garbage:26, ice:80, other instas:120, pot:255, cabbage:42, kernel:75, melon:80, total:700
+                r_dict={0:1, 2:5, 3:1, 5:4, 6:1, 7:8, 8:1, 10:10, 12:1, 13:4, 14:50, 15:10, 17:1, 18:3, 20:70, 23:1, 26:1, 28:1, 29:1, 30:3, 31:1, 32:21, 33:400, 34:37, 36:1, 37:2, 38:2, 39:40, 40:80, 44:15, 47:160} #garbage:22, semi-garbage:26, ice:80, other instas:120, pot:255, cabbage:42, kernel:75, melon:80, total:700
 
         if (level=="wnb1" or level=="wnb2") and randomConveyors.get()=="It's Raining Seeds":            
             randomised=CONVEYOR_DEFAULTS[level][1]
@@ -2379,11 +2926,23 @@ def randomiseConveyors(in_seed):
 ##        print(level+":")
 ##        for i in randomised:
 ##            print(SEED_STRINGS[i[0]]+": "+str(i[1]))
-    
     random.setstate(rng_state)
 
 #showAverage()
 #nightAverage()
+
+reset_zombie_spawn() # resets from random zombies mode
+reset_from_random_worlds() # writes default code for selecting world/graves/etc
+if randomWorld.get() and gamemode.get() != "minigames":
+    (level_worlds, level_with_5_pots) = randomiseLevelWorlds()
+    (snorkel_levels, dolphin_levels) = redistribute_aquatic_zombies()
+    randomiseGraves()
+    randomiseFog()
+    randomisePoolAmbush()
+    randomiseRoofAmbush()
+    randomisePots()
+else:
+    (level_worlds, snorkel_levels, dolphin_levels, level_with_5_pots) = (default_worlds, [23, 24, 25, 27, 30], [28, 29, 30, 34], 41)
 if randomWaveCount.get() != "False" and gamemode.get() == "adventure":
     (flags_per_level, wavecount_per_level, waves_per_flag) = randomiseWaveCount()
 else:
@@ -2412,9 +2971,11 @@ if randomZombies:
 
 if randomConveyors.get()!="False":
     randomiseConveyors(seed)
+    WriteMemory("unsigned char", [2], 0x42335E) # changes pot weight curve from linear to quad, so it doesn't decrease so quickly
 else:
     for i in CONVEYOR_DEFAULTS:
         writeConveyor(CONVEYOR_DEFAULTS[i][0], CONVEYOR_DEFAULTS[i][1])
+    WriteMemory("unsigned char", [1], 0x42335E) # reset pot weight curve to linear
 
 #for i in levels:
     #print(LEVEL_STRINGS[i], SEED_STRINGS[level_plants[i]])
@@ -3501,6 +4062,8 @@ WriteMemory("unsigned char", [
             0x75, 0x16, # original code  
             ],
             0x483F1A)
+
+# activate Dave
 if enableDave.get() != 'False' or gamemode.get() == 'ng+':
     WriteMemory("unsigned char", [
         0x66, 0x90, # nop 2 // removes jump if this is first adventure
@@ -3613,7 +4176,17 @@ if enableDave.get() != 'False' or gamemode.get() == 'ng+':
             (plants_array.index(34)-1),
             ], 
             0x48403A)
-    
+
+
+if randomWorld.get() and gamemode.get() != "minigames":
+    # hardcodes the next world for adventure mode: address for the world itself to change in main loop is 0x40a599
+    WriteMemory("unsigned char", 
+    [
+        0x83, 0xFA, 0x32, 0x0F, 0x87, 0x0F, 0x00, 0x00, 0x00, 0xC7, 0x86, 0x4C, 0x55, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0xE9, 0x93, 0x00, 0x00, 0x00, 0xC7, 0x86, 0x4C, 0x55, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0xE9, 0x84, 0x00, 0x00, 0x00
+    ], 0x40A58A)
+
 # random vars setup
 if randomVarsSystemEnabled:
     if WINDOWS:
@@ -3742,24 +4315,6 @@ if randomVarsSystemEnabled:
     random_vars = RandomVars(seed, WriteMemory, True, plants_string_container, zombies_string_container, game_string_container,
                              code_address=string_stuff_address, catZombieHealth=actualRandomVarsZombieHealth, catFireRate=actualRandomVarsFireRate)
 
-try:
-    leftoverZombies=open('leftoverZombies.txt', 'r')
-except:
-    leftoverZombies=open('leftoverZombies.txt', 'w')
-    leftoverZombies.close()
-    leftoverZombies=open('leftoverZombies.txt', 'r')
-
-leftoverInfo=leftoverZombies.readlines()
-if len(leftoverInfo)>0:
-    currentZombies=[]
-    for i in range(1, len(leftoverInfo)):
-        currentZombies.append(int(leftoverInfo[i].strip()))
-    currentZombies=randomiseZombies(currentZombies, int(leftoverInfo[0]), "leftovers")
-leftoverZombies.close()
-leftoverZombies=open('leftoverZombies.txt', 'w')
-leftoverZombies.write("")
-leftoverZombies.close()
-
 if randomCooldowns.get():
     WriteMemory("unsigned char",[255,255],0x6512C2) # make peashooter/sunflower not red on first level
 WriteMemory("int",[150],0x69F2CC) # reset peashooter fire rate
@@ -3802,6 +4357,65 @@ if gamemode.get() != 'adventure':
     WriteMemory("unsigned char", [0x38], 0x42df5d) # limbo
     plants_unlocked = 40
     WriteMemory("int",plants_unlocked,0x651090) # needed for Dave I think
+
+def should_keep_sleeping():
+    if gamemode.get() == "minigames":
+        return game_ui() != 3 or ReadMemory("int",0x6A9EC0,0x768) == 0 or \
+                    (ReadMemory("int",0x6A9EC0,0x768, 0x5600) < 100 and \
+                    ReadMemory("int",0x6A9EC0,0x768, 0x5604) < 100)
+    else:
+        return game_ui() != 3 or ReadMemory("bool",0x6A9EC0,0x768, 0x5603)
+
+def wait_level_end_or_game_close():
+    # so, there was a restart bug, when randomiser falsely detected the end of level - probably because the game board is deleted and initialized
+    # when level restarts - and reading memory at the same moment might cause a false positive. So, we have to check if the level is really over
+    # by checking twice with a small delay in between.
+    # However, there's also a possibility for read to produce an exception (probably because board is being NULL for some time, or if game is closed).
+    # So we have to catch those exceptions. And if we catch a lot of them in a row, we assume the game is closed.
+    # But, if reading/writing makes an exception, pvz module doesn't release a memory lock, so we have to release it manually - or
+    # rando will be stuck forever waiting for a lock to be released. For linux we use fake lock, so releasing it does nothing, just keeps code clean.
+    # However, sometimes pvz module detects that game is closed, and in such case reading memory doesn't acquire lock before throwing exception,
+    # so releasing that lock produces another exception - and we have to catch that one too in order to detect that game closed and to not crash rando.
+    # And we got that code mess as a result.
+    exception_counter = 0   # using it to detect user closing the game
+    sleep_cond = True
+    while sleep_cond:
+        if exception_counter > 5:
+            print("game closed")
+            input()
+            exit()
+        Sleep(0.1)
+        try: # detecting the end of level
+            sleep_cond = should_keep_sleeping()
+            exception_counter = 0
+        except: # exception might happen when restarting the level, in which case we continue to sleep, but also have to release pvz module lock
+            print('caught exception')
+            exception_counter += 1
+            sleep_cond = True
+            try: # sometimes on windows, if game is closed, pvz module doesn't acquire lock, and releasing it produces an exception
+                memory_lock.release()
+            except:
+                print("game closed")
+                input()
+                exit()
+        if not sleep_cond and not saved.get(): # here we detect level end again to make sure we are not encoutering restart bug
+            Sleep(5)
+            try:
+                old_sleep_cond = sleep_cond
+                sleep_cond = should_keep_sleeping()
+                if old_sleep_cond != sleep_cond:
+                    print('caught restart bug')
+                    sleep_cond = True
+            except:
+                print('caught exception 2')
+                sleep_cond = True
+                try: # sometimes on windows, if game is closed, pvz module doesn't acquire lock, and releasing it produces an exception
+                    memory_lock.release()
+                except:
+                    print("game closed")
+                    input()
+                    exit()
+
 
 if gamemode.get() == 'minigames':
     if randomZombies.get():
@@ -3884,17 +4498,7 @@ if gamemode.get() == 'minigames':
             Sleep(500)
         if shopless.get():
             WriteMemory("int",0,0x6A9EC0,0x82C, 0x28)
-        sleep_cond = True
-        while sleep_cond:
-            Sleep(0.1)
-            try:
-                sleep_cond = game_ui() != 3 or ReadMemory("int",0x6A9EC0,0x768) == 0 or \
-                    (ReadMemory("int",0x6A9EC0,0x768, 0x5600) < 100 and \
-                    ReadMemory("int",0x6A9EC0,0x768, 0x5604) < 100)
-                #0x5600 is fadeout timer, 0x5604 is next survival stage timer
-            except:
-                print('caught exception')
-                sleep_cond = True
+        wait_level_end_or_game_close() # if game is closed, tha function exits the program after waiting for an input
              
 else:
     for i in range(50):
@@ -3947,14 +4551,6 @@ else:
             if i!=0:
                 currentZombies=randomiseZombies(zombiesToRandomise, i-1, levels)
             currentZombies=randomiseZombies(zombiesToRandomise, i, levels)
-            if len(currentZombies)>0 and not saved.get():
-                if savePoint-1!=i:
-                    linesToWrite=[str(levels[i])+"\n"]
-                    for j in range(0, len(currentZombies)):
-                        linesToWrite.append(str(currentZombies[j])+"\n")
-                    leftoverZombies=open('leftoverZombies.txt', 'w')
-                    leftoverZombies.writelines(linesToWrite)
-                    leftoverZombies.close()
         if upgradeRewards.get() and gamemode.get() == 'adventure':
             if i!=0:
                 if(level_plants[lastlevel] == -1):
@@ -3982,6 +4578,8 @@ else:
             WriteMemory("unsigned int", [waves_per_flag[levels[i]]], 0x4090D2)
             current_level_flag_count[0] = flags_per_level[levels[i]]
             current_level_waves_per_flag[0] = waves_per_flag[levels[i]]
+        if randomWorld.get():
+            WriteMemory("unsigned int", level_worlds[levels[i]], 0x40A599)
         if i!=0 or gamemode.get() == 'ng+':
             if randomCost.get():
                 randomiseCost()
@@ -4023,24 +4621,7 @@ else:
             Sleep(500)
         if not noAutoSlots.get() or shopless.get():
             WriteMemory("int",0,0x6A9EC0,0x82C, 0x28)
-        sleep_cond = True
-        while sleep_cond:
-            Sleep(0.1)
-            try:
-                sleep_cond = game_ui() != 3 or ReadMemory("bool",0x6A9EC0,0x768, 0x5603)
-            except:
-                print('caught exception')
-                sleep_cond = True
-            if not sleep_cond and not saved.get():
-                Sleep(5)
-                try:
-                    old_sleep_cond = sleep_cond
-                    sleep_cond = game_ui() != 3 or ReadMemory("bool",0x6A9EC0,0x768, 0x5603)
-                    if old_sleep_cond != sleep_cond:
-                        print('caught restart bug')
-                except:
-                    print('caught exception')
-                    sleep_cond = True
+        wait_level_end_or_game_close() # if game is closed, tha function exits the program after waiting for an input
         WriteMemory("int",i,0x65115c)
 
 WriteMemory("int",0,0x651190)
