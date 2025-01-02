@@ -690,6 +690,123 @@ outputText.insert(END, "How to play:\nCreate a new save file in game (don't star
                   +" (press \"Help\" in main menu for example) and then you can play mini-games or survivals in any order.\n"
                   +"If you choose new game+, you do it the same as normal adventure mode.\n It's not recommended to play different mode other than selected one.")
 
+# difficulty presets
+def apply_difficulty_preset(difficulty):
+    # reset all settings to default first
+    challengeMode.set(False)
+    shopless.set(False)
+    noRestrictions.set(False)
+    noAutoSlots.set(True)
+    imitater.set(False)
+    randomisePlants.set(True)
+    seeded.set(False)
+    upgradeRewards.set(True)
+    randomWeights.set(False)
+    randomWavePoints.set("False")
+    startingWave.set("False")
+    randomCost.set(False)
+    randomCooldowns.set(False)
+    costTextToggle.set(False)
+    randomZombies.set(False)
+    randomConveyors.set("False")
+    cooldownColoring.set("False")
+    enableDave.set("False")
+    davePlantsCount.set("3")
+    randomVarsCatZombieHealth.set("Off")
+    randomVarsCatFireRate.set("Off")
+    limitPreviews.set(False)
+    randomWaveCount.set("False")
+    randomWorld.set(True)
+    randomWorldChance.set(33)
+
+    if difficulty == "Beginner":
+        # low randomization for beginners
+        randomisePlants.set(True)
+        upgradeRewards.set(True)
+        randomWorld.set(True)
+        randomWorldChance.set(20)
+        enableDave.set("On")
+
+    elif difficulty == "Normal":
+        # normal randomization
+        challengeMode.set(True)
+        randomisePlants.set(True)
+        upgradeRewards.set(True)
+        randomWorld.set(True)
+        randomWorldChance.set(33)
+        randomCost.set(True)
+        randomZombies.set(True)
+        enableDave.set("On")
+        randomWeights.set(True)
+
+    elif difficulty == "Hard":
+        # significant randomization
+        challengeMode.set(True)
+        randomisePlants.set(True)
+        upgradeRewards.set(True)
+        randomWorld.set(True)
+        randomWorldChance.set(50)
+        randomCost.set(True)
+        costTextToggle.set(True)
+        randomCooldowns.set(True)
+        cooldownColoring.set("Selection only")
+        randomZombies.set(True)
+        randomWeights.set(True)
+        randomWavePoints.set("Normal")
+        startingWave.set("Random")
+        enableDave.set("On + plant upgrades")
+        randomVarsCatZombieHealth.set("Average")
+        randomVarsCatFireRate.set("Average")
+        randomWaveCount.set("Flag count only")
+
+    elif difficulty == "Chaos":
+        # very high randomization
+        challengeMode.set(True)
+        noRestrictions.set(True)
+        randomisePlants.set(True)
+        upgradeRewards.set(True)
+        randomWorld.set(True)
+        randomWorldChance.set(75)
+        randomCost.set(True)
+        costTextToggle.set(True)
+        randomCooldowns.set(True)
+        cooldownColoring.set("Always on")
+        randomZombies.set(True)
+        randomWeights.set(True)
+        randomWavePoints.set("EXTREME")
+        startingWave.set("Instant")
+        randomConveyors.set("It's Raining Seeds")
+        enableDave.set("On + plant upgrades")
+        davePlantsCount.set("random(1-5)")
+        randomVarsCatZombieHealth.set("Very Strong")
+        randomVarsCatFireRate.set("Very Strong")
+        limitPreviews.set(True)
+        randomWaveCount.set("On")
+
+# preset buttons
+difficultyLabel = Label(window, text="DIFFICULTY PRESETS:")
+difficultyLabel.grid(row=8, column=1, sticky=W, pady=(10, 5))
+
+beginnerButton = Button(window, text="BEGINNER", width=16,
+                       command=lambda: apply_difficulty_preset("Beginner"))
+beginnerButton.grid(row=8, column=2, sticky=W, padx=5)
+Hovertip(beginnerButton, "Basic randomization for newcomers.\nMainly randomizes plants and world types.", 10)
+
+normalButton = Button(window, text="NORMAL", width=16,
+                     command=lambda: apply_difficulty_preset("Normal"))
+normalButton.grid(row=8, column=3, sticky=W, padx=5)
+Hovertip(normalButton, "Moderate randomization.\nAdds random costs and zombies.", 10)
+
+hardButton = Button(window, text="HARD", width=16,
+                   command=lambda: apply_difficulty_preset("Hard"))
+hardButton.grid(row=8, column=4, sticky=W, padx=5)
+Hovertip(hardButton, "Significant randomization.\nAdds random cooldowns, wave points,\nand health/fire rate changes.", 10)
+
+chaosButton = Button(window, text="CHAOS", width=16,
+                    command=lambda: apply_difficulty_preset("Chaos"))
+chaosButton.grid(row=8, column=5, sticky=W, padx=5)
+Hovertip(chaosButton, "Maximum randomization.\nEnables all random features\nwith extreme settings.", 10)
+
 if randomCost.get():
     costTextButton.config(state=NORMAL)
 if noRestrictions.get():
