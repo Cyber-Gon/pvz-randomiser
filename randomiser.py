@@ -2115,13 +2115,18 @@ def randomiseWaveCount():
             else:
                 waves_per_flag[level] = 10
             wavecount_per_level[level] = waves_per_flag[level] * flags_per_level[level]
+        # 3-5 without interesting conveyors is boring, so let's not make it any longer - but 
+        # let's also not introduce dependency of level order generation on conveyor mode; so we want
+        # to do all randomisation anyway, and only then check for conveyor
+        if level == 25 and randomConveyors.get() != "It's Raining Seeds":
+            waves_per_flag[level] = 10
+            wavecount_per_level[level] = 20
+            flags_per_level[level] = 2
 
     if randomWaveCount.get() == "Flag count only":
         untouchable_wavecount.extend([2, 3])
     if randomWaveCount.get() == "Flag count only" or level_worlds[5] not in [0, 1]:
         untouchable_wavecount.append(5)
-    if randomConveyors.get() != "It's Raining Seeds":
-        untouchable_wavecount.append(25)
     if not randomisePlants.get():
         untouchable_wavecount.append(41)
     changeable_levels = [x for x in range(1, 51) if x not in untouchable_wavecount] # modified in add_level
