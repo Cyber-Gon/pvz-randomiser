@@ -1,6 +1,5 @@
 from   tkinter import *
 from   tkinter import ttk
-from tkinter.ttk import Style
 import platform
 import math
 import abc
@@ -728,6 +727,21 @@ print("Fire Rate Random:",   str(randomVarsCatFireRate.get()))
 print("Random Level Length:",str(randomWaveCount.get()))
 print("Random Worlds:",      str(randomWorld.get()))
 print("Random World Chance:",str(randomWorldChance.get()))
+
+def settings_lines_to_save():
+    return [(challengeMode.get()), (shopless.get()), (noRestrictions.get()), (noAutoSlots.get()), (imitater.get()),
+        (randomisePlants.get()), (seeded.get()), (upgradeRewards.get()), (randomWeights.get()),
+        (randomWavePoints.get()), startingWave.get(), randomCost.get(), randomCooldowns.get(),
+        costTextToggle.get(), randomZombies.get(), randomConveyors.get(), cooldownColoring.get(),
+        enableDave.get(), davePlantsCount.get(), randomVarsCatZombieHealth.get(), randomVarsCatFireRate.get(),
+        renderWeights.get(), renderWavePoints.get(), limitPreviews.get(), gamemode.get(), randomWaveCount.get(), randomWorld.get(),
+        randomWorldChance.get()]
+
+linesToWrite=[seed, (i+1), str(ReadMemory("int", 0x6A9EC0,0x82C,0x214)), str(ReadMemory("int",0x6A9EC0,0x82C, 0x28)), *settings_lines_to_save()]
+with open('saveFile.txt', 'w') as saveFile:
+    for k in range(len(linesToWrite)):
+        linesToWrite[k]=str(linesToWrite[k])+"\n"
+    saveFile.writelines(linesToWrite)
 
 
 ######### RANDOM VARS SYSTEM ########
@@ -1562,15 +1576,6 @@ current_level_container = [-1]
 current_level_flag_count = [1]
 current_level_waves_per_flag = [10]
 
-def settings_lines_to_save():
-    return [(challengeMode.get()), (shopless.get()), (noRestrictions.get()), (noAutoSlots.get()), (imitater.get()),
-        (randomisePlants.get()), (seeded.get()), (upgradeRewards.get()), (randomWeights.get()),
-        (randomWavePoints.get()), startingWave.get(), randomCost.get(), randomCooldowns.get(),
-        costTextToggle.get(), randomZombies.get(), randomConveyors.get(), cooldownColoring.get(),
-        enableDave.get(), davePlantsCount.get(), randomVarsCatZombieHealth.get(), randomVarsCatFireRate.get(),
-        renderWeights.get(), renderWavePoints.get(), limitPreviews.get(), gamemode.get(), randomWaveCount.get(), randomWorld.get(),
-        randomWorldChance.get()]
-
 def randomiseLevels(seed, ngplus=False):
     global noRestrictions
     random.seed(seed)
@@ -2231,9 +2236,9 @@ def randomiseLevelWorlds():
         worlds[i] = new_world
     roof_with_5_pots = 41 if worlds[41] == 4 else worlds_rng.choice([k for k,v in worlds.items() if v == 4 and k % 5 != 0])
     # change some fog levels to roof night, because fog is boring
-    roof_night_candidates = [k for k,v in worlds.items() if v == 3 and k not in untouchable and k not in [5,25]]
-    if len(roof_night_candidates) > 1:
-        roof_night_levels = worlds_rng.sample(roof_night_candidates, 2)
+    roof_night_candidates = [k for k,v in worlds.items() if v == 3 and k not in untouchable and k not in [5,25,40]]
+    if len(roof_night_candidates) > 0:
+        roof_night_levels = worlds_rng.sample(roof_night_candidates, min(3, len(roof_night_candidates)))
         for l in roof_night_levels:
             worlds[l] = 5
     assert len(worlds) == 50
@@ -2444,15 +2449,7 @@ def reset_from_random_worlds():
 def redistribute_aquatic_zombies():
     # snorkel appears on 5 of pool levels, and none of fog levels
     # dolphins appear on 3 of pool levels, and 1 of fog levels
-    # we also set starting level to 60 to make sure they don't spawn on 3-3/3-8
-
-    # set starting level to 60 to be sure
-    if 23 not in pool_levels and 23 not in fog_levels:
-        WriteMemory("int", 60, 0x69DA8C + 0x1C*11)
-        zombies[11][1] = 60
-    if 28 not in pool_levels and 28 not in fog_levels:
-        WriteMemory("int", 60, 0x69DA8C + 0x1C*14)
-        zombies[14][1] = 60
+    # we also change starting level to make sure they don't spawn on 3-3/3-8
     
     # find snorkels and dolphins which are allowed to stay
     snorkel_levels = (pool_levels & {23, 24, 25, 27, 30}) | (fog_levels & {23, 24, 25, 27, 30})
@@ -2479,6 +2476,15 @@ def redistribute_aquatic_zombies():
     for i in range(1,51):
         WriteMemory("int", int(i in snorkel_levels), 0x6A35B0 + 0xCC*11 + 4*i)
         WriteMemory("int", int(i in dolphin_levels), 0x6A35B0 + 0xCC*14 + 4*i)
+
+     # set starting level
+    if 23 not in pool_levels and 23 not in fog_levels:
+        WriteMemory("int", min(snorkel_levels), 0x69DA8C + 0x1C*11)
+        zombies[11][1] = min(snorkel_levels)
+    if 28 not in pool_levels and 28 not in fog_levels:
+        WriteMemory("int", min(dolphin_levels), 0x69DA8C + 0x1C*14)
+        zombies[14][1] = min(dolphin_levels)
+    
     return (snorkel_levels, dolphin_levels)
     
 def randomiseGraves():
@@ -2514,7 +2520,7 @@ def randomiseFog():
             min_fog = worlds_rng.choice(fog_conveyors)
         else:
             if level_worlds[31] == 3:
-                min_fog = 3
+                min_fog = 31
             else:
                 candidates = [l for l in fog_levels if l != 40]
                 min_fog = worlds_rng.choice(candidates)
@@ -4501,6 +4507,7 @@ if gamemode.get() == 'minigames':
         wait_level_end_or_game_close() # if game is closed, tha function exits the program after waiting for an input
              
 else:
+    #WriteMemory("int", [2], 0x409326) # make 2-5 short
     for i in range(50):
         current_level_container[0] = levels[i]
         if gamemode.get() == 'adventure':
@@ -4520,8 +4527,7 @@ else:
             linesToWrite=[seed, (i+1), str(ReadMemory("int", 0x6A9EC0,0x82C,0x214)), str(ReadMemory("int",0x6A9EC0,0x82C, 0x28)), *settings_lines_to_save()]
             saveFile=open('saveFile.txt', 'w')
             for k in range(len(linesToWrite)):
-                linesToWrite[k]=str(linesToWrite[k])
-                linesToWrite[k]=linesToWrite[k]+"\n"
+                linesToWrite[k]=str(linesToWrite[k])+"\n"
             saveFile.writelines(linesToWrite)
             saveFile.close()
             if i!=0 and (randomWavePoints.get()!="False" or randomWeights.get()):
