@@ -1504,7 +1504,7 @@ class ShitContainer(VarContainer):
             plant_indices=[40, 41, 42, 43, 44, 45, 46, 47]
         )
         invisible_zombies = VarWithStrIndices(
-            VarStr(var=OnOffVar("invisible_zombies", address=[0x0052E356, 0x0053402A], chance=18,
+            VarStr(var=OnOffVar("invisible_zombies", address=[0x0052E356, 0x0053402A], chance=11,
                                 datatype=["unsigned char", "unsigned char"],
                                 default=[[0x15, 0x75], [0x15, 0x75]],
                                 onValue=[0x50, 0x74],
@@ -1517,12 +1517,13 @@ class ShitContainer(VarContainer):
             affects_game_str=True,
         )
         shrooms_wake_up = VarWithStrIndices(
-            VarStr(var=ContinuousVar("shrooms_wake_up", address=0x004108CC, chance=30,
-                                    datatype="unsigned int",
-                                    default=0, # wake up timer
+            VarStr(var=ContinuousVar("shrooms_wake_up", address=[0x004108CC, 0x0040E140], chance=28,
+                                    datatype=["unsigned int", "unsigned char"],
+                                    default=[0, [0x7F, 0x0D]], # wake up timer, jmp if wake up timer already active
                                     min=1500, # wake up timer
                                     max=3000, # wake up timer
                                     enabled_on_levels=lambda l:(l == -1 or level_worlds[l] in [0, 2, 4]) and l not in [15, 35],
+                                    multivar_functions=[lambda _:[0x90, 0x90]] # allow to plant if wake up timer active
                                     ),
                     format_str="Mushrooms wake up after {value} seconds",
                     format_value_type=FORMAT_ACTUAL_VALUE,
@@ -1533,10 +1534,10 @@ class ShitContainer(VarContainer):
             plant_indices=[8, 9, 10, 12, 13, 14, 15, 24, 31, 42]
         )
         autoscroll_rule = VarWithStrIndices(
-            VarStr(var=VarWithRanges("autoscroll_rule", address=[0x004140CA,0x004140C0], chance=25,
+            VarStr(var=VarWithRanges("autoscroll_rule", address=[0x004140CA,0x004140C0], chance=22,
                                     datatype=["unsigned int","unsigned int"],
                                     default=[2500, 600], # base + random
-                                    ranges=[(40, 700, 1200), (60, 1200, 1700)], # (weight, min, max)
+                                    ranges=[(40, 900, 1200), (60, 1200, 1700)], # (weight, min, max)
                                     enabled_on_levels=lambda l:l == -1 or (l != 15 and l != 25 and l != 35 and l != 50),
                                     multivar_functions=[lambda main:int(main/2500*600)] # calculate random part
                                     ),
@@ -1547,7 +1548,7 @@ class ShitContainer(VarContainer):
             affects_game_str=True,
         )
         more_wavepoints = VarWithStrIndices(
-            VarStr(var=OnOffVar("more_wavepoints", address=0x00409748, chance=25,
+            VarStr(var=OnOffVar("more_wavepoints", address=0x00409748, chance=22,
                                 datatype="unsigned char",
                                 default=[0xB8, 0x56, 0x55, 0x55, 0x55, 0xF7, 0xEB, 0x8B, 0xC2],
                                 onValue=[0x8B, 0xCB, 0xD1, 0xE9, 0x8D, 0x49, 0x01, 0xEB, 0x07],
@@ -1566,9 +1567,9 @@ class ShitContainer(VarContainer):
                                     datatype=["unsigned int", "unsigned int", "unsigned int", "unsigned int", "unsigned int", "unsigned int", "float", "float"],
                                     default=[780, 40, 870, 845, 800, 825, 880.0, 800.0],
                                     min=580,
-                                    max=710,
+                                    max=700,
                                     enabled_on_levels=lambda l:l == -1 or l not in [15,35,45,50],
-                                    multivar_functions=[lambda main:60, lambda main:870-(780-main), lambda main:845-(780-main), lambda main:800-(780-main),
+                                    multivar_functions=[lambda main:40, lambda main:870-(780-main), lambda main:845-(780-main), lambda main:800-(780-main),
                                                         lambda main:825-(780-main), lambda main:880.0-(780-main), lambda main:800.0-(780-main)],
                                     needs_reset=True
                                     ),
@@ -1647,7 +1648,7 @@ class ShitContainer(VarContainer):
         lose_sun_on_plant_death = VarWithStrIndices(
             # jump to code; enable writing negative sun in seed bank; reset n of lost plants to 0; amount of sun lost
             VarStr(var=OnOffVar("lose_sun_on_plant_death",
-                                address=[0x0041605E, 0x0048983A, lose_sun_on_plant_death_address_data, lose_sun_on_plant_death_address+0x2A],
+                                address=[0x0041605E, 0x0048983A, lose_sun_on_plant_death_address_data, lose_sun_on_plant_death_address+0x34],
                                 chance=22,
                                 datatype=["unsigned char", "unsigned char", "unsigned int", "unsigned char"],
                                 default=[[0x89, 0x85, 0x5C, 0x55, 0x00, 0x00], 0xC8, 0, 40],
@@ -4594,8 +4595,8 @@ if randomVarsSystemEnabled:
     random_zombie_size_address_max = random_zombie_size_address + 0x28
     random_zombie_size_address_min = random_zombie_size_address + 0x2C
     lose_sun_on_plant_death_address = random_zombie_size_address + 0x40
-    lose_sun_on_plant_death_address_data = lose_sun_on_plant_death_address + 0x34
-    click_on_sun_plant_address = lose_sun_on_plant_death_address + 0x40
+    lose_sun_on_plant_death_address_data = lose_sun_on_plant_death_address + 0x40
+    click_on_sun_plant_address = lose_sun_on_plant_death_address + 0x50
     advance_cd_on_zombie_death_address = click_on_sun_plant_address + 0x30
     float_rebases_address = string_stuff_address + 0x800
     plants_string_address = string_stuff_address + 4 * 1024
@@ -4733,10 +4734,10 @@ if randomVarsSystemEnabled:
 
     # lose sun on plant death
     WriteMemory("unsigned char", [
-        0x89, 0x85, 0x5C, 0x55, 0x00, 0x00, 0x8B, 0x85, 0x98, 0x57, 0x00, 0x00, 0x03, 0x85,
+        0x89, 0x85, 0x5C, 0x55, 0x00, 0x00, 0x8B, 0x85, 0x00, 0x56, 0x00, 0x00, 0x85, 0xC0, 0x7D, 0x28, 0x8B, 0x85, 0x98, 0x57, 0x00, 0x00, 0x03, 0x85,
         0x9C, 0x57, 0x00, 0x00, 0x2B, 0x05, *lose_sun_on_plant_death_address_data.to_bytes(4,"little",signed=True), 0x0F, 0x8E, 0x10, 0x00,
         0x00, 0x00, 0x01, 0x05, *lose_sun_on_plant_death_address_data.to_bytes(4,"little",signed=True), 0x83, 0xAD, 0x60, 0x55, 0x00, 0x00,
-        0x32, 0x48, 0x7F, 0xF6, 0xE9, *(0x416064-lose_sun_on_plant_death_address-0x33).to_bytes(4,"little",signed=True)
+        0x32, 0x48, 0x7F, 0xF6, 0xE9, *(0x416064-lose_sun_on_plant_death_address-0x3D).to_bytes(4,"little",signed=True)
     ],
     lose_sun_on_plant_death_address)
     WriteMemory("unsigned int", [0], lose_sun_on_plant_death_address_data)
@@ -4763,6 +4764,7 @@ if randomVarsSystemEnabled:
     random_vars = RandomVars(seed, WriteMemory, True, plants_string_container, zombies_string_container, game_string_container,
                              code_address=string_stuff_address, catZombieHealth=actualRandomVarsZombieHealth, catFireRate=actualRandomVarsFireRate,
                              randomShit=randomShit.get())
+    random_vars.reset()
 
 if randomCooldowns.get():
     WriteMemory("unsigned char",[255,255],0x6512C2) # make peashooter/sunflower not red on first level
