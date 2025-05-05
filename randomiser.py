@@ -9,6 +9,7 @@ from inspect import signature
 from statistics import mean, median
 from idlelib.tooltip import Hovertip
 import atexit
+import os
 
 try:
     if platform.system() == "Windows":
@@ -235,8 +236,11 @@ randomVarsCatFireRate = StringVar(value="Off")
 limitPreviews    = BooleanVar(value=False)
 gamemode         = StringVar(value="adventure")
 randomWaveCount  = StringVar(value="False")
-randomWorld      = BooleanVar(value=True)
-randomWorldChance=IntVar(value=33)
+randomWorld      = BooleanVar(value=False)
+randomWorldChance= IntVar(value=33)
+randomShit       = BooleanVar(value=False)
+randomSound      = BooleanVar(value=False)
+randomSoundChance= IntVar(value=3)
 
 seed=str(random.randint(1,999999999999))
 
@@ -265,6 +269,12 @@ if hasSave:
         fileInfo.append("False") #randomWorld
     if len(fileInfo)<32:
         fileInfo.append("33") #randomWorldChance
+    if len(fileInfo)<33:
+        fileInfo.append("False") #randomShit
+    if len(fileInfo)<34:
+        fileInfo.append("False") #randomSound
+    if len(fileInfo)<35:
+        fileInfo.append("3") #randomSoundChance
     challengeMode.set(  eval(fileInfo[4].strip()))
     shopless.set(       eval(fileInfo[5].strip()))
     noRestrictions.set( eval(fileInfo[6].strip()))
@@ -288,11 +298,14 @@ if hasSave:
     randomVarsCatFireRate.set(str(fileInfo[24].strip()))
     renderWeights.set(str(fileInfo[25].strip()))
     renderWavePoints.set(str(fileInfo[26].strip()))
-    limitPreviews.set(str(fileInfo[27].strip()))
+    limitPreviews.set(str(fileInfo[27].strip()) == "True")
     gamemode.set(str(fileInfo[28].strip()))
     randomWaveCount.set(str(fileInfo[29].strip()))
     randomWorld.set(str(fileInfo[30].strip()))
     randomWorldChance.set(int(fileInfo[31].strip()))
+    randomShit.set(str(fileInfo[32].strip()) == "True")
+    randomSound.set(str(fileInfo[33].strip()) == "True")
+    randomSoundChance.set(int(fileInfo[34].strip()))
     if fileInfo[1]=="finished\n":
         hasSave=False
 
@@ -405,11 +418,14 @@ def continueButtonClick():
     randomVarsCatFireRate.set(str(fileInfo[24].strip()))
     renderWeights.set(str(fileInfo[25].strip()))
     renderWavePoints.set(str(fileInfo[26].strip()))
-    limitPreviews.set(str(fileInfo[27].strip()))
+    limitPreviews.set(str(fileInfo[27].strip()) == "True")
     gamemode.set(str(fileInfo[28].strip()))
     randomWaveCount.set(str(fileInfo[29].strip()))
     randomWorld.set(str(fileInfo[30].strip()))
     randomWorldChance.set(int(fileInfo[31].strip()))
+    randomShit.set(str(fileInfo[32].strip()) == "True")
+    randomSound.set(str(fileInfo[33].strip()) == "True")
+    randomSoundChance.set(int(fileInfo[34].strip()))
     saved.set(True)
     jumpLevel=""
     window.destroy()
@@ -509,6 +525,14 @@ Hovertip(seededButton, "Enabled seeded RNG in game - things like zombie spawns w
 upgradeButton=Checkbutton(window, text="UPGRADE REWARDS", width=16, variable=upgradeRewards, anchor="w")#command=upgradeButtonClick)
 upgradeButton.grid(row=4, column=3, sticky=W)
 Hovertip(upgradeButton, "RECOMMENDED - Some of level rewards, which are normally missing, might be changed to upgrade plants,\nso you don't need to buy them", 10)
+
+soundButton=Checkbutton(window, text="RANDOM SOUNDS", width=16, variable=randomSound, anchor="w")#command=upgradeButtonClick)
+soundButton.grid(row=5, column=3, sticky=W)
+Hovertip(soundButton, "Changes some sounds randomly, also randomizes music", 10)
+
+randomSoundSlider = Scale(window, from_=1, to=10, orient=HORIZONTAL, length=115, label="Random sound chance", variable=randomSoundChance)
+randomSoundSlider.config(font=('Arial', 8))
+randomSoundSlider.grid(row=6, column=3, sticky=W)
 
 randWeightsButton=Checkbutton(window, text="RANDOM WEIGHTS", width=16, variable=randomWeights, anchor="w", command=randomWeightsButtonClick)
 randWeightsButton.grid(row=1, column=1, sticky=W)
@@ -610,7 +634,7 @@ Hovertip(randomWavecountButton, """Randomizes the amount of zombie waves on most
 "On" means that both flag count and waves per flag is randomized.
 Works only in adventure mode.""", 10)
 
-randomWorldButton=Checkbutton(window, text="RANDOM WORLD", width=16, variable=randomWorld, anchor="w")#command=cooldownButtonClick)
+randomWorldButton=Checkbutton(window, text="RANDOM WORLD", width=16, variable=randomWorld, anchor="w")
 randomWorldButton.grid(row=3, column=6, sticky=W)
 Hovertip(randomWorldButton, "Randomizes world (day, night, pool, fog, roof) for most levels, doesn't work for minigames mode", 10)
 
@@ -618,9 +642,13 @@ randomWorldSlider = Scale(window, from_=0, to=100, orient=HORIZONTAL, length=115
 randomWorldSlider.config(font=('Arial', 8))
 randomWorldSlider.grid(row=4, column=6, sticky=W)
 
+randomShitButton=Checkbutton(window, text="RANDOM STUFF", width=16, variable=randomShit, anchor="w")
+randomShitButton.grid(row=6, column=6, sticky=W)
+Hovertip(randomShitButton, "Random stuff", 10)
+
 daveAmountLabel=Label(window, text="DAVE PLANTS COUNT:")
 daveAmountLabel.grid(row=5, column=5, sticky=W)
-daveAmountButton=ttk.Combobox(window, text="DAVE PLANTS COUNT", width=16, textvariable=davePlantsCount )#command=randomConveyorButtonClick)
+daveAmountButton=ttk.Combobox(window, text="DAVE PLANTS COUNT", width=16, textvariable=davePlantsCount )
 daveAmountButton["values"] = ["1", "2", "3", "4", "5", "random(1-5)"]
 daveAmountButton.state(["readonly"])
 daveAmountButton.bind('<<ComboboxSelected>>', lambda e: daveAmountButton.selection_clear())
@@ -687,7 +715,8 @@ outputText.grid(row=7, column=0, columnspan=10, sticky=W)
 outputText.insert(END, "How to play:\nCreate a new save file in game (don't start 1-1 yet).\nChoose settings.\nPress one of game modes buttons on the right.\n"
                   +"If you start adventure, beat 1-1 and then randomization will be on.\nIf you start minigames+survivals, you have to update interface"
                   +" (press \"Help\" in main menu for example) and then you can play mini-games or survivals in any order.\n"
-                  +"If you choose new game+, you do it the same as normal adventure mode.\n It's not recommended to play different mode other than selected one.")
+                  +"If you choose new game+, you do it the same as normal adventure mode.\n It's not recommended to play different mode other than selected one."
+                  +"\nIf you change settings between different playthrough, you should restart the game.")
 
 if randomCost.get():
     costTextButton.config(state=NORMAL)
@@ -727,6 +756,9 @@ print("Fire Rate Random:",   str(randomVarsCatFireRate.get()))
 print("Random Level Length:",str(randomWaveCount.get()))
 print("Random Worlds:",      str(randomWorld.get()))
 print("Random World Chance:",str(randomWorldChance.get()))
+print("Random Stuff:",       str(randomShit.get()))
+print("Random Sound:",       str(randomSound.get()))
+print("Random Sound Chance:",str(randomSoundChance.get()))
 
 def settings_lines_to_save():
     return [(challengeMode.get()), (shopless.get()), (noRestrictions.get()), (noAutoSlots.get()), (imitater.get()),
@@ -735,7 +767,7 @@ def settings_lines_to_save():
         costTextToggle.get(), randomZombies.get(), randomConveyors.get(), cooldownColoring.get(),
         enableDave.get(), davePlantsCount.get(), randomVarsCatZombieHealth.get(), randomVarsCatFireRate.get(),
         renderWeights.get(), renderWavePoints.get(), limitPreviews.get(), gamemode.get(), randomWaveCount.get(), randomWorld.get(),
-        randomWorldChance.get()]
+        randomWorldChance.get(), randomShit.get(), randomSound.get(), randomSoundChance.get()]
 
 linesToWrite=[seed, (i+1), str(ReadMemory("int", 0x6A9EC0,0x82C,0x214)), str(ReadMemory("int",0x6A9EC0,0x82C, 0x28)), *settings_lines_to_save()]
 with open('saveFile.txt', 'w') as saveFile:
@@ -753,7 +785,7 @@ FORMAT_PERCENT_CHANGE = 2
 FORMAT_PERCENT_OF_DEFAULT_VALUE = 3
 
 class RandomVariable(abc.ABC):
-    def __init__(self, name, address, chance, datatype, default, enabled_on_levels = None, multivar_functions=None):
+    def __init__(self, name, address, chance, datatype, default, enabled_on_levels = None, multivar_functions=None, needs_reset=False):
         # default can always be a list
         if any(type(x) == list for x in [address, datatype]) and not all(type(x) == list for x in [address, datatype, default, multivar_functions]):
             raise TypeError(f'incompatible types of arguments in constructor for {name}')
@@ -777,6 +809,7 @@ class RandomVariable(abc.ABC):
             self.multivar = False
             self.calculate_value = self.get_randomized_value
             self.write_value = self.write_single_value
+        self.needs_reset = needs_reset
 
     def can_be_enabled(self, level):
         if self.enabled_on_levels:
@@ -817,6 +850,9 @@ class RandomVariable(abc.ABC):
 
     def is_default(self):
         return self.default == self.value
+    
+    def reset_memory(self, WriteMemory):
+        self.write_value(self.address, self.value, self.datatype, WriteMemory, True)
 
     def current_main_value(self):
         return self.value[0] if self.multivar else self.value
@@ -829,7 +865,7 @@ class RandomVariable(abc.ABC):
             if format_type == FORMAT_ACTUAL_VALUE:
                 return "{:.1f}".format(abs(val))
             elif format_type == FORMAT_DELTA_CHANGE:
-                return "{:.1f}".format(abs(val))
+                return "{:.1f}".format(abs(val - default))
         elif format_type == FORMAT_ACTUAL_VALUE:
             return str(abs(val))
         elif format_type == FORMAT_DELTA_CHANGE:
@@ -852,11 +888,11 @@ class RandomVariable(abc.ABC):
             sign = val >= default
             word = more_less_words[int(not sign)] # first word is increase, second is decrease
             value_str = self.get_value_str(format_type, val, default)
-            return {'value': value_str, 'sign': '+' if sign else '-', 'change_word': word} 
+            plural = '' if value_str == '1' else 's'
+            return {'value': value_str, 'sign': '+' if sign else '-', 'change_word': word, 'plural': plural} 
         except Exception as e:
             print(f"{self.name} tooltip_values exception: {e}")
-            return {'value': "error", 'sign': '', 'change_word': ''}
-
+            return {'value': "error", 'sign': '', 'change_word': '', 'plural': ''}
 
     def randomize(self, random, level, WriteMemory, do_write):
         if self.test(random, self.chance, level) and self.can_be_enabled(level):
@@ -871,8 +907,8 @@ class RandomVariable(abc.ABC):
 
 
 class ContinuousVar(RandomVariable):
-    def __init__(self, name, address, chance, datatype, default, min, max, enabled_on_levels = None, multivar_functions=None):
-        super().__init__(name, address, chance, datatype, default, enabled_on_levels, multivar_functions)
+    def __init__(self, name, address, chance, datatype, default, min, max, enabled_on_levels = None, multivar_functions=None, needs_reset=False):
+        super().__init__(name, address, chance, datatype, default, enabled_on_levels, multivar_functions, needs_reset)
         if min > max:
             (min,max) = (max,min)
         self.min = min
@@ -886,8 +922,8 @@ class ContinuousVar(RandomVariable):
 
 
 class VarWithRanges(RandomVariable):
-    def __init__(self, name, address, chance, datatype, default, ranges:list[tuple], enabled_on_levels = None, multivar_functions=None):
-        super().__init__(name, address, chance, datatype, default, enabled_on_levels, multivar_functions)
+    def __init__(self, name, address, chance, datatype, default, ranges:list[tuple], enabled_on_levels = None, multivar_functions=None, needs_reset=False):
+        super().__init__(name, address, chance, datatype, default, enabled_on_levels, multivar_functions, needs_reset)
         # ranges is a list of tuples of (weight, min, max)
         assert type(ranges) == list and len(ranges) > 0
         assert all(type(x) == tuple and len(x) == 3 and isinstance(val, (int, float)) for x in ranges for val in x)
@@ -904,8 +940,8 @@ class VarWithRanges(RandomVariable):
 
 
 class DiscreteVar(RandomVariable):
-    def __init__(self, name, address, chance, datatype, default, choices:list, enabled_on_levels = None, multivar_functions=None):
-        super().__init__(name, address, chance, datatype, default, enabled_on_levels, multivar_functions)
+    def __init__(self, name, address, chance, datatype, default, choices:list, enabled_on_levels = None, multivar_functions=None, needs_reset=False):
+        super().__init__(name, address, chance, datatype, default, enabled_on_levels, multivar_functions, needs_reset)
         assert type(choices) == list and len(choices) > 0
         self.choices = choices
 
@@ -914,23 +950,30 @@ class DiscreteVar(RandomVariable):
 
 
 class OnOffVar(RandomVariable):
-    def __init__(self, name, address, chance, datatype, default, onValue, enabled_on_levels = None, multivar_functions=None):
-        super().__init__(name, address, chance, datatype, default, enabled_on_levels, multivar_functions)
+    def __init__(self, name, address, chance, datatype, default, onValue, enabled_on_levels = None, multivar_functions=None, needs_reset=False):
+        super().__init__(name, address, chance, datatype, default, enabled_on_levels, multivar_functions, needs_reset)
         self.onValue = onValue
 
     def get_randomized_value(self, random: random.Random, level):
         return self.onValue
     
-    def get_value_str(self, *args):
-        return 'Off' if self.is_default() else 'On'
+    def get_value_str(self, format_type, val, default):
+        if type(val) is list or type(default) is list:
+            return 'Off' if self.is_default() else 'On'
+        return super().get_value_str(format_type, val, default)
     
     def tooltip_values(self, format_type, more_less_words, modify_value_func = None, value_index = 0):
-        return {'value': self.get_value_str(), 'sign': '', 'change_word': ''}
+        val = self.value[value_index] if self.multivar else self.value
+        default = self.default[value_index] if self.multivar else self.default
+        if type(val) is list or type(default) is list:
+            return {'value': self.get_value_str(format_type, val, default), 'sign': '', 'change_word': '', 'plural': ''}
+        else:
+            return super().tooltip_values(format_type, more_less_words, modify_value_func, value_index)
 
 
 class FireRateVar(VarWithRanges):
-    def __init__(self, name, address, chance, datatype, default, ranges, unstable_range: tuple, enabled_on_levels=None, multivar_functions=None):
-        super().__init__(name, address, chance, datatype, default, ranges, enabled_on_levels, multivar_functions)
+    def __init__(self, name, address, chance, datatype, default, ranges, unstable_range: tuple, enabled_on_levels=None, multivar_functions=None, needs_reset=False):
+        super().__init__(name, address, chance, datatype, default, ranges, enabled_on_levels, multivar_functions, needs_reset)
         assert type(unstable_range) == tuple and len(unstable_range) == 2
         self.unstable_range = (min(unstable_range), max(unstable_range))
 
@@ -1006,9 +1049,10 @@ class FlagCountString(SimpleOutputString):
 
 
 class VarStr(OutputStringBase):
-    def __init__(self, var: RandomVariable, format_str: str, format_value_type: int = FORMAT_ACTUAL_VALUE, format_more_less_words=['more', 'less'], modify_value_func = None):
+    def __init__(self, var: RandomVariable, format_str: str, format_value_type: int = FORMAT_ACTUAL_VALUE, format_more_less_words=['more', 'less'], modify_value_func = None, value_index: int = 0):
         super().__init__(format_str, modify_value_func)
         self.var = var
+        self.value_index = value_index
         self.format_value_type = format_value_type
         self.format_more_less_words = format_more_less_words
 
@@ -1017,7 +1061,7 @@ class VarStr(OutputStringBase):
     
     def __str__(self) -> str:
         try:
-            return self.format_str.format(**self.var.tooltip_values(self.format_value_type, self.format_more_less_words, self.modify_value_func))
+            return self.format_str.format(**self.var.tooltip_values(self.format_value_type, self.format_more_less_words, self.modify_value_func, self.value_index))
         except: 
             return f"error in VarStr format_str.format, format={self.format_str}"
 
@@ -1179,6 +1223,10 @@ class VarContainer(abc.ABC):
     def randomize(self, level, do_write):
         pass
 
+    @abc.abstractmethod
+    def reset(self):
+        pass
+
     def chance(self, base: float, modifier: float) -> float:
         if modifier <= 0:
             return 0
@@ -1314,6 +1362,14 @@ class FireRateContainer(VarContainer):
         for v in self.potentially_unstable_vars:
             v.var_str.var.randomize(self.rng, level, self.WriteMemory, do_write, allow_unstable, 1.0 if allow_unstable else 0.7)
 
+    def reset(self):
+        for v in self.vars:
+            if v.var_str.var.needs_reset:
+                v.var_str.var.reset_memory(self.WriteMemory)
+        for v in self.potentially_unstable_vars:
+            if v.var_str.var.needs_reset:
+                v.var_str.var.reset_memory(self.WriteMemory)
+
 
 class HealthContainer(VarContainer):
     def __init__(self, seed, write_memory_func, do_activate_strings, plants_container, zombies_container, game_container, category):
@@ -1389,7 +1445,7 @@ class HealthContainer(VarContainer):
                                     default=20, choices=balloon_choices,
                                     enabled_on_levels=lambda l:l==-1 or (l in [33,34,39,40] and (not randomZombies.get() or not 16 in currentZombies))\
                                         or (l not in [33,34,39,40] and randomZombies.get() and 16 in currentZombies)),
-                        format_str="Balloon requires extra {value} hits to pop",
+                        format_str="Balloon requires extra {value} hit{plural} to pop",
                         format_value_type=FORMAT_DELTA_CHANGE,
                         modify_value_func=lambda h:h//20 # modify_value_func changes value (and default) before formatting, it doesn't affect actual randomization
                 ),
@@ -1414,44 +1470,273 @@ class HealthContainer(VarContainer):
         for v in self.vars:
             v.var_str.var.randomize(self.rng, level, self.WriteMemory, do_write)
 
+    def reset(self):
+        for v in self.vars:
+            if v.var_str.var.needs_reset:
+                v.var_str.var.reset_memory(self.WriteMemory)
+
+
+class ShitContainer(VarContainer):
+    def __init__(self, seed, write_memory_func, do_activate_strings, plants_container, zombies_container, game_container):
+        super().__init__(seed, write_memory_func, do_activate_strings, plants_container, zombies_container, game_container)
+        self.vars: list[VarWithStrIndices] = []
+        plant_on_graves = VarWithStrIndices(
+            VarStr(var=OnOffVar("plant_on_graves", address=0x0040E162, chance=25,
+                                datatype="unsigned char",
+                                default=[0x74],
+                                onValue=[0xEB],
+                                enabled_on_levels=lambda l:l != -1 and level_worlds[l] == 1 and l != 35,
+                                ),
+                    format_str="Can plant on graves",
+            ),
+            affects_game_str=True
+        )
+        upgrades_placed_anywhere = VarWithStrIndices(
+            VarStr(var=OnOffVar("upgrades_free_planting", address=[0x0040E47A, 0x0041D7D6], chance=20,
+                                datatype=["unsigned char", "unsigned char"],
+                                default=[[0x08], [0x75, 0x16, 0x8D, 0x58, 0xDF]], # jne 0041D7EE; lea ebx,[eax-21]
+                                onValue=[0x00],
+                                multivar_functions=[lambda _: [0xE9, 0xB4, 0x00, 0x00, 0x00]] # jmp 0041D88F
+                                ),
+                    format_str="Upgrade plants don't require base plant",
+            ),
+            affects_game_str=True,
+            plant_indices=[40, 41, 42, 43, 44, 45, 46, 47]
+        )
+        invisible_zombies = VarWithStrIndices(
+            VarStr(var=OnOffVar("invisible_zombies", address=[0x0052E356, 0x0053402A], chance=18,
+                                datatype=["unsigned char", "unsigned char"],
+                                default=[[0x15, 0x75], [0x15, 0x75]],
+                                onValue=[0x50, 0x74],
+                                multivar_functions=[lambda _: [0x50, 0x74]],
+                                enabled_on_levels=lambda l:l == -1 or flags_per_level[l] == 1,
+                                needs_reset=True
+                                ),
+                    format_str="Zombies are invisible",
+            ),
+            affects_game_str=True,
+        )
+        shrooms_wake_up = VarWithStrIndices(
+            VarStr(var=ContinuousVar("shrooms_wake_up", address=0x004108CC, chance=30,
+                                    datatype="unsigned int",
+                                    default=0, # wake up timer
+                                    min=1500, # wake up timer
+                                    max=3000, # wake up timer
+                                    enabled_on_levels=lambda l:(l == -1 or level_worlds[l] in [0, 2, 4]) and l not in [15, 35],
+                                    ),
+                    format_str="Mushrooms wake up after {value} seconds",
+                    format_value_type=FORMAT_ACTUAL_VALUE,
+                    modify_value_func=lambda time:time/100
+
+            ),
+            affects_game_str=True,
+            plant_indices=[8, 9, 10, 12, 13, 14, 15, 24, 31, 42]
+        )
+        autoscroll_rule = VarWithStrIndices(
+            VarStr(var=VarWithRanges("autoscroll_rule", address=[0x004140CA,0x004140C0], chance=25,
+                                    datatype=["unsigned int","unsigned int"],
+                                    default=[2500, 600], # base + random
+                                    ranges=[(40, 700, 1200), (60, 1200, 1700)], # (weight, min, max)
+                                    enabled_on_levels=lambda l:l == -1 or (l != 15 and l != 25 and l != 35 and l != 50),
+                                    multivar_functions=[lambda main:int(main/2500*600)] # calculate random part
+                                    ),
+                    format_str="Autoscroll rule reduced to {value} sec",
+                    format_value_type=FORMAT_ACTUAL_VALUE,
+                    modify_value_func=lambda time:time/100
+            ),
+            affects_game_str=True,
+        )
+        more_wavepoints = VarWithStrIndices(
+            VarStr(var=OnOffVar("more_wavepoints", address=0x00409748, chance=25,
+                                datatype="unsigned char",
+                                default=[0xB8, 0x56, 0x55, 0x55, 0x55, 0xF7, 0xEB, 0x8B, 0xC2],
+                                onValue=[0x8B, 0xCB, 0xD1, 0xE9, 0x8D, 0x49, 0x01, 0xEB, 0x07],
+                                enabled_on_levels=lambda l:gamemode.get() != 'ng+' and (l == -1 or l not in [15,35,50]),
+                                needs_reset=True
+                                ),
+                    format_str="Wave points increase per 2 waves instead of 3",
+            ),
+            affects_game_str=True,
+        )
+        spawn_coords = VarWithStrIndices(
+            # most zombies x-pos, random for most zombies x-pos, vaulters, gargs, zamboni, catapult, bobsled, flag
+            VarStr(var=ContinuousVar("spawn_coords", address=[0x005225A5, 0x00522598, 0x00522CE1, 0x00523D3E, 0x00522DF5, 0x00522E97,
+                                                              float_rebase(0x005230FB, 'float', 880.0), float_rebase(0x0052327E, 'float', 800.0)],
+                                    chance=25,
+                                    datatype=["unsigned int", "unsigned int", "unsigned int", "unsigned int", "unsigned int", "unsigned int", "float", "float"],
+                                    default=[780, 40, 870, 845, 800, 825, 880.0, 800.0],
+                                    min=580,
+                                    max=710,
+                                    enabled_on_levels=lambda l:l == -1 or l not in [15,35,45,50],
+                                    multivar_functions=[lambda main:60, lambda main:870-(780-main), lambda main:845-(780-main), lambda main:800-(780-main),
+                                                        lambda main:825-(780-main), lambda main:880.0-(780-main), lambda main:800.0-(780-main)],
+                                    needs_reset=True
+                                    ),
+                    format_str="Zombies spawn {value} more left",
+                    format_value_type=FORMAT_PERCENT_CHANGE
+            ),
+            affects_game_str=True,
+        )
+        extra_slots = VarWithStrIndices(
+            VarStr(var=DiscreteVar("extra_slots", address=[0x0041BFE9, 0x0041C004, 0x0041BFF7], chance=30,
+                                    datatype=["unsigned char", "unsigned char", "unsigned char"],
+                                    default=[6, [0xCC, 0xCC, 0xCC, 0xCC, 0xCC, 0xCC, 0xCC, 0xCC, 0xCC, 0xCC, 0xCC, 0xCC], [0x5E, 0xC3]],
+                                    choices=[7, 7, 8],
+                                    enabled_on_levels=lambda l:l % 5 != 0 and ((gamemode.get() != 'adventure' and shopless.get()) or (gamemode.get() == 'adventure' and global_level_index >= 6)),
+                                    multivar_functions=[lambda _:[0x83, 0xF8, 0x0A, 0x7E, 0x05, 0xB8, 0x0A, 0x00, 0x00, 0x00, 0x5E, 0xC3],
+                                                        lambda _:[0xEB, 0x0B]],
+                                    ),
+                    format_str="Extra {value} slot{plural}",
+                    format_value_type=FORMAT_DELTA_CHANGE
+            ),
+            affects_game_str=True,
+        )
+        fifty_percent_rule = VarWithStrIndices(
+            VarStr(var=VarWithRanges("50_percent", address=[float_rebase(0x00414080, "float", 0.5), float_rebase(0x00414073, "float", 0.65)],
+                                    chance=30,
+                                    datatype=["float", "float"],
+                                    default=[0.5, 0.65],
+                                    ranges=[(80, 0.60, 0.75), (50, 0.35, 0.40), (50, 0.75, 0.90)],
+                                    enabled_on_levels=lambda l:l!=15 and l!=35 and l!=50,
+                                    multivar_functions=[lambda main:main+0.3*(1-main)],
+                                    needs_reset=True
+                                    ),
+                    format_str="50% rule changed to {value}% rule",
+                    format_value_type=FORMAT_ACTUAL_VALUE,
+                    modify_value_func=lambda v:(1-v)*100
+            ),
+            affects_game_str=True,
+        )
+        random_zombie_sizes_var = VarWithStrIndices(
+            VarStr(var=OnOffVar("zombie_sizes", address=0x5226DD, chance=20,
+                                datatype="unsigned char",
+                                default=[0xD9, 0xE8, 0x88, 0x5F, 0x78],
+                                onValue=[0xE9, *(random_zombie_size_address-0x005226E2).to_bytes(4,"little",signed=True)], # jmp to new code
+                                enabled_on_levels=lambda l:l!=25,
+                                needs_reset=True
+                                ),
+                    format_str="Random zombie sizes",
+            ),
+            affects_game_str=True,
+        )
+        extra_plant_hp = VarWithStrIndices(
+            # most plants, garlic, spikerock
+            VarStr(var=OnOffVar("extra_plant_hp", address=[0x0045DC55, 0x0045E242, 0x0045E5C3], chance=25,
+                                datatype=["unsigned int", "unsigned int", "unsigned int"],
+                                default=[300, 400, 450],
+                                onValue=[600],
+                                multivar_functions=[lambda main:800, lambda main:900]
+                                ),
+                    format_str="Normal plants have double hp (not nuts/pumpkins)",
+            ),
+            affects_game_str=True,
+        )
+        class StartingSunVar(DiscreteVar):
+            def test(self, random: random.Random, chance, level):
+                if gamemode.get() != 'minigames' and (level_worlds[level] == 1 or level_worlds[level] == 3 or level_worlds[level] == 5):
+                    chance = (chance / 100)**0.5 * 100 # increase chance on night levels
+                return super().test(random, chance, level)
+        starting_sun = VarWithStrIndices(
+            VarStr(
+                var=StartingSunVar("starting sun", 0x0040b09b, chance=60, datatype="int",
+                                    default=50, choices=[75, 75, 100], enabled_on_levels=lambda l: l % 5 != 0),
+                format_str="Starting sun: {value}",
+                format_value_type=FORMAT_ACTUAL_VALUE),
+            affects_game_str=True
+        )
+        lose_sun_on_plant_death = VarWithStrIndices(
+            # jump to code; enable writing negative sun in seed bank; reset n of lost plants to 0; amount of sun lost
+            VarStr(var=OnOffVar("lose_sun_on_plant_death",
+                                address=[0x0041605E, 0x0048983A, lose_sun_on_plant_death_address_data, lose_sun_on_plant_death_address+0x2A],
+                                chance=22,
+                                datatype=["unsigned char", "unsigned char", "unsigned int", "unsigned char"],
+                                default=[[0x89, 0x85, 0x5C, 0x55, 0x00, 0x00], 0xC8, 0, 40],
+                                onValue=[0xE9, *(lose_sun_on_plant_death_address-0x416063).to_bytes(4,"little",signed=True), 0x90],
+                                enabled_on_levels=lambda l:l%5!=0,
+                                multivar_functions=[lambda main:0xC0, lambda main:0,
+                                                    lambda main,level:int(self.rng.randint(15,50) * (1 if (level == -1 or level_worlds[level] in [0,2,4]) else 0.34))]
+                                ),
+                    format_str="Lose {value} sun when plant dies/shoveled",
+                    value_index=3 # sun lost per plant
+            ),
+            affects_game_str=True,
+        )
+        click_on_sun_plant = VarWithStrIndices(
+            VarStr(var=OnOffVar("click_on_sun_plant", address=0x00466390, chance=25,
+                                datatype="unsigned char",
+                                default=[0x83, 0x7E, 0x3C, 0x25, 0x57],
+                                onValue=[0xE9, *(click_on_sun_plant_address-0x466395).to_bytes(4,"little",signed=True)],
+                                enabled_on_levels=lambda l:l%5!=0,
+                                ),
+                    format_str="Clicking on sun plants accelerates production",
+            ),
+            affects_game_str=True,
+        )
+        advance_cd_on_zombie_death = VarWithStrIndices(
+            VarStr(var=OnOffVar("advance_cd_on_zombie_death", address=0x00530633, chance=25,
+                                datatype="unsigned char",
+                                default=[0x5F, 0x8B, 0xE5, 0x5D, 0xC3],
+                                onValue=[0xE9, *(advance_cd_on_zombie_death_address-0x530638).to_bytes(4,"little",signed=True)],
+                                enabled_on_levels=lambda l:l%5!=0,
+                                ),
+                    format_str="Killing zombies advances cooldowns by 2 seconds",
+            ),
+            affects_game_str=True,
+        )
+        self.vars.append(plant_on_graves)
+        self.vars.append(upgrades_placed_anywhere)
+        self.vars.append(invisible_zombies)
+        self.vars.append(shrooms_wake_up)
+        self.vars.append(autoscroll_rule)
+        self.vars.append(more_wavepoints)
+        self.vars.append(spawn_coords)
+        self.vars.append(extra_slots)
+        self.vars.append(fifty_percent_rule)
+        self.vars.append(random_zombie_sizes_var)
+        self.vars.append(extra_plant_hp)
+        self.vars.append(lose_sun_on_plant_death)
+        self.vars.append(click_on_sun_plant)
+        self.vars.append(advance_cd_on_zombie_death)
+        self.vars.append(starting_sun)
+
+        self.add_vars_to_string_containers(self.vars)
+
+
+    def randomize(self, level, do_write):
+        for v in self.vars:
+            v.var_str.var.randomize(self.rng, level, self.WriteMemory, do_write)
+
+    def reset(self):
+        for v in self.vars:
+            if v.var_str.var.needs_reset:
+                v.var_str.var.reset_memory(self.WriteMemory)
+
 
 class RandomVars(VarContainer):
     def __init__(self, seed, write_memory_func, do_activate_strings, plants_container: IndexedStrContainer, 
                  zombies_container: IndexedStrContainer, game_container: NonIndexedStrContainer, code_address,
-                 catZombieHealth: int, catFireRate: int):
+                 catZombieHealth: int, catFireRate: int, randomShit:bool):
         super().__init__(seed, write_memory_func, do_activate_strings, plants_container, zombies_container, game_container)
         self.seed = seed
         catFireRate = max(catFireRate, 0)
         catZombieHealth = max(catZombieHealth, 0)
+        randomShit = int(randomShit) * 5
         self.code_address = code_address
         self.catZombieHealth = catZombieHealth
         self.catFireRate = catFireRate
         self.vars: list[VarWithStrIndices] = []
         self.unprintable_vars: list[RandomVariable] = []
         self.var_containers: list[VarContainer] = []
-        self.any_category_enabled = catZombieHealth or catFireRate # use to make sure that system is enabled for randomization and not just for string rendering
-        # we can add categories check here before adding vars, also can adjust their chances
-        if self.any_category_enabled:
-            class StartingSunVar(DiscreteVar):
-                def test(self, random: random.Random, chance, level):
-                    if gamemode.get() != 'minigames' and (level_worlds[level] == 1 or level_worlds[level] == 3 or level_worlds[level] == 5):
-                        chance = (chance / 100)**0.5 * 100 # increase chance on night levels
-                    return super().test(random, chance, level)
-            self.vars.append(VarWithStrIndices(
-                VarStr(
-                    var=StartingSunVar("starting sun", 0x0040b09b, chance=self.chance(55, mean([catZombieHealth, catFireRate])), datatype="int",
-                                        default=50, choices=[75, 75, 100], enabled_on_levels=lambda l: l % 5 != 0),
-                    format_str="Starting sun amount is {change_word} to {value}",
-                    format_value_type=FORMAT_ACTUAL_VALUE,
-                    format_more_less_words=['increased', 'decreased']),
-                affects_game_str=True
-            ))
+        self.any_category_enabled = catZombieHealth or catFireRate or randomShit # use to make sure that system is enabled for randomization and not just for string rendering
         if catZombieHealth:
             self.var_containers.append(HealthContainer(self.seed+"health", write_memory_func, do_activate_strings, plants_container,
                                         zombies_container, game_container, catZombieHealth))
         if catFireRate:
             self.var_containers.append(FireRateContainer(self.seed+"firerate", write_memory_func, do_activate_strings, plants_container,
                                         zombies_container, game_container, catFireRate))
+        if randomShit:
+            self.var_containers.append(ShitContainer(self.seed+"shit", write_memory_func, do_activate_strings, plants_container,
+                                        zombies_container, game_container))
         self.add_vars_to_string_containers(self.vars)
             
 
@@ -1468,6 +1753,30 @@ class RandomVars(VarContainer):
             self.game_strings.update_strings(self.WriteMemory)
             if self.game_strings.get_amount_of_lines() > 1: # first line is always hotkey hint
                 self.WriteMemory("unsigned char", [1], self.code_address) # force printing
+
+    def reset(self):
+        for v in self.vars:
+            if v.var_str.var.needs_reset:
+                v.var_str.var.reset_memory(self.WriteMemory)
+        for v in self.unprintable_vars:
+            if v.needs_reset:
+                v.reset_memory(self.WriteMemory)
+        for c in self.var_containers:
+            c.reset()
+
+
+float_rebase_current_offset = 0
+def float_rebase(address: int, datatype: str, original_value: float):
+    global float_rebase_current_offset
+    if datatype != 'float' and datatype != 'double':
+        raise TypeError('Wrong datatype')
+    if datatype == 'double' and float_rebase_current_offset % 8 != 0:
+        float_rebase_current_offset = float_rebase_current_offset // 8 + 8
+    write_address = float_rebases_address + float_rebase_current_offset
+    WriteMemory(datatype, [original_value], write_address)
+    WriteMemory("unsigned int", [write_address], address)
+    float_rebase_current_offset += (8 if datatype == 'double' else 4)
+    return write_address
 
 #endregion
 ######### END OF RANDOM VARS SYSTEM ########
@@ -1488,6 +1797,8 @@ dave_rng = random.Random(seed+'dave')
 upgrade_rng = random.Random(seed+'upgrade')
 wavecount_rng = random.Random(seed+'wavecount')
 worlds_rng = random.Random(seed+'worlds')
+sounds_rng = random.Random(seed+'sounds')
+
 # level order and plants use random.seed to reseed global random object, so I don't make separate Random for them
 
 LEVEL_PLANTS = [
@@ -1533,6 +1844,8 @@ LEVEL_STRINGS = ["Not a level",
     "4-1", "4-2", "4-3", "4-4", "4-5", "4-6", "4-7", "4-8", "4-9", "4-10",
     "5-1", "5-2", "5-3", "5-4", "5-5", "5-6", "5-7", "5-8", "5-9", "5-10"
 ]
+
+global_level_index = 0
 
 default_flags = [1, 1, 1, 1, 1, 1, 2, 1, 2, 2, 1, 2, 1, 2, 1, 1, 2, 1, 2, 2, 1, 2, 2, 3, 2, 2, 3, 2, 3, 3, 1, 2, 1, 2, 2, 1, 2, 1, 2, 2, 1, 2, 2, 3, 2, 2, 3, 2, 3, 3]
 default_wavecount = [4, 6, 8, 10, 8] + [default_flags[x] * 10 for x in range(5, 50)]
@@ -2074,6 +2387,68 @@ def randomiseDavePlantCount():
             daveActualPlantCount + 1 - daveActualPlantCount // 5
             ], 
             0x484045)
+
+def random_sound():
+    s = sounds_rng.randint(0, 103)
+    while s in [14, 33, 49]: # endless sounds
+        s = sounds_rng.randint(0, 103)
+    return s
+
+def sounds_decorator(f):
+    addresses = {0x40d06e: 52, 0x40d0d2: 7, 0x410f44: 9, 0x4110c3: 9, 0x4111a0: 9, 0x4111cf: 8, 0x411cdc: 75, 0x41cfcd: 4,
+                0x41d286: 4, 0x432a71: 94, 0x432ae0: 87, 0x432be8: 31, 0x44e196: 80, 0x44e889: 47,
+                0x44e7e4: 48, 0x4585bf: 64, 0x4586c1: 1, 0x458e1d: 36, 0x458e67: 2, 0x45e313: 57, 0x45e39b: 54,
+                0x45ee68: 1, 0x45f771: 3, 0x45fa9e: 4, 0x45fc0f: 63, 0x45ff04: 80, 0x4600d5: 68, 0x460aa7: 41,
+                0x460d46: 40, 0x460ee4: 57, 0x4611d1: 76, 0x46130d: 63, 0x46141e: 61, 0x462c7f: 21, 0x4631f7: 83,
+                0x466764: 55, 0x4667be: 65, 0x4668df: 56, 0x466933: 65, 0x466b64: 69, 0x466e6a: 30, 0x466f74: 3, 0x466fa5: 29,
+                0x466ff5: 27, 0x46dd8e: 32, 0x46dded: 43, 0x46de52: 38, 0x46deb0: 62, 0x46df22: 46, 0x46df8a: 58, 0x46dfdc: 1,
+                0x46ed11: 39, 0x46ee62: 3, 0x46d7f8: 1, 0x46d77d: 73, 0x46d712: 1, 0x524e1a: 68, 0x524f87: 44,
+                0x52502c: 73, 0x52531f: 74, 0x5255e6: 26, 0x5257c7: 37, 0x525d7f: 66, 0x525fb0: 48, 0x526087: 74,
+                0x5260f4: 78, 0x52635e: 53, 0x52645c: 50, 0x526468: 52, 0x5268f2: 53, 0x526bad: 34, 0x526c0b: 23,
+                0x526e8b: 40, 0x526f9a: 47, 0x52718c: 88, 0x5274de: 3, 0x527628: 56, 0x52767c: 65, 0x527883: 3, 0x527eb3: 40,
+                0x5283b0: 80, 0x528404: 83, 0x5285e9: 80, 0x52894f: 79, 0x528e9d: 100, 0x529ea1: 25, 0x52a455: 25, 0x52b3c6: 70,
+                0x52b717: 72, 0x52b7c2: 72, 0x52b9c3: 68, 0x52ba7c: 5, 0x52bad1: 6, 0x52bb21: 5, 0x52ea04: 22, 0x52ebde: 23,
+                0x52ec5d: 22, 0x52ed8b: 23, 0x52f80d: 19, 0x52f852: 52, 0x530696: 51, 0x5306f8: 60, 0x530756: 16, 0x5309b3: 18,
+                0x53139c: 46, 0x53348f: 91, 0x53397a: 28, 0x533e66: 23}
+    # this addresses are used in 1 place of so in whole game, so we always randomize them so that on the only level you hear these sounds they are different
+    always_change_addresses = {0x421b91: 47, 0x421c97: 46, 0x421d04: 58, 0x421d84: 48, 0x423727: 17,
+                               0x424ba0: 4, 0x462e45: 55, 0x462f2d: 20, 0x533bbd: 45, 0x533c8a: 45,
+                               0x533ce2: 40, 0x534b72: 89, 0x534d8c: 89, 0x534f3a: 89, 0x5350ab: 40,
+                               0x535177: 89, 0x5351cb: 44, 0x535420: 89, 0x535a4b: 93, 0x535c47: 89,
+                               0x536058: 91, 0x53614e: 40, 0x536695: 40}
+    if gamemode.get() == 'minigames':
+        always_change_addresses |= {0x4205e7: 68, 0x42097f: 68, 0x420f60: 15, 0x4254ef: 15, 0x44e33f: 82}
+    # chech for debugging - instruction is either mov esi,value or mov eax,value (use with minigames mode so all addresses are checked)
+    # if instruction is esi, have to check whether esi register used down the line to not overwrite something important
+    # for k in addresses|always_change_addresses:
+    #     instruction = ReadMemory("unsigned char", k-1)
+    #     assert(instruction in [0xBE, 0xB8])
+
+    # random music code
+    WriteMemory("unsigned char", [
+        0xE8, 0x7B, 0x1B, 0xE0, 0xFF, 0x84, 0xC0, 0x0F, 0x85, 0x9B, 0x9A, 0xE0, 0xFF, 0xE9, 0x53, 0x9B, 0xE0, 0xFF, 0x90,
+    ],0x651DA0)
+    WriteMemory("unsigned char", [0xE9, 0x1B, 0x66, 0x1F, 0x00, 0x90], 0x45B780) # jmp 651DA0
+    def wrapper(*args, **kwargs):
+        f(*args, addresses=addresses, always_change_addresses=always_change_addresses, **kwargs)
+    return wrapper
+
+@sounds_decorator
+def randomiseSounds(**kwargs):
+    if 'addresses' not in kwargs or 'always_change_addresses' not in kwargs:
+        raise ValueError('missing addresses or always_change_addresses key in kwargs')
+    for addr in kwargs['addresses']:
+        if sounds_rng.randint(1,100) <= 3 + randomSoundChance.get() * 7:
+            WriteMemory("unsigned int", [random_sound()], addr)
+        else:
+            WriteMemory("unsigned int", [kwargs['addresses'][addr]], addr) # reset
+    for addr in kwargs['always_change_addresses']:
+        WriteMemory("unsigned int", [random_sound()], addr)
+    music_track = sounds_rng.randint(1,12) # track 13 crashes for some reason
+    if gamemode != 'minigames' and global_level_index == 49:
+        music_track = 12 # brainiac maniac
+    WriteMemory("unsigned char", [music_track], 0x45B908)
+    WriteMemory("unsigned int", [music_track], 0x45B914)
 
 untouchable_wavecount = [1, 15, 35, 50]
 
@@ -2903,7 +3278,7 @@ def randomiseConveyors(in_seed):
                     r_dict[19]=5
                     if at_night:
                         r_dict[24]=5
-                        if level != "4-10": # 4-10 hardcoded to not have fog, but with random worlds other conveyors can have fog
+                        if level != "4-10" and level != "invs": # 4-10 hardcoded to not have fog, but with random worlds other conveyors can have fog
                             r_dict[25]=7 # add plantern
                 if at_night:
                     for i in range(8, 16):
@@ -4215,6 +4590,14 @@ if randomVarsSystemEnabled:
     hotkey_code_address = string_stuff_address + 0x100
     string_code_address = string_stuff_address + 0x120
     string_code_address_2 = string_stuff_address + 0x1C0 # used to print on selection screen
+    random_zombie_size_address = string_stuff_address + 0x280
+    random_zombie_size_address_max = random_zombie_size_address + 0x28
+    random_zombie_size_address_min = random_zombie_size_address + 0x2C
+    lose_sun_on_plant_death_address = random_zombie_size_address + 0x40
+    lose_sun_on_plant_death_address_data = lose_sun_on_plant_death_address + 0x34
+    click_on_sun_plant_address = lose_sun_on_plant_death_address + 0x40
+    advance_cd_on_zombie_death_address = click_on_sun_plant_address + 0x30
+    float_rebases_address = string_stuff_address + 0x800
     plants_string_address = string_stuff_address + 4 * 1024
     zombies_string_address = plants_string_address + 26 * 1024
     game_string_address = zombies_string_address + 18 * 1024
@@ -4270,6 +4653,19 @@ if randomVarsSystemEnabled:
         0xEB,
         ],
         0x40E7E8)
+    # increase width of tooltips
+    WriteMemory("unsigned char", [
+        0x7F,
+        ],
+        0x51A77A)
+    WriteMemory("unsigned char", [
+        0x90, 0x90
+        ],
+        0x51A77B)
+    WriteMemory("unsigned char", [
+        0x00, 0x01
+        ],
+        0x51A77E)
     # Rendering strings on board
     string_print_x_coord = 50
     string_print_y_coord = 116 # can't be higher than 127 with current implementation!
@@ -4323,8 +4719,50 @@ if randomVarsSystemEnabled:
         0xE9, *list((hotkey_code_address-0x41B867).to_bytes(4,"little",signed=True)),
         ],
         0x41B862)
+    
+    # Random zombie sizes effect
+    WriteMemory("unsigned char", [
+        0x88, 0x5F, 0x78, 0xD9, 0x05, *random_zombie_size_address_max.to_bytes(4,"little",signed=True), 0x51, 0xD9, 0x1C, 0x24,
+        0xD9, 0x05, *random_zombie_size_address_min.to_bytes(4,"little",signed=True),
+        0x51, 0xD9, 0x1C, 0x24, 0xE8, *(0x511CB0-random_zombie_size_address-0x1C).to_bytes(4,"little",signed=True),
+        0x83, 0xC4, 0x08, 0xE9, *(0x5226E2-random_zombie_size_address-0x24).to_bytes(4,"little",signed=True),
+    ],
+    random_zombie_size_address)
+    WriteMemory("float", [1.5], random_zombie_size_address_max)
+    WriteMemory("float", [0.5], random_zombie_size_address_min)
+
+    # lose sun on plant death
+    WriteMemory("unsigned char", [
+        0x89, 0x85, 0x5C, 0x55, 0x00, 0x00, 0x8B, 0x85, 0x98, 0x57, 0x00, 0x00, 0x03, 0x85,
+        0x9C, 0x57, 0x00, 0x00, 0x2B, 0x05, *lose_sun_on_plant_death_address_data.to_bytes(4,"little",signed=True), 0x0F, 0x8E, 0x10, 0x00,
+        0x00, 0x00, 0x01, 0x05, *lose_sun_on_plant_death_address_data.to_bytes(4,"little",signed=True), 0x83, 0xAD, 0x60, 0x55, 0x00, 0x00,
+        0x32, 0x48, 0x7F, 0xF6, 0xE9, *(0x416064-lose_sun_on_plant_death_address-0x33).to_bytes(4,"little",signed=True)
+    ],
+    lose_sun_on_plant_death_address)
+    WriteMemory("unsigned int", [0], lose_sun_on_plant_death_address_data)
+
+    # Click on sun plants
+    countdown_removed_per_click = 35 # max is 127
+    WriteMemory("unsigned char", [
+        0x83, 0x7E, 0x24, 0x01, 0x74, 0x0C, 0x83, 0x7E, 0x24, 0x09, 0x74, 0x06, 0x83,
+        0x7E, 0x24, 0x29, 0x75, 0x04, 0x83, 0x6E, 0x58, countdown_removed_per_click, 0x83, 0x7E, 0x3C, 0x25,
+        0x57, 0xE9, *(0x466395-click_on_sun_plant_address-0x20).to_bytes(4,"little",signed=True)
+    ],
+    click_on_sun_plant_address)
+
+    # Advance cooldowns on zombie death
+    advance = 200
+    WriteMemory("unsigned char", [
+        0x8B, 0x47, 0x6C, 0x85, 0xC0, 0x7C, 0x24, 0x8B, 0x47, 0x04, 0x8B, 0x80, 0x44, 0x01, 0x00, 0x00,
+        0x83, 0xC0, 0x28, 0xB9, 0x0A, 0x00, 0x00, 0x00, 0x80, 0x78, 0x49, 0x00, 0x74, 0x07, 0x81, 0x40,
+        0x24, *(advance).to_bytes(4,"little",signed=True), 0x83, 0xC0, 0x50, 0x49, 0x7F, 0xED, 0x5F, 0x8B, 0xE5, 0x5D, 0xC3,
+        0xE9, *(0x530638-advance_cd_on_zombie_death_address-0x35).to_bytes(4,"little",signed=True),
+    ],
+    advance_cd_on_zombie_death_address)
+
     random_vars = RandomVars(seed, WriteMemory, True, plants_string_container, zombies_string_container, game_string_container,
-                             code_address=string_stuff_address, catZombieHealth=actualRandomVarsZombieHealth, catFireRate=actualRandomVarsFireRate)
+                             code_address=string_stuff_address, catZombieHealth=actualRandomVarsZombieHealth, catFireRate=actualRandomVarsFireRate,
+                             randomShit=randomShit.get())
 
 if randomCooldowns.get():
     WriteMemory("unsigned char",[255,255],0x6512C2) # make peashooter/sunflower not red on first level
@@ -4467,6 +4905,7 @@ if gamemode.get() == 'minigames':
     if savePoint > 150:
         savePoint = 150
     for i in range(1000000):
+        global_level_index = i
         if saved.get():
             if savePoint-1==i:
                 saved.set(False)
@@ -4497,6 +4936,8 @@ if gamemode.get() == 'minigames':
             # optimization - we don't actually write random vars and strings when using jump-to-level, but still randomize then (so seed works)
             WriteMemory("unsigned char", [12 for i in range(56)], 0x651308)
             random_vars.randomize(-1, do_write=not saved.get())
+        if not saved.get() and randomSound.get():
+            randomiseSounds()
         if saved.get():
             Sleep(1)
         else:
@@ -4514,6 +4955,7 @@ if gamemode.get() == 'minigames':
 else:
     #WriteMemory("int", [2], 0x409326) # make 2-5 short
     for i in range(50):
+        global_level_index = i
         current_level_container[0] = levels[i]
         if gamemode.get() == 'adventure':
             if i == 0:
@@ -4609,6 +5051,8 @@ else:
         if not shopless.get():
             WriteMemory("bool",True,0x6A9EC0,0x82C,0x21C)
             WriteMemory("bool",True,0x6A9EC0,0x82C,0x218)
+        if (i == 0 or not saved.get()) and randomSound.get():
+            randomiseSounds()
         if(i != 0) and not saved.get(): 
             Sleep(1)
         if gamemode.get() == 'adventure' and (level_plants[newlevel] != -1):
