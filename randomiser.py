@@ -1537,7 +1537,7 @@ class ShitContainer(VarContainer):
             VarStr(var=VarWithRanges("autoscroll_rule", address=[0x004140CA,0x004140C0], chance=22,
                                     datatype=["unsigned int","unsigned int"],
                                     default=[2500, 600], # base + random
-                                    ranges=[(40, 900, 1200), (60, 1200, 1700)], # (weight, min, max)
+                                    ranges=[(40, 900, 1200), (63, 1200, 1800)], # (weight, min, max)
                                     enabled_on_levels=lambda l:l == -1 or (l != 15 and l != 25 and l != 35 and l != 50),
                                     multivar_functions=[lambda main:int(main/2500*600)] # calculate random part
                                     ),
@@ -1548,7 +1548,7 @@ class ShitContainer(VarContainer):
             affects_game_str=True,
         )
         more_wavepoints = VarWithStrIndices(
-            VarStr(var=OnOffVar("more_wavepoints", address=0x00409748, chance=22,
+            VarStr(var=OnOffVar("more_wavepoints", address=0x00409748, chance=20,
                                 datatype="unsigned char",
                                 default=[0xB8, 0x56, 0x55, 0x55, 0x55, 0xF7, 0xEB, 0x8B, 0xC2],
                                 onValue=[0x8B, 0xCB, 0xD1, 0xE9, 0x8D, 0x49, 0x01, 0xEB, 0x07],
@@ -1563,11 +1563,11 @@ class ShitContainer(VarContainer):
             # most zombies x-pos, random for most zombies x-pos, vaulters, gargs, zamboni, catapult, bobsled, flag
             VarStr(var=ContinuousVar("spawn_coords", address=[0x005225A5, 0x00522598, 0x00522CE1, 0x00523D3E, 0x00522DF5, 0x00522E97,
                                                               float_rebase(0x005230FB, 'float', 880.0), float_rebase(0x0052327E, 'float', 800.0)],
-                                    chance=25,
+                                    chance=23,
                                     datatype=["unsigned int", "unsigned int", "unsigned int", "unsigned int", "unsigned int", "unsigned int", "float", "float"],
                                     default=[780, 40, 870, 845, 800, 825, 880.0, 800.0],
                                     min=580,
-                                    max=700,
+                                    max=680,
                                     enabled_on_levels=lambda l:l == -1 or l not in [15,35,45,50],
                                     multivar_functions=[lambda main:40, lambda main:870-(780-main), lambda main:845-(780-main), lambda main:800-(780-main),
                                                         lambda main:825-(780-main), lambda main:880.0-(780-main), lambda main:800.0-(780-main)],
@@ -1649,13 +1649,13 @@ class ShitContainer(VarContainer):
             # jump to code; enable writing negative sun in seed bank; reset n of lost plants to 0; amount of sun lost
             VarStr(var=OnOffVar("lose_sun_on_plant_death",
                                 address=[0x0041605E, 0x0048983A, lose_sun_on_plant_death_address_data, lose_sun_on_plant_death_address+0x34],
-                                chance=22,
+                                chance=20,
                                 datatype=["unsigned char", "unsigned char", "unsigned int", "unsigned char"],
                                 default=[[0x89, 0x85, 0x5C, 0x55, 0x00, 0x00], 0xC8, 0, 40],
                                 onValue=[0xE9, *(lose_sun_on_plant_death_address-0x416063).to_bytes(4,"little",signed=True), 0x90],
-                                enabled_on_levels=lambda l:l%5!=0,
+                                enabled_on_levels=lambda l:l%5!=0 and level_worlds[l] in [0,2,4],
                                 multivar_functions=[lambda main:0xC0, lambda main:0,
-                                                    lambda main,level:int(self.rng.randint(15,50) * (1 if (level == -1 or level_worlds[level] in [0,2,4]) else 0.34))]
+                                                    lambda main,level:int(self.rng.randint(10,25) * (0.45 if level_worlds[level] == 4 else 1))]
                                 ),
                     format_str="Lose {value} sun when plant dies/shoveled",
                     value_index=3 # sun lost per plant
@@ -2597,8 +2597,7 @@ def randomiseLevelWorlds():
             if i % 5 == 0:
                 untouchable.add(i)
     balance = [0, 0, 0, 0, 0]
-    levels = list(range(1,51))
-    worlds_rng.shuffle(levels)
+    levels = [j * 10 + i + 1 for i in range(10) for j in range(5)] # 1, 11, 21, 31, 41, 2, 12...
     for i in levels:
         if i in untouchable or worlds_rng.randint(1, 100) > randomWorldChance.get():
             worlds[i] = default_worlds[i]
