@@ -1534,10 +1534,10 @@ class ShitContainer(VarContainer):
             plant_indices=[8, 9, 10, 12, 13, 14, 15, 24, 31, 42]
         )
         autoscroll_rule = VarWithStrIndices(
-            VarStr(var=VarWithRanges("autoscroll_rule", address=[0x004140CA,0x004140C0], chance=22,
+            VarStr(var=VarWithRanges("autoscroll_rule", address=[0x004140CA,0x004140C0], chance=20,
                                     datatype=["unsigned int","unsigned int"],
                                     default=[2500, 600], # base + random
-                                    ranges=[(40, 900, 1200), (63, 1200, 1800)], # (weight, min, max)
+                                    ranges=[(40, 1000, 1400), (60, 1400, 1800)], # (weight, min, max)
                                     enabled_on_levels=lambda l:l == -1 or (l != 15 and l != 25 and l != 35 and l != 50),
                                     multivar_functions=[lambda main:int(main/2500*600)] # calculate random part
                                     ),
@@ -1651,9 +1651,9 @@ class ShitContainer(VarContainer):
                                 address=[0x0041605E, 0x0048983A, lose_sun_on_plant_death_address_data, lose_sun_on_plant_death_address+0x34],
                                 chance=20,
                                 datatype=["unsigned char", "unsigned char", "unsigned int", "unsigned char"],
-                                default=[[0x89, 0x85, 0x5C, 0x55, 0x00, 0x00], 0xC8, 0, 40],
+                                default=[[0x89, 0x85, 0x5C, 0x55, 0x00, 0x00], 0xC1, 0, 40],
                                 onValue=[0xE9, *(lose_sun_on_plant_death_address-0x416063).to_bytes(4,"little",signed=True), 0x90],
-                                enabled_on_levels=lambda l:l%5!=0 and level_worlds[l] in [0,2,4],
+                                enabled_on_levels=lambda l:l==-1 or (l%5!=0 and level_worlds[l] in [0,2,4]),
                                 multivar_functions=[lambda main:0xC0, lambda main:0,
                                                     lambda main,level:int(self.rng.randint(10,25) * (0.45 if level_worlds[level] == 4 else 1))]
                                 ),
