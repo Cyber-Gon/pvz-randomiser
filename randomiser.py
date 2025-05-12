@@ -2597,7 +2597,8 @@ def randomiseLevelWorlds():
             if i % 5 == 0:
                 untouchable.add(i)
     balance = [0, 0, 0, 0, 0]
-    levels = [j * 10 + i + 1 for i in range(10) for j in range(5)] # 1, 11, 21, 31, 41, 2, 12...
+    levels = list(range(1,51))
+    worlds_rng.shuffle(levels)
     for i in levels:
         if i in untouchable or worlds_rng.randint(1, 100) > randomWorldChance.get():
             worlds[i] = default_worlds[i]
@@ -2841,10 +2842,14 @@ def redistribute_aquatic_zombies():
     dolphin_potential_levels = pool_levels.difference({5, 28, 29, 30, 34})
     dolphin_add_to_fog_level = 34 not in fog_levels
     for i in range(5 - snorkel_count):
+        if len(snorkel_potential_levels) == 0:
+            break
         level = worlds_rng.choice(list(snorkel_potential_levels))
         snorkel_levels.add(level)
         snorkel_potential_levels.remove(level)
     for i in range(4 - dolphin_count - int(dolphin_add_to_fog_level)):
+        if len(dolphin_potential_levels) == 0:
+            break
         level = worlds_rng.choice(list(dolphin_potential_levels))
         dolphin_levels.add(level)
         dolphin_potential_levels.remove(level)
@@ -2922,7 +2927,7 @@ def randomiseFog():
     # ClearFogAroundPlant
     WriteMemory("unsigned char", [min_fog] ,0x41A492)
     WriteMemory("unsigned char", [0] ,0x41A49C)
-    WriteMemory("unsigned char", [median_point] ,0x41A4AB)
+    WriteMemory("unsigned char", [median_point] ,0x41A4A1)
     WriteMemory("unsigned char", [median_point+1] ,0x41A4AF)
     WriteMemory("unsigned char", [60] ,0x41A4B4)
 
