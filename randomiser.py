@@ -10,6 +10,7 @@ from statistics import mean, median
 from idlelib.tooltip import Hovertip
 import atexit
 import os
+import traceback
 
 try:
     if platform.system() == "Windows":
@@ -190,8 +191,10 @@ try:
             return ReadMemory("int", 0x6A9EC0, 0x7FC)
         
         pvz_memfd = openPVZ()
-except:
+except Exception as err:
     print("pvz not found!")
+    print("windows: " + str(WINDOWS))
+    print(traceback.format_exc())
 import random
     
 try:
@@ -787,21 +790,22 @@ FORMAT_PERCENT_OF_DEFAULT_VALUE = 3
 class RandomVariable(abc.ABC):
     def __init__(self, name, address, chance, datatype, default, enabled_on_levels = None, multivar_functions=None, needs_reset=False):
         # default can always be a list
-        if any(type(x) == list for x in [address, datatype]) and not all(type(x) == list for x in [address, datatype, default, multivar_functions]):
+        if any(type(x) is list for x in [address, datatype]) and not all(type(x) is list for x in [address, datatype, default, multivar_functions]):
             raise TypeError(f'incompatible types of arguments in constructor for {name}')
-        if any(type(x) == list for x in [address, datatype]) and \
+        if any(type(x) is list for x in [address, datatype]) and \
         not all(x == len(address) for x in [len(address), len(datatype), len(default), len(multivar_functions) + 1]):
             raise ValueError(f'different list lengths in constructor of {name}')
         self.name = name
         self.address = address
         self.default = default
         self.chance = chance
+        self.chance_callable = bool(callable(chance))
         self.datatype = datatype
         self.value = copy.deepcopy(default)
         self.written_value = copy.deepcopy(default)
         self.enabled_on_levels = enabled_on_levels
         self.multivar_functions = multivar_functions
-        if type(address) == list:
+        if type(address) is list:
             self.multivar = True
             self.calculate_value = self.calculate_multivar_value
             self.write_value = self.write_multivar_value
@@ -858,10 +862,10 @@ class RandomVariable(abc.ABC):
         return self.value[0] if self.multivar else self.value
     
     def get_value_str(self, format_type, val, default):
-        if (type(val) != float and type(val) != int) or (type(default) != int and type(default) != float):
+        if (type(val) is not float and type(val) is not int) or (type(default) is not int and type(default) is not float):
             print(f"{self.name} get_value_str error: {val}, {default}")
             return f"{self.name} get_value_str error: {val}, {default}"
-        if type(val) == float and format_type in [FORMAT_ACTUAL_VALUE, FORMAT_DELTA_CHANGE]:
+        if type(val) is float and format_type in [FORMAT_ACTUAL_VALUE, FORMAT_DELTA_CHANGE]:
             if format_type == FORMAT_ACTUAL_VALUE:
                 return "{:.1f}".format(abs(val))
             elif format_type == FORMAT_DELTA_CHANGE:
@@ -895,7 +899,8 @@ class RandomVariable(abc.ABC):
             return {'value': "error", 'sign': '', 'change_word': '', 'plural': ''}
 
     def randomize(self, random, level, WriteMemory, do_write):
-        if self.test(random, self.chance, level) and self.can_be_enabled(level):
+        actual_chance = self.chance(level) if self.chance_callable else self.chance 
+        if self.test(random, actual_chance, level) and self.can_be_enabled(level):
             value = self.calculate_value(random, level)
         else:
             value = copy.deepcopy(self.default)
@@ -925,8 +930,8 @@ class VarWithRanges(RandomVariable):
     def __init__(self, name, address, chance, datatype, default, ranges:list[tuple], enabled_on_levels = None, multivar_functions=None, needs_reset=False):
         super().__init__(name, address, chance, datatype, default, enabled_on_levels, multivar_functions, needs_reset)
         # ranges is a list of tuples of (weight, min, max)
-        assert type(ranges) == list and len(ranges) > 0
-        assert all(type(x) == tuple and len(x) == 3 and isinstance(val, (int, float)) for x in ranges for val in x)
+        assert type(ranges) is list and len(ranges) > 0
+        assert all(type(x) is tuple and len(x) == 3 and isinstance(val, (int, float)) for x in ranges for val in x)
         self.weights = [x[0] for x in ranges if x[0] > 0]
         self.value_ranges = [(min(x[1], x[2]), max(x[1], x[2])) for x in ranges if x[0] > 0]
         assert len(self.weights) > 0
@@ -942,7 +947,7 @@ class VarWithRanges(RandomVariable):
 class DiscreteVar(RandomVariable):
     def __init__(self, name, address, chance, datatype, default, choices:list, enabled_on_levels = None, multivar_functions=None, needs_reset=False):
         super().__init__(name, address, chance, datatype, default, enabled_on_levels, multivar_functions, needs_reset)
-        assert type(choices) == list and len(choices) > 0
+        assert type(choices) is list and len(choices) > 0
         self.choices = choices
 
     def get_randomized_value(self, random: random.Random, level):
@@ -974,7 +979,7 @@ class OnOffVar(RandomVariable):
 class FireRateVar(VarWithRanges):
     def __init__(self, name, address, chance, datatype, default, ranges, unstable_range: tuple, enabled_on_levels=None, multivar_functions=None, needs_reset=False):
         super().__init__(name, address, chance, datatype, default, ranges, enabled_on_levels, multivar_functions, needs_reset)
-        assert type(unstable_range) == tuple and len(unstable_range) == 2
+        assert type(unstable_range) is tuple and len(unstable_range) == 2
         self.unstable_range = (min(unstable_range), max(unstable_range))
 
     def randomize(self, random, level, WriteMemory, do_write, allow_unstable=True, max_multiplier=1.0):
@@ -1016,13 +1021,13 @@ class OutputStringBase(abc.ABC):
 class SimpleOutputString(OutputStringBase):
     def __init__(self, value_container, format_str: str, modify_value_func = None):
         super().__init__(format_str, modify_value_func)
-        if type(value_container) != list:
+        if type(value_container) is not list:
             self.value_container = [value_container]
         else:
             self.value_container = value_container
 
     def __str__(self) -> str:
-        if type(self.value_container) != list or (type(self.value_container) == list and len(self.value_container) == 0):
+        if type(self.value_container) is not list or (type(self.value_container) is list and len(self.value_container) == 0):
             print(f"error in SimpleOutputString __str__, format: {self.format_str}")
             return f"error"
         value = self.value_container[0]
@@ -1109,7 +1114,7 @@ class IndexedStrContainer:
         self.str_dict = dict(zip(range(string_count), ([] for _ in range(string_count))))
 
     def add_var(self, var: OutputStringBase, indices):
-        if type(indices) != list:
+        if type(indices) is not list:
             indices = [indices]
         if any(x not in self.str_dict for x in indices):
             raise ValueError(f"wrong index for {self.name} container, indices: {','.join(str(x) for x in indices)}")
@@ -1560,17 +1565,19 @@ class ShitContainer(VarContainer):
             affects_game_str=True,
         )
         spawn_coords = VarWithStrIndices(
-            # most zombies x-pos, random for most zombies x-pos, vaulters, gargs, zamboni, catapult, bobsled, flag
-            VarStr(var=ContinuousVar("spawn_coords", address=[0x005225A5, 0x00522598, 0x00522CE1, 0x00523D3E, 0x00522DF5, 0x00522E97,
-                                                              float_rebase(0x005230FB, 'float', 880.0), float_rebase(0x0052327E, 'float', 800.0)],
+            # most zombies x-pos, random for most zombies x-pos, vaulters, gargs, zamboni, catapult, bobsled, flag, snorkel, dolphin
+            VarStr(var=ContinuousVar("spawn_coords", address=[default_zombie_x_pos_address, 0x00522598, 0x00522CE1, 0x00523D3E, 0x00522DF5, 0x00522E97,
+                                                              float_rebase(0x005230FB, 'float', 880.0), float_rebase(0x0052327E, 'float', 800.0),
+                                                              snorkel_x_pos_address, dolphin_x_pos_address],
                                     chance=23,
-                                    datatype=["unsigned int", "unsigned int", "unsigned int", "unsigned int", "unsigned int", "unsigned int", "float", "float"],
-                                    default=[780, 40, 870, 845, 800, 825, 880.0, 800.0],
+                                    datatype=["unsigned int", "unsigned int", "unsigned int", "unsigned int", "unsigned int", "unsigned int", "float", "float", "unsigned int", "unsigned int"],
+                                    default=[780, 40, 870, 845, 800, 825, 880.0, 800.0, 780, 780],
                                     min=580,
                                     max=680,
                                     enabled_on_levels=lambda l:l == -1 or l not in [15,35,45,50],
                                     multivar_functions=[lambda main:40, lambda main:870-(780-main), lambda main:845-(780-main), lambda main:800-(780-main),
-                                                        lambda main:825-(780-main), lambda main:880.0-(780-main), lambda main:800.0-(780-main)],
+                                                        lambda main:825-(780-main), lambda main:880.0-(780-main), lambda main:800.0-(780-main),
+                                                        lambda main:(main if noRestrictions.get() else 780), lambda main:(main if noRestrictions.get() else 780)],
                                     needs_reset=True
                                     ),
                     format_str="Zombies spawn {value} more left",
@@ -1632,15 +1639,10 @@ class ShitContainer(VarContainer):
             ),
             affects_game_str=True,
         )
-        class StartingSunVar(DiscreteVar):
-            def test(self, random: random.Random, chance, level):
-                if gamemode.get() != 'minigames' and (level_worlds[level] == 1 or level_worlds[level] == 3 or level_worlds[level] == 5):
-                    chance = (chance / 100)**0.5 * 100 # increase chance on night levels
-                return super().test(random, chance, level)
         starting_sun = VarWithStrIndices(
             VarStr(
-                var=StartingSunVar("starting sun", 0x0040b09b, chance=60, datatype="int",
-                                    default=50, choices=[75, 75, 100], enabled_on_levels=lambda l: l % 5 != 0),
+                var=DiscreteVar("starting sun", 0x0040b09b, chance=lambda l:(60 if l==-1 or level_worlds[l] in [0,2,4] else 80), datatype="int",
+                                    default=50, choices=[75, 75, 75, 100, 100, 125], enabled_on_levels=lambda l: l % 5 != 0),
                 format_str="Starting sun: {value}",
                 format_value_type=FORMAT_ACTUAL_VALUE),
             affects_game_str=True
@@ -1648,14 +1650,14 @@ class ShitContainer(VarContainer):
         lose_sun_on_plant_death = VarWithStrIndices(
             # jump to code; enable writing negative sun in seed bank; reset n of lost plants to 0; amount of sun lost
             VarStr(var=OnOffVar("lose_sun_on_plant_death",
-                                address=[0x0041605E, 0x0048983A, lose_sun_on_plant_death_address_data, lose_sun_on_plant_death_address+0x34],
+                                address=[0x0041605E, 0x0048983A, lose_sun_on_plant_death_address_data, lose_sun_on_plant_death_address+0x3E],
                                 chance=20,
                                 datatype=["unsigned char", "unsigned char", "unsigned int", "unsigned char"],
                                 default=[[0x89, 0x85, 0x5C, 0x55, 0x00, 0x00], 0xC1, 0, 40],
                                 onValue=[0xE9, *(lose_sun_on_plant_death_address-0x416063).to_bytes(4,"little",signed=True), 0x90],
                                 enabled_on_levels=lambda l:l==-1 or (l%5!=0 and level_worlds[l] in [0,2,4]),
                                 multivar_functions=[lambda main:0xC0, lambda main:0,
-                                                    lambda main,level:int(self.rng.randint(10,25) * (0.45 if level_worlds[level] == 4 else 1))]
+                                                    lambda main,level:int(self.rng.randint(10,25) * (0.5 if level_worlds[level] == 4 else 1))]
                                 ),
                     format_str="Lose {value} sun when plant dies/shoveled",
                     value_index=3 # sun lost per plant
@@ -2186,7 +2188,7 @@ def addLevel(levels, firstLevels):
     return levels, firstLevels
 
 def addToLevelsList(levels, numberList):
-    if type(numberList)==int:
+    if type(numberList) is int:
         numberList=[numberList]
     for i in range(0, len(numberList)):
         levels.append(numberList[i])
@@ -2801,7 +2803,7 @@ def reset_from_random_worlds():
     WriteMemory("unsigned char", [40] ,0x40B97F)
     WriteMemory("unsigned char", [31] ,0x41A492)
     WriteMemory("unsigned char", [32] ,0x41A49C)
-    WriteMemory("unsigned char", [36] ,0x41A4AB)
+    WriteMemory("unsigned char", [36] ,0x41A4A1)
     WriteMemory("unsigned char", [37] ,0x41A4AF)
     WriteMemory("unsigned char", [40] ,0x41A4B4)
     # default pool ambush
@@ -4599,9 +4601,15 @@ if randomVarsSystemEnabled:
     random_zombie_size_address_max = random_zombie_size_address + 0x28
     random_zombie_size_address_min = random_zombie_size_address + 0x2C
     lose_sun_on_plant_death_address = random_zombie_size_address + 0x40
-    lose_sun_on_plant_death_address_data = lose_sun_on_plant_death_address + 0x40
+    lose_sun_on_plant_death_address_data = lose_sun_on_plant_death_address + 0x48
     click_on_sun_plant_address = lose_sun_on_plant_death_address + 0x50
     advance_cd_on_zombie_death_address = click_on_sun_plant_address + 0x30
+    zombie_x_pos_address = advance_cd_on_zombie_death_address + 0x40
+    default_zombie_x_pos_address = zombie_x_pos_address + 0x0E
+    snorkel_x_pos_address = zombie_x_pos_address + 0x15
+    dolphin_x_pos_address = zombie_x_pos_address + 0x1C
+    next_address = zombie_x_pos_address + 0x30
+
     float_rebases_address = string_stuff_address + 0x800
     plants_string_address = string_stuff_address + 4 * 1024
     zombies_string_address = plants_string_address + 26 * 1024
@@ -4738,10 +4746,12 @@ if randomVarsSystemEnabled:
 
     # lose sun on plant death
     WriteMemory("unsigned char", [
-        0x89, 0x85, 0x5C, 0x55, 0x00, 0x00, 0x8B, 0x85, 0x00, 0x56, 0x00, 0x00, 0x85, 0xC0, 0x7D, 0x28, 0x8B, 0x85, 0x98, 0x57, 0x00, 0x00, 0x03, 0x85,
-        0x9C, 0x57, 0x00, 0x00, 0x2B, 0x05, *lose_sun_on_plant_death_address_data.to_bytes(4,"little",signed=True), 0x0F, 0x8E, 0x10, 0x00,
-        0x00, 0x00, 0x01, 0x05, *lose_sun_on_plant_death_address_data.to_bytes(4,"little",signed=True), 0x83, 0xAD, 0x60, 0x55, 0x00, 0x00,
-        0x32, 0x48, 0x7F, 0xF6, 0xE9, *(0x416064-lose_sun_on_plant_death_address-0x3D).to_bytes(4,"little",signed=True)
+        0x89, 0x85, 0x5C, 0x55, 0x00, 0x00, 0x8B, 0x85, 0x00, 0x56, 0x00, 0x00, 0x85, 0xC0, 0x7D, 0x32, 0x8B, 0x85, 0x98, 0x57, 0x00, 0x00, 0x03, 0x85,
+        0x9C, 0x57, 0x00, 0x00, 0x2B, 0x05, *lose_sun_on_plant_death_address_data.to_bytes(4,"little",signed=True), 
+        0x74, 0x1E, 0x7F, 0x0C, 0xC7, 0x05, *lose_sun_on_plant_death_address_data.to_bytes(4,"little",signed=True),
+        0x00, 0x00, 0x00, 0x00, 0xEB, 0x10, 0x01, 0x05,
+        *lose_sun_on_plant_death_address_data.to_bytes(4,"little",signed=True), 0x83, 0xAD, 0x60, 0x55, 0x00, 0x00, 0x32, 0x48, 0x7F, 0xF6,
+        0xE9, *(0x416064-lose_sun_on_plant_death_address-0x47).to_bytes(4,"little",signed=True), 0x90
     ],
     lose_sun_on_plant_death_address)
     WriteMemory("unsigned int", [0], lose_sun_on_plant_death_address_data)
@@ -4764,6 +4774,18 @@ if randomVarsSystemEnabled:
         0xE9, *(0x530638-advance_cd_on_zombie_death_address-0x35).to_bytes(4,"little",signed=True),
     ],
     advance_cd_on_zombie_death_address)
+
+    # Zombie x position for snorkels and dolphins
+    WriteMemory("unsigned char", [
+        0x8B, 0x55, 0x0C, 0x83, 0xFA, 0x0B, 0x74, 0x0C, 0x83, 0xFA, 0x0E, 0x74, 0x0E, 0x05, 0x0C,
+        0x03, 0x00, 0x00, 0xEB, 0x0C, 0x05, 0x0C, 0x03, 0x00, 0x00, 0xEB, 0x05, 0x05, 0x0C, 0x03,
+        0x00, 0x00, 0xE9, *(0x5225A9-zombie_x_pos_address-0x25).to_bytes(4,"little",signed=True),
+    ],
+    zombie_x_pos_address)
+    WriteMemory("unsigned char", [
+        0xE9, *(zombie_x_pos_address-0x5225A9).to_bytes(4,"little",signed=True), # jmp to new code
+    ],
+    0x5225A4)
 
     random_vars = RandomVars(seed, WriteMemory, True, plants_string_container, zombies_string_container, game_string_container,
                              code_address=string_stuff_address, catZombieHealth=actualRandomVarsZombieHealth, catFireRate=actualRandomVarsFireRate,
