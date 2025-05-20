@@ -2426,15 +2426,16 @@ def sounds_decorator(f):
     # for k in addresses|always_change_addresses:
     #     instruction = ReadMemory("unsigned char", k-1)
     #     assert(instruction in [0xBE, 0xB8])
+    def wrapper(*args, **kwargs):
+        f(*args, addresses=addresses, always_change_addresses=always_change_addresses, **kwargs)
+    return wrapper
 
+if randomSound.get():
     # random music code
     WriteMemory("unsigned char", [
         0xE8, 0x7B, 0x1B, 0xE0, 0xFF, 0x84, 0xC0, 0x0F, 0x85, 0x9B, 0x9A, 0xE0, 0xFF, 0xE9, 0x53, 0x9B, 0xE0, 0xFF, 0x90,
     ],0x651DA0)
     WriteMemory("unsigned char", [0xE9, 0x1B, 0x66, 0x1F, 0x00, 0x90], 0x45B780) # jmp 651DA0
-    def wrapper(*args, **kwargs):
-        f(*args, addresses=addresses, always_change_addresses=always_change_addresses, **kwargs)
-    return wrapper
 
 @sounds_decorator
 def randomiseSounds(**kwargs):
