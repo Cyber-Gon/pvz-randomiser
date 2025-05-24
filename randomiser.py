@@ -244,6 +244,7 @@ randomWorldChance= IntVar(value=33)
 randomShit       = BooleanVar(value=False)
 randomSound      = BooleanVar(value=False)
 randomSoundChance= IntVar(value=3)
+randomPitch      = BooleanVar(value=False)
 
 seed=str(random.randint(1,999999999999))
 
@@ -278,13 +279,16 @@ if hasSave:
         fileInfo.append("False") #randomSound
     if len(fileInfo)<35:
         fileInfo.append("3") #randomSoundChance
+    if len(fileInfo)<36:
+        fileInfo.append("False") #randomPitch
     challengeMode.set(  eval(fileInfo[4].strip()))
     shopless.set(       eval(fileInfo[5].strip()))
     noRestrictions.set( eval(fileInfo[6].strip()))
     noAutoSlots.set(    eval(fileInfo[7].strip()))
     imitater.set(       eval(fileInfo[8].strip()))
     randomisePlants.set(eval(fileInfo[9].strip()))
-    seeded.set(         eval(fileInfo[10].strip()))
+    seeded.set(False) # crashes game
+    # seeded.set(         eval(fileInfo[10].strip()))
     upgradeRewards.set( eval(fileInfo[11].strip()))
     randomWeights.set(  eval(fileInfo[12].strip()))
     randomWavePoints.set(    fileInfo[13].strip())
@@ -309,6 +313,7 @@ if hasSave:
     randomShit.set(str(fileInfo[32].strip()) == "True")
     randomSound.set(str(fileInfo[33].strip()) == "True")
     randomSoundChance.set(int(fileInfo[34].strip()))
+    randomPitch.set(str(fileInfo[35].strip()) == "True")
     if fileInfo[1]=="finished\n":
         hasSave=False
 
@@ -429,6 +434,8 @@ def continueButtonClick():
     randomShit.set(str(fileInfo[32].strip()) == "True")
     randomSound.set(str(fileInfo[33].strip()) == "True")
     randomSoundChance.set(int(fileInfo[34].strip()))
+    # randomPitch.set(str(fileInfo[35].strip()) == "True")
+    randomPitch.set(False)
     saved.set(True)
     jumpLevel=""
     window.destroy()
@@ -521,9 +528,9 @@ randPlantsButton=Checkbutton(window, text="RANDOM PLANTS", width=16, variable=ra
 randPlantsButton.grid(row=4, column=0, sticky=W)
 Hovertip(randPlantsButton, "RECOMMENDED - you get random plant after beating each level, instead of the normal reward.", 10)
 
-seededButton=Checkbutton(window, text="SEEDED", width=16, variable=seeded, anchor="w")#command=seededButtonClick)
-seededButton.grid(row=1, column=4, sticky=W)
-Hovertip(seededButton, "Enabled seeded RNG in game - things like zombie spawns will be seeded", 10)
+# seededButton=Checkbutton(window, text="SEEDED", width=16, variable=seeded, anchor="w")#command=seededButtonClick)
+# seededButton.grid(row=1, column=4, sticky=W)
+# Hovertip(seededButton, "Enabled seeded RNG in game - things like zombie spawns will be seeded", 10)
 
 upgradeButton=Checkbutton(window, text="UPGRADE REWARDS", width=16, variable=upgradeRewards, anchor="w")#command=upgradeButtonClick)
 upgradeButton.grid(row=4, column=3, sticky=W)
@@ -536,6 +543,10 @@ Hovertip(soundButton, "Changes some sounds randomly, also randomizes music", 10)
 randomSoundSlider = Scale(window, from_=1, to=10, orient=HORIZONTAL, length=115, label="Random sound chance", variable=randomSoundChance)
 randomSoundSlider.config(font=('Arial', 8))
 randomSoundSlider.grid(row=6, column=3, sticky=W)
+
+pitchButton=Checkbutton(window, text="RANDOM PITCH", width=16, variable=randomPitch, anchor="w")#command=upgradeButtonClick)
+pitchButton.grid(row=5, column=4, sticky=W)
+Hovertip(pitchButton, "Randomizes pitch of sounds. Can be combined with random sounds, but works without them", 10)
 
 randWeightsButton=Checkbutton(window, text="RANDOM WEIGHTS", width=16, variable=randomWeights, anchor="w", command=randomWeightsButtonClick)
 randWeightsButton.grid(row=1, column=1, sticky=W)
@@ -762,6 +773,7 @@ print("Random World Chance:",str(randomWorldChance.get()))
 print("Random Stuff:",       str(randomShit.get()))
 print("Random Sound:",       str(randomSound.get()))
 print("Random Sound Chance:",str(randomSoundChance.get()))
+print("Random Pitch:",       str(randomPitch.get()))
 
 def settings_lines_to_save():
     return [(challengeMode.get()), (shopless.get()), (noRestrictions.get()), (noAutoSlots.get()), (imitater.get()),
@@ -770,7 +782,7 @@ def settings_lines_to_save():
         costTextToggle.get(), randomZombies.get(), randomConveyors.get(), cooldownColoring.get(),
         enableDave.get(), davePlantsCount.get(), randomVarsCatZombieHealth.get(), randomVarsCatFireRate.get(),
         renderWeights.get(), renderWavePoints.get(), limitPreviews.get(), gamemode.get(), randomWaveCount.get(), randomWorld.get(),
-        randomWorldChance.get(), randomShit.get(), randomSound.get(), randomSoundChance.get()]
+        randomWorldChance.get(), randomShit.get(), randomSound.get(), randomSoundChance.get(), randomPitch.get()]
 
 linesToWrite=[seed, (i+1), str(ReadMemory("int", 0x6A9EC0,0x82C,0x214)), str(ReadMemory("int",0x6A9EC0,0x82C, 0x28)), *settings_lines_to_save()]
 with open('saveFile.txt', 'w') as saveFile:
@@ -2421,13 +2433,23 @@ def sounds_decorator(f):
                                0x536058: 91, 0x53614e: 40, 0x536695: 40}
     if gamemode.get() == 'minigames':
         always_change_addresses |= {0x4205e7: 68, 0x42097f: 68, 0x420f60: 15, 0x4254ef: 15, 0x44e33f: 82}
-    # chech for debugging - instruction is either mov esi,value or mov eax,value (use with minigames mode so all addresses are checked)
+    # check for debugging - instruction is either mov esi,value or mov eax,value (use with minigames mode so all addresses are checked)
     # if instruction is esi, have to check whether esi register used down the line to not overwrite something important
     # for k in addresses|always_change_addresses:
     #     instruction = ReadMemory("unsigned char", k-1)
     #     assert(instruction in [0xBE, 0xB8])
+    pitches = {
+        0: 10.0, 1: 10.0, 2: 10.0, 3: 10.0, 4: 10.0, 5: 0.0, 6: 4.0, 7: 0.0, 8: 0.0, 9: 0.0, 10: 0.0, 11: 0.0,
+        12: 0.0, 13: 0.0, 14: 0.0, 15: 0.0, 16: 5.0, 17: 10.0, 18: 0.0, 19: 10.0, 20: -3.0, 21: 0.0, 22: 0.0,
+        23: 0.0, 24: 2.0, 25: 10.0, 26: 4.0, 27: 10.0, 28: 10.0, 29: 10.0, 30: 10.0, 31: 10.0, 32: 10.0, 33: 0.0, 34: 1.0,
+        35: -5.0, 36: 2.0, 37: 10.0, 38: 5.0, 39: 10.0, 40: 2.0, 41: 2.0, 42: 2.0, 43: 2.0, 44: 2.0, 45: 2.0, 46: 10.0,
+        47: 2.0, 48: 2.0, 49: 0.0, 50: 0.0, 51: 0.0, 52: 0.0, 53: 0.0, 54: 0.0, 55: 0.0, 56: 0.0, 57: 0.0, 58: 5.0, 59: 0.0,
+        60: 10.0, 61: -2.0, 62: -5.0, 63: -2.0, 64: -5.0, 65: 2.0, 66: -2.0, 67: -2.0, 68: 0.0, 69: 0.0, 70: 2.0, 71: 0.0, 72: 1.0,
+        73: 2.0, 74: 2.0, 75: 5.0, 76: 10.0, 77: 10.0, 78: 5.0, 79: 10.0, 80: 5.0, 81: 0.0, 82: 0.0, 83: 0.0, 84: 3.0, 85: 0.0,
+        86: 0.0, 87: 0.0, 88: 5.0, 89: 3.0, 90: 0.0, 91: 3.0, 92: 0.0, 93: 0.0, 94: 0.0, 95: 0.0, 96: 0.0, 97: 0.0, 98: 0.0, 99: 0.0,
+        100: 0.0, 101: 0.0, 102: 0.0, 103: 0.0}
     def wrapper(*args, **kwargs):
-        f(*args, addresses=addresses, always_change_addresses=always_change_addresses, **kwargs)
+        f(*args, addresses=addresses, always_change_addresses=always_change_addresses, pitches=pitches, **kwargs)
     return wrapper
 
 if randomSound.get():
@@ -2439,20 +2461,33 @@ if randomSound.get():
 
 @sounds_decorator
 def randomiseSounds(**kwargs):
-    if 'addresses' not in kwargs or 'always_change_addresses' not in kwargs:
-        raise ValueError('missing addresses or always_change_addresses key in kwargs')
-    for addr in kwargs['addresses']:
-        if sounds_rng.randint(1,100) <= 3 + randomSoundChance.get() * 7:
+    if 'addresses' not in kwargs or 'always_change_addresses' not in kwargs or 'pitches' not in kwargs:
+        raise ValueError('missing addresses or always_change_addresses or pitches key in kwargs')
+    if randomSound.get():
+        for addr in kwargs['addresses']:
+            if sounds_rng.randint(1,100) <= 3 + randomSoundChance.get() * 7:
+                WriteMemory("unsigned int", [random_sound()], addr)
+            else:
+                WriteMemory("unsigned int", [kwargs['addresses'][addr]], addr) # reset
+        for addr in kwargs['always_change_addresses']:
             WriteMemory("unsigned int", [random_sound()], addr)
-        else:
-            WriteMemory("unsigned int", [kwargs['addresses'][addr]], addr) # reset
-    for addr in kwargs['always_change_addresses']:
-        WriteMemory("unsigned int", [random_sound()], addr)
-    music_track = sounds_rng.randint(1,12) # track 13 crashes for some reason
-    if gamemode != 'minigames' and global_level_index == 49:
-        music_track = 12 # brainiac maniac
-    WriteMemory("unsigned char", [music_track], 0x45B908)
-    WriteMemory("unsigned int", [music_track], 0x45B914)
+        music_track = sounds_rng.randint(1,12) # track 13 crashes for some reason
+        if gamemode != 'minigames' and global_level_index == 49:
+            music_track = 12 # brainiac maniac
+        WriteMemory("unsigned char", [music_track], 0x45B908)
+        WriteMemory("unsigned int", [music_track], 0x45B914)
+    if randomPitch.get():
+        pitches = kwargs['pitches']
+        for r in[range(12), range(13,104)]: # for some very strange reason writing sound 12 crashes the game
+            for i in r:
+                if sounds_rng.randint(1, 2) == 1:
+                    WriteMemory("float", [
+                        (sounds_rng.randint(4, 15) + abs(pitches[i])) * sounds_rng.choice([-1, 1])
+                    ],0x69FAD0+i*52+4)
+                else:
+                    WriteMemory("float", [
+                        pitches[i]
+                    ],0x69FAD0+i*52+4)
 
 untouchable_wavecount = [1, 15, 35, 50]
 
@@ -4408,6 +4443,10 @@ if limitPreviews.get():
         0x66, 0x90,       # nop 2
     ], 0x43A66C)
 
+# always Enable shop
+WriteMemory("unsigned char", [
+        0x00
+    ], 0x483D68)
 
 # Crazy Dave stuff
 # I know this is a lot of code, but I'm not sure how to make it better - a lot of it is for umbrella/blover/torchwood.
@@ -4965,7 +5004,7 @@ if gamemode.get() == 'minigames':
             # optimization - we don't actually write random vars and strings when using jump-to-level, but still randomize then (so seed works)
             WriteMemory("unsigned char", [12 for i in range(56)], 0x651308)
             random_vars.randomize(-1, do_write=not saved.get())
-        if not saved.get() and randomSound.get():
+        if not saved.get() and (randomSound.get() or randomPitch.get()):
             randomiseSounds()
         if saved.get():
             Sleep(1)
@@ -5080,7 +5119,7 @@ else:
         if not shopless.get():
             WriteMemory("bool",True,0x6A9EC0,0x82C,0x21C)
             WriteMemory("bool",True,0x6A9EC0,0x82C,0x218)
-        if (i == 0 or not saved.get()) and randomSound.get():
+        if (i == 0 or not saved.get()) and (randomSound.get() or randomPitch.get()):
             randomiseSounds()
         if(i != 0) and not saved.get(): 
             Sleep(1)
