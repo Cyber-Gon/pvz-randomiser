@@ -784,7 +784,7 @@ def settings_lines_to_save():
         renderWeights.get(), renderWavePoints.get(), limitPreviews.get(), gamemode.get(), randomWaveCount.get(), randomWorld.get(),
         randomWorldChance.get(), randomShit.get(), randomSound.get(), randomSoundChance.get(), randomPitch.get()]
 
-linesToWrite=[seed, (i+1), str(ReadMemory("int", 0x6A9EC0,0x82C,0x214)), str(ReadMemory("int",0x6A9EC0,0x82C, 0x28)), *settings_lines_to_save()]
+linesToWrite=[seed, 2, str(ReadMemory("int", 0x6A9EC0,0x82C,0x214)), str(ReadMemory("int",0x6A9EC0,0x82C, 0x28)), *settings_lines_to_save()]
 with open('saveFile.txt', 'w') as saveFile:
     for k in range(len(linesToWrite)):
         linesToWrite[k]=str(linesToWrite[k])+"\n"
@@ -3025,7 +3025,10 @@ def generateZombies(levels, level_plants):
         if level==50 or level==15 or level==35:
             zombiesToRandomise.append([]) # no rando on those levels
             continue
-        current_plants = set(plantsInOrder[0:i])
+        if gamemode.get() == 'ng+':
+            current_plants = set(plantsInOrder)
+        else:
+            current_plants = set(plantsInOrder[0:i])
         has_lily              = 16 in current_plants
         has_pool_shooter      = 29 in current_plants or 18 in current_plants
         has_seapeater         = (24 in current_plants or 19 in current_plants) and has_pool_shooter #threepeater or starfruit + sea shroom or kelp
