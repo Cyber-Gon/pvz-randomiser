@@ -41,9 +41,9 @@ try:
         WINDOWS = False
 
         class MockMemoryLock:
-            def acquire():
+            def acquire(self):
                 pass
-            def release():
+            def release(self):
                 pass
         memory_lock = MockMemoryLock()
 
@@ -4996,7 +4996,7 @@ def wait_level_end_or_game_close():
             print("game closed")
             input()
             exit()
-        Sleep(0.1)
+        Sleep(0.5)
         try: # detecting the end of level
             sleep_cond = should_keep_sleeping()
             exception_counter = 0
