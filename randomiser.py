@@ -11,6 +11,14 @@ from idlelib.tooltip import Hovertip
 import atexit
 import os
 import traceback
+import sys
+
+def excepthook(type, value, traceback):
+    print('Unhandled error:', type, value)
+    sys.__excepthook__(type, value, traceback)
+    input()
+
+sys.excepthook = excepthook
 
 try:
     if platform.system() == "Windows":
