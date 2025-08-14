@@ -245,6 +245,8 @@ randomShit       = BooleanVar(value=False)
 randomSound      = BooleanVar(value=False)
 randomSoundChance= IntVar(value=3)
 randomPitch      = BooleanVar(value=False)
+easierStart      = BooleanVar(value=False)
+harderEnd        = BooleanVar(value=False)
 
 seed=str(random.randint(1,999999999999))
 
@@ -281,6 +283,10 @@ if hasSave:
         fileInfo.append("3") #randomSoundChance
     if len(fileInfo)<36:
         fileInfo.append("False") #randomPitch
+    if len(fileInfo)<37:
+        fileInfo.append("False") #easierStart
+    if len(fileInfo)<38:
+        fileInfo.append("False") #harderEnd
     challengeMode.set(  eval(fileInfo[4].strip()))
     shopless.set(       eval(fileInfo[5].strip()))
     noRestrictions.set( eval(fileInfo[6].strip()))
@@ -314,6 +320,8 @@ if hasSave:
     randomSound.set(str(fileInfo[33].strip()) == "True")
     randomSoundChance.set(int(fileInfo[34].strip()))
     randomPitch.set(str(fileInfo[35].strip()) == "True")
+    easierStart.set(str(fileInfo[36].strip()) == "True")
+    harderEnd.set(str(fileInfo[37].strip()) == "True")
     if fileInfo[1]=="finished\n":
         hasSave=False
 
@@ -435,7 +443,9 @@ def continueButtonClick():
     randomSound.set(str(fileInfo[33].strip()) == "True")
     randomSoundChance.set(int(fileInfo[34].strip()))
     # randomPitch.set(str(fileInfo[35].strip()) == "True")
-    randomPitch.set(False)
+    randomPitch.set(False) # index 35 is still written to save file, but because there might be a chance of crash with random pitch we set it to false
+    easierStart.set(str(fileInfo[36].strip()) == "True")
+    harderEnd.set(str(fileInfo[37].strip()) == "True")
     saved.set(True)
     jumpLevel=""
     window.destroy()
@@ -547,6 +557,14 @@ randomSoundSlider.grid(row=6, column=3, sticky=W)
 pitchButton=Checkbutton(window, text="RANDOM PITCH", width=16, variable=randomPitch, anchor="w")#command=upgradeButtonClick)
 pitchButton.grid(row=5, column=4, sticky=W)
 Hovertip(pitchButton, "Randomizes pitch of sounds. Can be combined with random sounds, but works without them", 10)
+
+easierStartButton=Checkbutton(window, text="Easier start", width=16, variable=easierStart, anchor="w")#command=upgradeButtonClick)
+easierStartButton.grid(row=0, column=5, sticky=W)
+Hovertip(easierStartButton, "Makes start of playthrough slightly easier by modifying other modes. Works only in adventure mode.", 10)
+
+harderEndButton=Checkbutton(window, text="Harder end", width=16, variable=harderEnd, anchor="w")#command=upgradeButtonClick)
+harderEndButton.grid(row=0, column=6, sticky=W)
+Hovertip(harderEndButton, "Makes end of playthrough harder by modifying other modes. Works only in adventure mode.", 10)
 
 randWeightsButton=Checkbutton(window, text="RANDOM WEIGHTS", width=16, variable=randomWeights, anchor="w", command=randomWeightsButtonClick)
 randWeightsButton.grid(row=1, column=1, sticky=W)
@@ -774,6 +792,8 @@ print("Random Stuff:",       str(randomShit.get()))
 print("Random Sound:",       str(randomSound.get()))
 print("Random Sound Chance:",str(randomSoundChance.get()))
 print("Random Pitch:",       str(randomPitch.get()))
+print("Easier Start:",       str(easierStart.get()))
+print("Harder End:",       str(harderEnd.get()))
 
 def settings_lines_to_save():
     return [(challengeMode.get()), (shopless.get()), (noRestrictions.get()), (noAutoSlots.get()), (imitater.get()),
@@ -782,7 +802,8 @@ def settings_lines_to_save():
         costTextToggle.get(), randomZombies.get(), randomConveyors.get(), cooldownColoring.get(),
         enableDave.get(), davePlantsCount.get(), randomVarsCatZombieHealth.get(), randomVarsCatFireRate.get(),
         renderWeights.get(), renderWavePoints.get(), limitPreviews.get(), gamemode.get(), randomWaveCount.get(), randomWorld.get(),
-        randomWorldChance.get(), randomShit.get(), randomSound.get(), randomSoundChance.get(), randomPitch.get()]
+        randomWorldChance.get(), randomShit.get(), randomSound.get(), randomSoundChance.get(), randomPitch.get(),
+        easierStart.get(), harderEnd.get()]
 
 linesToWrite=[seed, 2, str(ReadMemory("int", 0x6A9EC0,0x82C,0x214)), str(ReadMemory("int",0x6A9EC0,0x82C, 0x28)), *settings_lines_to_save()]
 with open('saveFile.txt', 'w') as saveFile:
@@ -790,6 +811,30 @@ with open('saveFile.txt', 'w') as saveFile:
         linesToWrite[k]=str(linesToWrite[k])+"\n"
     saveFile.writelines(linesToWrite)
 
+difficulty = 0.5
+
+def calculate_difficulty(level_index):
+    if easierStart.get() and level_index < 24:
+        difficulty = 0.0
+        for level in range(level_index):
+            if level < 8:
+                difficulty += 0.01
+            elif level < 16:
+                difficulty += 0.02
+            else:
+                difficulty += 0.03
+    elif harderEnd.get() and level_index > 24:
+        difficulty = 0.5
+        for level in range(25, level_index):
+            if level < 33:
+                difficulty += 0.03
+            elif level < 41:
+                difficulty += 0.02
+            else:
+                difficulty += 0.01
+    else:
+        difficulty = 0.5
+    return difficulty
 
 ######### RANDOM VARS SYSTEM ########
 #region
@@ -810,8 +855,7 @@ class RandomVariable(abc.ABC):
         self.name = name
         self.address = address
         self.default = default
-        self.chance = chance
-        self.chance_callable = bool(callable(chance))
+        self.chance = chance if callable(chance) else lambda level: chance
         self.datatype = datatype
         self.value = copy.deepcopy(default)
         self.written_value = copy.deepcopy(default)
@@ -911,7 +955,7 @@ class RandomVariable(abc.ABC):
             return {'value': "error", 'sign': '', 'change_word': '', 'plural': ''}
 
     def randomize(self, random, level, WriteMemory, do_write):
-        actual_chance = self.chance(level) if self.chance_callable else self.chance 
+        actual_chance = self.chance(level)
         if self.test(random, actual_chance, level) and self.can_be_enabled(level):
             value = self.calculate_value(random, level)
         else:
@@ -926,16 +970,17 @@ class RandomVariable(abc.ABC):
 class ContinuousVar(RandomVariable):
     def __init__(self, name, address, chance, datatype, default, min, max, enabled_on_levels = None, multivar_functions=None, needs_reset=False):
         super().__init__(name, address, chance, datatype, default, enabled_on_levels, multivar_functions, needs_reset)
-        if min > max:
-            (min,max) = (max,min)
-        self.min = min
-        self.max = max
+        self.min = min if callable(min) else lambda : min
+        self.max = max if callable(max) else lambda : max
 
     def get_randomized_value(self, random: random.Random, level):
         datatype = self.datatype[0] if self.multivar else self.datatype
+        (min, max) = (self.min(), self.max())
+        if min > max:
+            (min,max) = (max,min)
         if datatype == 'float' or datatype == 'double':
-            return random.uniform(self.min, self.max)
-        return random.randint(int(self.min), int(self.max))
+            return random.uniform(min, max)
+        return random.randint(int(min), int(max))
 
 
 class VarWithRanges(RandomVariable):
@@ -943,13 +988,22 @@ class VarWithRanges(RandomVariable):
         super().__init__(name, address, chance, datatype, default, enabled_on_levels, multivar_functions, needs_reset)
         # ranges is a list of tuples of (weight, min, max)
         assert type(ranges) is list and len(ranges) > 0
-        assert all(type(x) is tuple and len(x) == 3 and isinstance(val, (int, float)) for x in ranges for val in x)
-        self.weights = [x[0] for x in ranges if x[0] > 0]
-        self.value_ranges = [(min(x[1], x[2]), max(x[1], x[2])) for x in ranges if x[0] > 0]
-        assert len(self.weights) > 0
+        assert all(type(x) is tuple and len(x) == 3 for x in ranges for val in x)
+        self.weights = [x[0] if callable(x[0]) else lambda x=x: x[0] for x in ranges if callable(x[0]) or x[0] > 0]
+        self.value_ranges = [((x[1] if callable(x[1]) else lambda x=x: x[1]), (x[2] if callable(x[2]) else lambda x=x:x[2])) for x in ranges
+                              if callable(x[0]) or x[0] > 0]
+        assert len(self.weights) > 0 and len(self.weights) == len(self.value_ranges)
 
     def get_randomized_value(self, random: random.Random, level):
-        range = random.choices(self.value_ranges, self.weights)[0] # tuple of (min, max)
+        weights = [max(w(), 0) for w in self.weights]
+        try:
+            range = random.choices(self.value_ranges, weights)[0] # tuple of (min, max)
+        except:
+            range = self.value_ranges[0]
+            print("couldn't select random range in VarWithRanges: " + self.name)
+        range = (range[0](), range[1]())
+        if range[0] > range[1]:
+            range = (range[1], range[0])
         datatype = self.datatype[0] if self.multivar else self.datatype
         if datatype == 'float' or datatype == 'double':
             return random.uniform(range[0], range[1])
@@ -960,10 +1014,10 @@ class DiscreteVar(RandomVariable):
     def __init__(self, name, address, chance, datatype, default, choices:list, enabled_on_levels = None, multivar_functions=None, needs_reset=False):
         super().__init__(name, address, chance, datatype, default, enabled_on_levels, multivar_functions, needs_reset)
         assert type(choices) is list and len(choices) > 0
-        self.choices = choices
+        self.choices = [c if callable(c) else lambda c=c: c for c in choices]
 
     def get_randomized_value(self, random: random.Random, level):
-        return random.choice(self.choices)
+        return random.choice(self.choices)()
 
 
 class OnOffVar(RandomVariable):
@@ -1000,7 +1054,15 @@ class FireRateVar(VarWithRanges):
         return super().randomize(random, level, WriteMemory, do_write)
 
     def fire_rate_randomize_value(self, random, level):
-        range = random.choices(self.value_ranges, self.weights)[0] # tuple of (min, max)
+        weights = [max(w(), 0) for w in self.weights]
+        try:
+            range = random.choices(self.value_ranges, weights)[0] # tuple of (min, max)
+        except:
+            range = self.value_ranges[0]
+            print("couldn't select random range in FireRateVar: " + self.name)
+        range = (range[0](), range[1]())
+        if range[0] > range[1]:
+            range = (range[1], range[0])
         actual_range = (range[0], range[0] + self.max_multiplier * (range[1] - range[0]))
         datatype = self.datatype[0] if self.multivar else self.datatype
         if datatype == 'float' or datatype == 'double':
@@ -1098,8 +1160,11 @@ class FireRateVarStr(VarStr):
         min_val = 9999
         max_val = 0
         for i in ranges:
-            j = self.modify_value_func(i[0])
-            k = self.modify_value_func(i[1])
+            min_in_cur_range = i[0]()
+            if min_in_cur_range <= self.unstable_range[1]: # ignore unstable range
+                continue
+            j = self.modify_value_func(i[0]())
+            k = self.modify_value_func(i[1]())
             min_val = min(min_val, min(j,k))
             max_val = max(max_val, max(j,k))
         def_val = self.modify_value_func(self.var.default)
@@ -1285,20 +1350,20 @@ class FireRateContainer(VarContainer):
             isCob = int(indices[i] == 47)
             minDelay = 162 if indices[i] == 42 else 96 if indices[i] == 40 else 97 if indices[i] == 43 else 0
             # weak range - limited at average setting
-            ranges.append((100, defaults[i]*(1+(0.06+0.01*min(category,3))*puffMultiplier-0.15*isCob),
+            ranges.append((lambda:75+50*difficulty, defaults[i]*(1+(0.06+0.01*min(category,3))*puffMultiplier-0.15*isCob),
                 defaults[i]*(1+(0.18+0.06*min(category,3))*puffMultiplier-0.15*isCob)))
-            ranges.append((100, max(defaults[i]*(1-(0.05+0.01*min(category,3))*puffMultiplier-0.1*isCob), minDelay),
+            ranges.append((lambda: 125-50*difficulty, max(defaults[i]*(1-(0.05+0.01*min(category,3))*puffMultiplier-0.1*isCob), minDelay),
                 max(defaults[i]*(1-(0.14+0.05*min(category,3))*puffMultiplier-0.1*isCob), minDelay)))
             # stronger range
             if category > 3 and canGoBeyondAverage[i]:
-                ranges.append(((50+30*(category-4))*puffMultiplier, defaults[i]*(1+0.35*puffMultiplier),
+                ranges.append((lambda p=puffMultiplier:(30+30*(category-4))*p+40*difficulty, defaults[i]*(1+0.35*puffMultiplier),
                     defaults[i]*(1+0.7*puffMultiplier)))
-                ranges.append(((50+30*(category-4))*puffMultiplier, max(defaults[i]*(1-0.25*puffMultiplier), minDelay),
+                ranges.append((lambda p=puffMultiplier:(70+30*(category-4))*p-40*difficulty, max(defaults[i]*(1-0.25*puffMultiplier), minDelay),
                     max(defaults[i]*(1-0.42*puffMultiplier), minDelay)))
             # very strong range
             if category > 4 and canGoVeryStrong[i]:
-                ranges.append((60, defaults[i]*1.75, defaults[i]*2.1))
-                ranges.append((40, defaults[i]*0.47, defaults[i]*0.55))
+                ranges.append((lambda:30+40*difficulty, defaults[i]*1.75, defaults[i]*2.1))
+                ranges.append((lambda:60-30*difficulty, defaults[i]*0.47, defaults[i]*0.55))
             # unstable fire rate
             if category > 2 and unstableValues[i] != 0:
                 ranges.append((-12 + 12 * category, math.floor(unstableValues[i]), math.ceil(unstableValues[i])))
@@ -1418,8 +1483,8 @@ class HealthContainer(VarContainer):
             else:
                 min_m = (0.075 + 0.005 * category) * changeMultipliers[i]
                 max_m = (0.09 + 0.06 * category) * changeMultipliers[i]
-            ranges.append((100, defaults[i]*(1+min_m), defaults[i]*(1+max_m)))
-            ranges.append((100, max(defaults[i]*(1-max_m*0.88), 5), max(defaults[i]*(1-min_m*0.88), 5))) # never set less than 5 hp
+            ranges.append((lambda:80+difficulty*40, defaults[i]*(1+min_m), defaults[i]*(1+max_m)))
+            ranges.append((lambda:120-difficulty*40, max(defaults[i]*(1-max_m*0.88), 5), max(defaults[i]*(1-min_m*0.88), 5))) # never set less than 5 hp
             if category > 2:
                 # stronger changes:
                 if isArmorHP[i]:
@@ -1428,8 +1493,8 @@ class HealthContainer(VarContainer):
                 else:
                     min_m = (0.05 + 0.04 * category) * changeMultipliers[i]
                     max_m = (0.4 + 0.05 * category) * changeMultipliers[i]
-                ranges.append((-60 + 30 * category, defaults[i]*(1+min_m), defaults[i]*(1+max_m)))
-                ranges.append((-60 + 30 * category, max(defaults[i]*(1-max_m*0.8), 5), max(defaults[i]*(1-min_m*0.8), 5))) # never set less than 5 hp
+                ranges.append((lambda:-90 + 30 * category + difficulty * 60, defaults[i]*(1+min_m), defaults[i]*(1+max_m)))
+                ranges.append((lambda:-40 + 30 * category - difficulty * 40, max(defaults[i]*(1-max_m*0.8), 5), max(defaults[i]*(1-min_m*0.8), 5))) # never set less than 5 hp
             if category > 4 and ((defaults[i] > 400 and isArmorHP[i]) or not isArmorHP[i]):
                 # very strong changes
                 if isArmorHP[i]:
@@ -1438,8 +1503,8 @@ class HealthContainer(VarContainer):
                 else:
                     min_m = (0.9) * changeMultipliers[i]**0.7
                     max_m = (1.3) * changeMultipliers[i]**0.7
-                ranges.append((53, defaults[i]*(1+min_m), defaults[i]*(1+max_m)))
-                ranges.append((47, max(defaults[i]*(1-max_m*0.66), 5), max(defaults[i]*(1-min_m*0.66), 5))) # never set less than 5 hp
+                ranges.append((lambda:30+46*difficulty, defaults[i]*(1+min_m), defaults[i]*(1+max_m)))
+                ranges.append((lambda:60-26*difficulty, max(defaults[i]*(1-max_m*0.66), 5), max(defaults[i]*(1-min_m*0.66), 5))) # never set less than 5 hp
             args = { 'var': VarWithRanges("zombie health "+str(indices[i]), address=addresses[i], chance=self.chance(120, category), datatype="int",
                                     default=defaults[i], ranges=ranges),
                         'format_str': "Health change: {sign}{value}",
@@ -1498,7 +1563,7 @@ class ShitContainer(VarContainer):
         super().__init__(seed, write_memory_func, do_activate_strings, plants_container, zombies_container, game_container)
         self.vars: list[VarWithStrIndices] = []
         plant_on_graves = VarWithStrIndices(
-            VarStr(var=OnOffVar("plant_on_graves", address=0x0040E162, chance=25,
+            VarStr(var=OnOffVar("plant_on_graves", address=0x0040E162, chance=lambda l:30-difficulty*10,
                                 datatype="unsigned char",
                                 default=[0x74],
                                 onValue=[0xEB],
@@ -1509,7 +1574,7 @@ class ShitContainer(VarContainer):
             affects_game_str=True
         )
         upgrades_placed_anywhere = VarWithStrIndices(
-            VarStr(var=OnOffVar("upgrades_free_planting", address=[0x0040E47A, 0x0041D7D6], chance=20,
+            VarStr(var=OnOffVar("upgrades_free_planting", address=[0x0040E47A, 0x0041D7D6], chance=lambda l:25-difficulty*10,
                                 datatype=["unsigned char", "unsigned char"],
                                 default=[[0x08], [0x75, 0x16, 0x8D, 0x58, 0xDF]], # jne 0041D7EE; lea ebx,[eax-21]
                                 onValue=[0x00],
@@ -1551,7 +1616,7 @@ class ShitContainer(VarContainer):
             plant_indices=[8, 9, 10, 12, 13, 14, 15, 24, 31, 42]
         )
         autoscroll_rule = VarWithStrIndices(
-            VarStr(var=VarWithRanges("autoscroll_rule", address=[0x004140CA,0x004140C0], chance=20,
+            VarStr(var=VarWithRanges("autoscroll_rule", address=[0x004140CA,0x004140C0], chance=lambda l:15+10*difficulty,
                                     datatype=["unsigned int","unsigned int"],
                                     default=[2500, 600], # base + random
                                     ranges=[(40, 1000, 1400), (60, 1400, 1800)], # (weight, min, max)
@@ -1565,7 +1630,7 @@ class ShitContainer(VarContainer):
             affects_game_str=True,
         )
         more_wavepoints = VarWithStrIndices(
-            VarStr(var=OnOffVar("more_wavepoints", address=0x00409748, chance=20,
+            VarStr(var=OnOffVar("more_wavepoints", address=0x00409748, chance=lambda l:10+20*difficulty,
                                 datatype="unsigned char",
                                 default=[0xB8, 0x56, 0x55, 0x55, 0x55, 0xF7, 0xEB, 0x8B, 0xC2],
                                 onValue=[0x8B, 0xCB, 0xD1, 0xE9, 0x8D, 0x49, 0x01, 0xEB, 0x07],
@@ -1616,7 +1681,7 @@ class ShitContainer(VarContainer):
                                     chance=30,
                                     datatype=["float", "float"],
                                     default=[0.5, 0.65],
-                                    ranges=[(80, 0.60, 0.75), (50, 0.35, 0.40), (50, 0.75, 0.90)],
+                                    ranges=[(80, 0.60, 0.75), (lambda:35+15*difficulty, 0.35, 0.40), (lambda:35+15*difficulty, 0.75, 0.90)],
                                     enabled_on_levels=lambda l:l!=15 and l!=35 and l!=50,
                                     multivar_functions=[lambda main:main+0.3*(1-main)],
                                     needs_reset=True
@@ -1653,7 +1718,7 @@ class ShitContainer(VarContainer):
         )
         starting_sun = VarWithStrIndices(
             VarStr(
-                var=DiscreteVar("starting sun", 0x0040b09b, chance=lambda l:(60 if l==-1 or level_worlds[l] in [0,2,4] else 80), datatype="int",
+                var=DiscreteVar("starting sun", 0x0040b09b, chance=lambda l:(50 if l==-1 or level_worlds[l] in [0,2,4] else 80), datatype="int",
                                     default=50, choices=[75, 75, 75, 100, 100, 125], enabled_on_levels=lambda l: l % 5 != 0),
                 format_str="Starting sun: {value}",
                 format_value_type=FORMAT_ACTUAL_VALUE),
@@ -1663,7 +1728,7 @@ class ShitContainer(VarContainer):
             # jump to code; enable writing negative sun in seed bank; reset n of lost plants to 0; amount of sun lost
             VarStr(var=OnOffVar("lose_sun_on_plant_death",
                                 address=[0x0041605E, 0x0048983A, lose_sun_on_plant_death_address_data, lose_sun_on_plant_death_address+0x3E],
-                                chance=20,
+                                chance=lambda l:10+difficulty*15,
                                 datatype=["unsigned char", "unsigned char", "unsigned int", "unsigned char"],
                                 default=[[0x89, 0x85, 0x5C, 0x55, 0x00, 0x00], 0xC1, 0, 40],
                                 onValue=[0xE9, *(lose_sun_on_plant_death_address-0x416063).to_bytes(4,"little",signed=True), 0x90],
@@ -1677,7 +1742,8 @@ class ShitContainer(VarContainer):
             affects_game_str=True,
         )
         click_on_sun_plant = VarWithStrIndices(
-            VarStr(var=OnOffVar("click_on_sun_plant", address=0x00466390, chance=25,
+            VarStr(var=OnOffVar("click_on_sun_plant", address=0x00466390,
+                                chance=lambda l:25-difficulty*12+(10 if level_worlds[l] in [1, 3, 5] else 0),
                                 datatype="unsigned char",
                                 default=[0x83, 0x7E, 0x3C, 0x25, 0x57],
                                 onValue=[0xE9, *(click_on_sun_plant_address-0x466395).to_bytes(4,"little",signed=True)],
@@ -1688,7 +1754,7 @@ class ShitContainer(VarContainer):
             affects_game_str=True,
         )
         advance_cd_on_zombie_death = VarWithStrIndices(
-            VarStr(var=OnOffVar("advance_cd_on_zombie_death", address=0x00530633, chance=25,
+            VarStr(var=OnOffVar("advance_cd_on_zombie_death", address=0x00530633, chance=lambda l:30-10*difficulty,
                                 datatype="unsigned char",
                                 default=[0x5F, 0x8B, 0xE5, 0x5D, 0xC3],
                                 onValue=[0xE9, *(advance_cd_on_zombie_death_address-0x530638).to_bytes(4,"little",signed=True)],
@@ -2264,14 +2330,12 @@ def nightAverage():
 def randomiseWeights(minigames=False):
     for i in range(0, 33):
         if i!=1 and i!=9 and i!=25:
-            if minigames and i == 26: # peashooter zombies in minigames are like normals
-                weight=weights_rng.randint(1, 45)
-            elif i>2:
-                weight=weights_rng.randint(1, 60)
-            #elif i==23:
-            #    weight=weights_rng.randint(1, 50)
+            if i == 0 or (minigames and i == 26): # normals or peashooter zombies in minigames
+                weight=weights_rng.randint(1, int(50 - difficulty * 10)) # scales from 50 to 40
+            elif i in [7, 8, 12, 14, 17, 18, 21, 23, 32]: # strong zombies
+                weight=weights_rng.randint(1, int(45 + difficulty * 30)) # scales from 45 to 75
             else:
-                weight=weights_rng.randint(1, 45)
+                weight=weights_rng.randint(1, int(50 + difficulty * 20)) # scales from 50 to 70
 
             if i==19:
                 weight=weights_rng.randint(1, 30) # yeti's final weight
@@ -2290,7 +2354,6 @@ def randomiseWeights(minigames=False):
 wavePointArray=[1, 1, 2, 2, 4, 2, 4, 7, 5, 0, 1, 3, 7, 3, 3, 3, 2, 4, 4, 4, 3, 4, 5, 10, 10, 0, 1, 4, 3, 3, 3, 7, 10]
 
 def randomiseWavePoints(minigames=False):
-    global randomWavePoints, wavePointArray
     for i in range(2, 33):
         if i==26 and minigames: # peashooter zombie in minigames will always have 1 point, because on Zombotany levels there are no normals
             WriteMemory("int", 1, 0x69DA88 + 0x1C*i)
@@ -2303,13 +2366,16 @@ def randomiseWavePoints(minigames=False):
             while addWavePoint==0 and not randomCheck:
                 if randomWavePoints.get()=="EXTREME":
                     if i==5:
-                        wavePoint=(wavepoint_rng.randint(10,83))//10
+                        wavePoint = (wavepoint_rng.randint(10, int(100 - 34 * difficulty))) // 10 # 10.0 to 6.6 scale
                     elif i==2:
-                        wavePoint=2+wavepoint_rng.randint(0,1)
+                        wavePoint = int(wavepoint_rng.uniform(3.4 - 1.8 * difficulty,
+                                                              4.4 - 1.8 * difficulty)) # 3.4-4.4 to 1.6-2.6 scale
                     else:
-                        wavePoint=(wavepoint_rng.randint(20,82))//10
-                    if wavePoint>=8:
-                        wavePoint=10    
+                        min_wp = int(max(20, 25 - 10 * difficulty)) # 25 to 20 at medium difficulty
+                        max_wp = int(92 - difficulty * 20) # 92 to 72
+                        wavePoint = (wavepoint_rng.randint(min_wp, max_wp)) // 10
+                    if wavePoint >= 8:
+                        wavePoint = 10    
                 else:
                     wavePoint=wavePointArray[i]
                     if wavePoint==10:
@@ -2321,10 +2387,14 @@ def randomiseWavePoints(minigames=False):
                     elif wavePoint==2 and i!=5:
                         lowerBound=0
                         upperBound=1
-                    else:
+                    else: # 3 wavepoints + newspaper
                         lowerBound=-1
                         upperBound=1
-                    addWavePoint=wavepoint_rng.randint(lowerBound, upperBound)
+                    options_for_wp_change = list(range(lowerBound, upperBound+1))
+                    n_of_options = len(options_for_wp_change)
+                    adjusted_difficulty = difficulty - 0.5 # -0.5 to 0.5
+                    weights_for_wp_change = [10 - (x / n_of_options * 12 * adjusted_difficulty) for x in range(n_of_options)]
+                    addWavePoint = wavepoint_rng.choices(options_for_wp_change, weights_for_wp_change)
                     wavePoint=wavePoint+addWavePoint
                     if wavePoint<2 and i!=5:
                         wavePoint=2
@@ -2361,7 +2431,9 @@ def randomiseCost():
     for i in range(0, 48):
         if i!=1 and i!=8 and i!=24: #sunflower, puff, seashroom are exceptions
             divider=cost_rng.uniform(1,2)
-            power=cost_rng.choice([-1, 1])
+            power_rand = cooldown_rng.uniform(0, 1)
+            difficulty_border = difficulty * 0.4 + 0.3 # 0.3 to 0.7 range
+            power = -1 if power_rand >= difficulty_border else 1
             color_array.append(round(((divider-1.0)**0.5)*127) + ((1-power)<<6))
             newCost=round(plants[i][0]*(divider**power))
             WriteMemory("int", newCost , 0x69F2C0 + 0x24*i)
@@ -2375,7 +2447,9 @@ def randomiseCooldown():
     for i in range(0, 48):
         if i!=1 and i!=8 and i!=33: #sunflower, puff, pot are exceptions
             divider=cooldown_rng.uniform(1,2)
-            power=cooldown_rng.choice([1, -1])
+            power_rand = cooldown_rng.uniform(0, 1)
+            difficulty_border = difficulty * 0.33 + 0.33 # 0.33 to 0.66 range
+            power = -1 if power_rand >= difficulty_border else 1
             x = divider**power
             newCooldown=round(plants[i][1] * x)
             if i in plant_cooldowns_container:
@@ -2471,7 +2545,7 @@ def randomiseSounds(**kwargs):
                 WriteMemory("unsigned int", [kwargs['addresses'][addr]], addr) # reset
         for addr in kwargs['always_change_addresses']:
             WriteMemory("unsigned int", [random_sound()], addr)
-        music_track = sounds_rng.randint(1,12) # track 13 crashes for some reason
+        music_track = sounds_rng.randint(1,12) # track 13 crashes
         if gamemode != 'minigames' and global_level_index == 49:
             music_track = 12 # brainiac maniac
         WriteMemory("unsigned char", [music_track], 0x45B908)
@@ -2524,7 +2598,7 @@ def randomiseWaveCount():
             wavecount_per_level[level] = waves_per_flag[level] * flags_per_level[level]
         # most of levels go here with random waves per flag:
         else:
-            if wavecount_rng.randint(1, 100) <= 45: # 40.5% chance for different waves per flag
+            if wavecount_rng.randint(1, 100) <= 45: # 40.5% chance for different waves per flag (considering it might randomize 10 per flag)
                 waves_per_flag[level] = wavecount_rng.randint(6, 15)
             else:
                 waves_per_flag[level] = 10
@@ -2671,128 +2745,128 @@ def randomiseLevelWorlds():
     world_counts = [len(day_levels), len(night_levels), len(pool_levels), len(fog_levels), len(roof_levels), len(roof_night_levels)]
     return (worlds, roof_with_5_pots)
 
+zombies_allowed = [
+    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1,],
+    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1,],
+    [0, 0, 1, 1, 1, 1, 1, 1, 1, 1,
+    0, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1,],
+    [0, 0, 0, 0, 0, 1, 1, 0, 1, 1,
+    0, 0, 0, 1, 1, 0, 0, 0, 0, 0,
+    0, 0, 0, 1, 0, 0, 0, 0, 1, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 1, 0, 0, 0, 0, 0, 0, 0, 0,],
+    [0, 0, 0, 0, 0, 0, 0, 1, 1, 1,
+    0, 1, 0, 0, 1, 0, 0, 0, 0, 0,
+    0, 1, 0, 1, 0, 0, 1, 0, 1, 1,
+    0, 0, 0, 0, 0, 0, 1, 0, 1, 1,
+    0, 1, 0, 0, 1, 0, 0, 0, 1, 1,],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    1, 1, 0, 0, 1, 0, 0, 0, 0, 0,
+    0, 1, 0, 1, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 1, 1, 0, 0, 1, 0, 1, 1,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 1, 1, 0, 0, 1,
+    0, 1, 0, 0, 1, 0, 0, 0, 0, 0,
+    0, 1, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 1, 0, 0, 0, 0, 0, 0,],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 1, 1, 1,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 1, 1, 1,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 1, 1, 1, 0, 1, 0, 0, 1,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 1, 1, 0, 1, 1,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 1, 1, 0, 1, 1,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 1, 1, 1,
+    0, 0, 0, 1, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    1, 1, 0, 0, 0, 0, 1, 0, 0, 1,
+    0, 0, 0, 0, 0, 0, 0, 0, 1, 1,],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 1, 1, 0, 0, 0, 0, 1, 1,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 1, 1, 0, 0, 1,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 1, 1, 1,
+    0, 0, 0, 1, 0, 0, 0, 0, 0, 0,],
+    [],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    1, 1, 0, 0, 0, 0, 1, 0, 1, 1,],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 1, 1, 1, 0, 1, 0, 1, 1,],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 1, 1, 0, 1, 1,],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 1, 1, 1,],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 1, 1, 1,],
+    [], [], [], [], [], [], [], []
+]
+    
 def reset_zombie_spawn():
-    zombies_allowed = [
-		[
-			1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-			1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-			1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-			1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-			1, 1, 1, 1, 1, 1, 1, 1, 1, 1,],
-		    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-			1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-			1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-			1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-			1, 1, 1, 1, 1, 1, 1, 1, 1, 1,],
-		    [0, 0, 1, 1, 1, 1, 1, 1, 1, 1,
-			0, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-			1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-			1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-			1, 1, 1, 1, 1, 1, 1, 1, 1, 1,],
-			[0, 0, 0, 0, 0, 1, 1, 0, 1, 1,
-			0, 0, 0, 1, 1, 0, 0, 0, 0, 0,
-			0, 0, 0, 1, 0, 0, 0, 0, 1, 0,
-			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-			0, 1, 0, 0, 0, 0, 0, 0, 0, 0,],
-			[0, 0, 0, 0, 0, 0, 0, 1, 1, 1,
-			0, 1, 0, 0, 1, 0, 0, 0, 0, 0,
-			0, 1, 0, 1, 0, 0, 1, 0, 1, 1,
-			0, 0, 0, 0, 0, 0, 1, 0, 1, 1,
-			0, 1, 0, 0, 1, 0, 0, 0, 1, 1,],
-			[0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-			1, 1, 0, 0, 1, 0, 0, 0, 0, 0,
-			0, 1, 0, 1, 0, 0, 0, 0, 0, 0,
-			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
-			[0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-			0, 0, 1, 1, 0, 0, 1, 0, 1, 1,
-			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
-			[0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-			0, 0, 0, 0, 0, 1, 1, 0, 0, 1,
-			0, 1, 0, 0, 1, 0, 0, 0, 0, 0,
-			0, 1, 0, 0, 0, 0, 0, 0, 0, 0,
-			0, 0, 0, 1, 0, 0, 0, 0, 0, 0,],
-			[0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-			0, 0, 0, 0, 0, 0, 0, 1, 1, 1,
-			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
-			[0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-			0, 0, 0, 0, 0, 0, 0, 1, 1, 1,
-			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-			0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-	        [],
-			[0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-			0, 0, 1, 1, 1, 0, 1, 0, 0, 1,
-			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
-			[0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-			0, 0, 0, 0, 0, 1, 1, 0, 1, 1,
-			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
-			[0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-			0, 0, 0, 0, 0, 1, 1, 0, 1, 1,
-			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
-			[0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-			0, 0, 0, 0, 0, 0, 0, 1, 1, 1,
-			0, 0, 0, 1, 0, 0, 0, 0, 0, 0,
-			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
-			[0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-			1, 1, 0, 0, 0, 0, 1, 0, 0, 1,
-			0, 0, 0, 0, 0, 0, 0, 0, 1, 1,],
-			[0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-			0, 0, 1, 1, 0, 0, 0, 0, 1, 1,
-			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
-			[0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-			0, 0, 0, 0, 0, 1, 1, 0, 0, 1,
-			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
-			[0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-			0, 0, 0, 0, 0, 0, 0, 1, 1, 1,
-			0, 0, 0, 1, 0, 0, 0, 0, 0, 0,],
-            [],
-			[0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-			1, 1, 0, 0, 0, 0, 1, 0, 1, 1,],
-			[0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-			0, 0, 1, 1, 1, 0, 1, 0, 1, 1,],
-			[0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-			0, 0, 0, 0, 0, 1, 1, 0, 1, 1,],
-			[0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-			0, 0, 0, 0, 0, 0, 0, 1, 1, 1,],
-			[0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-			0, 0, 0, 0, 0, 0, 0, 1, 1, 1,],
-            [], [], [], [], [], [], [], []
-    ]
     write_list = []
     for idx,val in enumerate(zombies_allowed):
         write_list.append(idx)
@@ -2885,12 +2959,14 @@ def redistribute_aquatic_zombies():
         level = worlds_rng.choice(list(snorkel_potential_levels))
         snorkel_levels.add(level)
         snorkel_potential_levels.remove(level)
+        zombies_allowed[11][level-1] = 1
     for i in range(4 - dolphin_count - int(dolphin_add_to_fog_level)):
         if len(dolphin_potential_levels) == 0:
             break
         level = worlds_rng.choice(list(dolphin_potential_levels))
         dolphin_levels.add(level)
         dolphin_potential_levels.remove(level)
+        zombies_allowed[14][level-1] = 1
     if dolphin_add_to_fog_level:
         potential_levels = fog_levels.difference({5, 34})
         level = worlds_rng.choice(list(potential_levels))
@@ -3022,6 +3098,7 @@ def generateZombies(levels, level_plants):
         plantsInOrder.append(level_plants[levels[i]])
     for i in range(1, len(levels)):
         level = levels[i]
+        difficulty = calculate_difficulty(i)
         if level==50 or level==15 or level==35:
             zombiesToRandomise.append([]) # no rando on those levels
             continue
@@ -3046,9 +3123,16 @@ def generateZombies(levels, level_plants):
                     continue
             if j==9 or j==10 or j==24 or j==25:
                 continue
-            elif zombies_rng.randint(0, 11) != 0:
+            
+            if len(zombies_allowed[j]) >= level and zombies_allowed[j][level-1]: # chance to remove zombie
+                modify_rate = 8 + difficulty * 6
+            elif j in [4, 6, 7, 8, 12, 14, 16, 17, 20, 21, 22, 23, 32]: # chance to add strong zombie
+                modify_rate = 15 - 8 * difficulty
+            else: # chance to add weak zombie
+                modify_rate = 12 - difficulty * 2
+            if int(zombies_rng.uniform(0, modify_rate)) != 0:
                 continue
-            elif (j==11 or j==14) and level_worlds not in [2,3]:
+            elif (j==11 or j==14) and level_worlds[level] not in [2,3]:
                 continue
             elif zombies[j][1]==level:
                 continue
@@ -5029,6 +5113,7 @@ else:
         global_level_index = i
         current_level_container[0] = levels[i]
         if gamemode.get() == 'adventure':
+            difficulty = calculate_difficulty(i)
             if i == 0:
                 WriteMemory("int", 50, 0x69F2CC) # quicken level 1-1
                 WriteMemory("int", 10, 0x41523D) # quicken level 1-1
