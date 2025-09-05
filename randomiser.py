@@ -4537,10 +4537,24 @@ if limitPreviews.get():
         0x66, 0x90,       # nop 2
     ], 0x43A66C)
 
-# always Enable shop
+# always enable shop
 WriteMemory("unsigned char", [
         0x00
     ], 0x483D68)
+# allow any upgrade plant in shop on any level
+WriteMemory("unsigned char", [
+        0x30, 0xC0, 0xC3
+    ], 0x48AAD0)
+# always enable second page in shop
+WriteMemory("unsigned char", [
+        0x00
+    ], 0x48C49B)
+WriteMemory("unsigned char", [
+        0x00
+    ], 0x48A551)
+WriteMemory("unsigned char", [
+        0x00
+    ], 0x48D330)
 
 # Crazy Dave stuff
 # I know this is a lot of code, but I'm not sure how to make it better - a lot of it is for umbrella/blover/torchwood.
