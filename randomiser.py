@@ -1474,12 +1474,12 @@ class HealthContainer(VarContainer):
         # average is <100% overall chance + slim chance for bigger changes
         # everything below has less chance for any change + smaller range of changes
         # every change should be sizeable, let's make no like +1% changes
-        indices =           [2,   4,   6,   19,   20,   7,   17,  3,    14,   23,   32,   12,   22,   15,   18,   5,   8,    24,   21,   27,  28,   31]
-        defaults =          [370, 1100,1100,1350, 450,  1400,100, 500,  500,  3000, 6000, 1350, 850,  500,  500,  150, 500,  70,   500,  1100,500,  2200]
-        isArmorHP =         [True,True,True,False,False,True,True,False,False,False,False,False,False,False,False,True,False,False,False,True,False,True]
-        changeMultipliers = [1,   0.7, 0.7, 0.7,  1,    0.7, 0.2, 1,    1,    0.38, 0.20, 0.7,  1,    1,    1,    1,   1,    2.5,  0.85, 0.7, 1,    0.45]
+        indices =           [2,   4,   6,   19,   20,   7,   17,  3,    14,   23,   32,   12,   22,   15,   18,   5,   8,    21,   27,  28,   31]
+        defaults =          [370, 1100,1100,1350, 450,  1400,100, 500,  500,  3000, 6000, 1350, 850,  500,  500,  150, 500,  500,  1100,500,  2200]
+        isArmorHP =         [True,True,True,False,False,True,True,False,False,False,False,False,False,False,False,True,False,False,True,False,True]
+        changeMultipliers = [1,   0.7, 0.7, 0.7,  1,    0.7, 0.2, 1,    1,    0.38, 0.20, 0.7,  1,    1,    1,    1,   1,    0.85, 0.7, 1,    0.45]
         addresses = [0x00522892,0x0052292B,0x00522949,0x0052296E,0x00522A1B,0x00522BB0,0x00522BEF,0x00522CBF,0x00522D64,0x00523D26,0x00523E4A,
-                        0x00522DE1,0x00522E8D,0x00522FC7,0x00523300,0x0052337D,0x00523530,0x005235AC,0x0052299C,0x0052382B,0x00523A87,0x0052395D]
+                        0x00522DE1,0x00522E8D,0x00522FC7,0x00523300,0x0052337D,0x00523530,0x0052299C,0x0052382B,0x00523A87,0x0052395D]
         assert len(indices) == len(defaults) == len(isArmorHP) == len(changeMultipliers) == len(addresses)
         for i in range(len(indices)):
             # note, we use 180 and not 270 because players are generally interested in how long it takes to kill zombie with firepower, so use hp without head
@@ -1607,18 +1607,17 @@ class ShitContainer(VarContainer):
             affects_game_str=True,
         )
         shrooms_wake_up = VarWithStrIndices(
-            VarStr(var=ContinuousVar("shrooms_wake_up", address=[0x004108CC, 0x0040E140], chance=28,
-                                    datatype=["unsigned int", "unsigned char"],
-                                    default=[0, [0x7F, 0x0D]], # wake up timer, jmp if wake up timer already active
+            VarStr(var=ContinuousVar("shrooms_wake_up", address=[mushrooms_wake_up_address_data, 0x004108CC, 0x0040E140], chance=lambda l:31-difficulty*10,
+                                    datatype=["unsigned int", "unsigned int", "unsigned char"],
+                                    default=[0, 0, [0x7F, 0x0D]],
                                     min=1500, # wake up timer
                                     max=3000, # wake up timer
                                     enabled_on_levels=lambda l:(l == -1 or level_worlds[l] in [0, 2, 4]) and l not in [15, 35],
-                                    multivar_functions=[lambda _:[0x90, 0x90]] # allow to plant if wake up timer active
+                                    multivar_functions=[lambda main: main, lambda _:[0x90, 0x90]] # allow to plant coffee if wake up timer active
                                     ),
                     format_str="Mushrooms wake up after {value} seconds",
                     format_value_type=FORMAT_ACTUAL_VALUE,
                     modify_value_func=lambda time:time/100
-
             ),
             affects_game_str=True,
             plant_indices=[8, 9, 10, 12, 13, 14, 15, 24, 31, 42]
@@ -4743,7 +4742,9 @@ if randomVarsSystemEnabled:
     default_zombie_x_pos_address = zombie_x_pos_address + 0x0E
     snorkel_x_pos_address = zombie_x_pos_address + 0x15
     dolphin_x_pos_address = zombie_x_pos_address + 0x1C
-    next_address = zombie_x_pos_address + 0x30
+    mushrooms_wake_up_address = zombie_x_pos_address + 0x30
+    mushrooms_wake_up_address_data = mushrooms_wake_up_address + 0x01
+    next_free_address = mushrooms_wake_up_address + 0x20
 
     float_rebases_address = string_stuff_address + 0x800
     plants_string_address = string_stuff_address + 4 * 1024
@@ -4921,6 +4922,17 @@ if randomVarsSystemEnabled:
         0xE9, *(zombie_x_pos_address-0x5225A9).to_bytes(4,"little",signed=True), # jmp to new code
     ],
     0x5225A4)
+
+    # Mushrooms wake up code
+    WriteMemory("unsigned char", [
+        0xBA, 0x00, 0x00, 0x00, 0x00, 0x89, 0x93, 0x30, 0x01, 0x00, 0x00, 0xE9,
+        *(0x45DCD0-mushrooms_wake_up_address-0x10).to_bytes(4,"little",signed=True),
+    ],
+    mushrooms_wake_up_address)
+    WriteMemory("unsigned char", [
+        0xE9, *(mushrooms_wake_up_address-0x45DCCF).to_bytes(4,"little",signed=True), 0x90 # jmp to new code
+    ],
+    0x45DCCA)
 
     random_vars = RandomVars(seed, WriteMemory, True, plants_string_container, zombies_string_container, game_string_container,
                              code_address=string_stuff_address, catZombieHealth=actualRandomVarsZombieHealth, catFireRate=actualRandomVarsFireRate,
