@@ -255,6 +255,8 @@ randomSoundChance= IntVar(value=3)
 randomPitch      = BooleanVar(value=False)
 easierStart      = BooleanVar(value=False)
 harderEnd        = BooleanVar(value=False)
+randomParticles  = BooleanVar(value=False)
+randomParticlesChance = IntVar(value=25)
 
 seed=str(random.randint(1,999999999999))
 
@@ -295,6 +297,10 @@ if hasSave:
         fileInfo.append("False") #easierStart
     if len(fileInfo)<38:
         fileInfo.append("False") #harderEnd
+    if len(fileInfo)<39:
+        fileInfo.append("False") #randomParticles
+    if len(fileInfo)<40:
+        fileInfo.append("25") #randomParticlesChance
     challengeMode.set(  eval(fileInfo[4].strip()))
     shopless.set(       eval(fileInfo[5].strip()))
     noRestrictions.set( eval(fileInfo[6].strip()))
@@ -330,6 +336,8 @@ if hasSave:
     randomPitch.set(str(fileInfo[35].strip()) == "True")
     easierStart.set(str(fileInfo[36].strip()) == "True")
     harderEnd.set(str(fileInfo[37].strip()) == "True")
+    randomParticles.set(str(fileInfo[38].strip()) == "True")
+    randomParticlesChance.set(int(fileInfo[39].strip()))
     if fileInfo[1]=="finished\n":
         hasSave=False
 
@@ -450,10 +458,11 @@ def continueButtonClick():
     randomShit.set(str(fileInfo[32].strip()) == "True")
     randomSound.set(str(fileInfo[33].strip()) == "True")
     randomSoundChance.set(int(fileInfo[34].strip()))
-    # randomPitch.set(str(fileInfo[35].strip()) == "True")
-    randomPitch.set(False) # index 35 is still written to save file, but because there might be a chance of crash with random pitch we set it to false
+    randomPitch.set(str(fileInfo[35].strip()) == "True")
     easierStart.set(str(fileInfo[36].strip()) == "True")
     harderEnd.set(str(fileInfo[37].strip()) == "True")
+    randomParticles.set(str(fileInfo[38].strip()) == "True")
+    randomParticlesChance.set(int(fileInfo[39].strip()))
     saved.set(True)
     jumpLevel=""
     window.destroy()
@@ -563,8 +572,16 @@ randomSoundSlider.config(font=('Arial', 8))
 randomSoundSlider.grid(row=6, column=3, sticky=W)
 
 pitchButton=Checkbutton(window, text="RANDOM PITCH", width=16, variable=randomPitch, anchor="w")#command=upgradeButtonClick)
-pitchButton.grid(row=5, column=4, sticky=W)
+pitchButton.grid(row=4, column=4, sticky=W)
 Hovertip(pitchButton, "Randomizes pitch of sounds. Can be combined with random sounds, but works without them", 10)
+
+particlesButton=Checkbutton(window, text="RANDOM PARTICLES", width=16, variable=randomParticles, anchor="w")#command=upgradeButtonClick)
+particlesButton.grid(row=5, column=4, sticky=W)
+Hovertip(particlesButton, "Changes particles, like explosions and others", 10)
+
+randomParticlesSlider = Scale(window, from_=0, to=100, orient=HORIZONTAL, length=115, label="Particles Chance", variable=randomParticlesChance)
+randomParticlesSlider.config(font=('Arial', 8))
+randomParticlesSlider.grid(row=6, column=4, sticky=W)
 
 easierStartButton=Checkbutton(window, text="Easier start", width=16, variable=easierStart, anchor="w")#command=upgradeButtonClick)
 easierStartButton.grid(row=0, column=5, sticky=W)
@@ -638,7 +655,7 @@ zombiesButton.grid(row=3, column=4, sticky=W)
 Hovertip(zombiesButton, "Adds or removes random zombie types from each level", 10)
 
 limitPreviewsButton=Checkbutton(window, text="LIMIT PREVIEWS", width=16, variable=limitPreviews, anchor="w")#command=cooldownButtonClick)
-limitPreviewsButton.grid(row=4, column=4, sticky=W)
+limitPreviewsButton.grid(row=5, column=6, sticky=W)
 Hovertip(limitPreviewsButton, "Limits each zombie type to appear only once on level preview,\nso you have no idea how many there are of each type", 10)
 
 ##zombiesButton=Checkbutton(window, text="RANDOM CONVEYORS", width=16, variable=randomConveyors, anchor="w")#command=cooldownButtonClick)
@@ -684,7 +701,7 @@ randomWorldSlider.grid(row=4, column=6, sticky=W)
 
 randomShitButton=Checkbutton(window, text="RANDOM STUFF", width=16, variable=randomShit, anchor="w")
 randomShitButton.grid(row=6, column=6, sticky=W)
-Hovertip(randomShitButton, "Random stuff", 10)
+Hovertip(randomShitButton, "Enables some random effects, like Mushrooms wake up, Can plant on graves, Extra slots, and others", 10)
 
 daveAmountLabel=Label(window, text="DAVE PLANTS COUNT:")
 daveAmountLabel.grid(row=5, column=5, sticky=W)
@@ -785,7 +802,7 @@ print("Starting Wave:",          startingWave.get())
 print("Random Cost:",        str(randomCost.get()))
 print("Coloured Cost:",      str(costTextToggle.get()))
 print("Random Cooldowns:",   str(randomCooldowns.get()))
-print("Cooldown seed coloring:",   str(cooldownColoring.get()))
+print("Cooldown seed coloring:", str(cooldownColoring.get()))
 print("Random Zombies:",     str(randomZombies.get()))
 print("Limited Previews:",   str(limitPreviews.get()))
 print("Random Conveyors:",   str(randomConveyors.get()))
@@ -801,7 +818,10 @@ print("Random Sound:",       str(randomSound.get()))
 print("Random Sound Chance:",str(randomSoundChance.get()))
 print("Random Pitch:",       str(randomPitch.get()))
 print("Easier Start:",       str(easierStart.get()))
-print("Harder End:",       str(harderEnd.get()))
+print("Harder End:",         str(harderEnd.get()))
+print("Random Particles:",   str(randomParticles.get()))
+print("Random Particles Chance:", str(randomParticlesChance.get()))
+
 
 def settings_lines_to_save():
     return [(challengeMode.get()), (shopless.get()), (noRestrictions.get()), (noAutoSlots.get()), (imitater.get()),
@@ -811,7 +831,7 @@ def settings_lines_to_save():
         enableDave.get(), davePlantsCount.get(), randomVarsCatZombieHealth.get(), randomVarsCatFireRate.get(),
         renderWeights.get(), renderWavePoints.get(), limitPreviews.get(), gamemode.get(), randomWaveCount.get(), randomWorld.get(),
         randomWorldChance.get(), randomShit.get(), randomSound.get(), randomSoundChance.get(), randomPitch.get(),
-        easierStart.get(), harderEnd.get()]
+        easierStart.get(), harderEnd.get(), randomParticles.get(), randomParticlesChance.get()]
 
 linesToWrite=[seed, 2, str(ReadMemory("int", 0x6A9EC0,0x82C,0x214)), str(ReadMemory("int",0x6A9EC0,0x82C, 0x28)), *settings_lines_to_save()]
 with open('saveFile.txt', 'w') as saveFile:
@@ -1886,6 +1906,7 @@ upgrade_rng = random.Random(seed+'upgrade')
 wavecount_rng = random.Random(seed+'wavecount')
 worlds_rng = random.Random(seed+'worlds')
 sounds_rng = random.Random(seed+'sounds')
+particles_rng = random.Random(seed+'particles')
 
 # level order and plants use random.seed to reseed global random object, so I don't make separate Random for them
 
@@ -2569,6 +2590,80 @@ def randomiseSounds(**kwargs):
                     WriteMemory("float", [
                         pitches[i]
                     ],0x69FAD0+i*52+4)
+
+
+def particles_decorator(f):
+    # Some particles are infinite, or too bad to be used very often (imagine doom explosion every time pea hits a zombie).
+    # So we allow them only on rare events
+    common_events_addresses = {
+        0x0046E0D7: 0, 0x0046E117: 1, 0x004648AC: 2, 0x00462E97: 4, 0x00529B9E: 6,
+        0x00529BA5: 72, 0x00529BB5: 74, 0x00529BE5: 61, 0x00529C0D: 18, 0x0052A36B: 7, 0x0052A372: 73, 0x00530EB9: 8, 0x00530EF9: 9,
+        0x00530F36: 10, 0x00530F63: 14, 0x00529920: 11, 0x00530A61: 12, 0x00530B00: 13, 0x00421DAA: 15, 0x0052539E: 16, 0x0044E109: 20,
+        0x0040D0EF: 21, 0x0040D08B: 22, 0x0046023E: 22, 0x0052F773: 22, 0x00531F6C: 23, 0x00531F95: 53, 0x0045FCD1: 24, 
+        0x0045FD43: 25, 0x005288EC: 33, 0x0052BC6B: 35, 0x0046457C: 36, 0x004645D6: 36,
+        0x0046722F: 44, 0x0046727C: 51, 0x0046C8D2: 45, 0x0046C975: 50, 0x0045FE5D: 49, 0x00530B63: 54,
+        0x0046D736: 55, 0x004648F8: 60, 0x0052EB5D: 63, 0x0053282A: 65, 0x005328CD: 63,
+        0x00533B5E: 80, 0x00533DCC: 64, 0x00533DF0: 63, 0x00533EA1: 65, 0x0046E16C: 68, 0x00466D17: 71,
+        0x0046E21E: 37, 0x0046E239: 43, 0x0046E2D1: 41, 0x0046E2DF: 40, 0x0046E2F7: 39, 0x0046E329: 38, 
+    }
+    rare_events_addresses = {
+        0x004667F4: 4, 0x00526C93: 5, 0x0046685C: 30, 0x0045E499: 46, 0x0046E1A8: 3,
+        0x00466A88: 48, 0x0052EA25: 62, 0x0052EC7E: 62, 0x0052B9FB: 88,
+    }
+    short_particles = [0, 1, 2, 3, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 21, 22, 23, 24, 25, 26, 29, 33, 36,
+                       37, 38, 39, 40, 41, 43, 44, 48, 51, 52, 54, 55, 58, 60, 61, 62, 63, 64, 65, 66, 68, 70,
+                       71, 72, 73, 74, 75, 76, 77, 78, 79, 88, 89, 90, 91, 94, 95, 96, 97, 98, 103]
+    bad_particles = [4, 27, 28, 30, 32, 34, 35, 42, 45, 46, 50, 56, 57, 59, 67, 69, 80, 81, 82, 83, 84, 85, 86, 87,
+                                       92, 93, 99, 100, 101, 102, 104]
+
+    # for e in common_events_addresses:
+    #     assert(ReadMemory("unsigned char", e-1) in (0x6A, 0xBF, 0xB8, 0xBE, 0x68))
+
+    def wrapper(*args, **kwargs):
+        f(*args, 
+           common_events_addresses=common_events_addresses,
+           rare_events_addresses=rare_events_addresses,
+           short_particles=short_particles,
+           bad_particles=bad_particles,
+           **kwargs)
+    return wrapper
+
+
+@particles_decorator
+def randomiseParticles(**kwargs):
+    if 'common_events_addresses' not in kwargs or 'rare_events_addresses' not in kwargs or 'short_particles' not in kwargs or 'bad_particles' not in kwargs:
+        raise ValueError('missing args')
+    available_options = kwargs['short_particles']
+    for d in [kwargs['common_events_addresses'], kwargs['rare_events_addresses']]:
+        for addr in d:
+            if addr in (0x00462E97, 0x00421DAA, 0x00531F95, 0x00533B5E):
+                chance = 100
+            else:
+                chance = randomParticlesChance.get()
+            if particles_rng.randint(1, 100) <= chance:
+                val = particles_rng.choice(available_options)
+            else:
+                val = d[addr]
+            if addr in (0x0046E21E, 0x0046E239, 0x0046E2D1, 0x0046E2DF, 0x0046E2F7, 0x0046E329):
+                if addr == 0x0046E21E:
+                    val_to_write = val
+                elif addr == 0x0046E239:
+                    val_to_write = val - 1
+                elif addr == 0x0046E2D1:
+                    val_to_write = val - 7
+                elif addr == 0x0046E2DF:
+                    val_to_write = val - 4
+                elif addr == 0x0046E2F7:
+                    val_to_write = val - 2
+                elif addr == 0x0046E329:
+                    val_to_write = val - 12
+                if val_to_write < 0:
+                    val_to_write = 37
+            else:
+                val_to_write = val
+            WriteMemory('unsigned char', [val_to_write], addr)
+        available_options = kwargs['bad_particles']
+
 
 untouchable_wavecount = [1, 15, 35, 50]
 
@@ -4556,6 +4651,11 @@ WriteMemory("unsigned char", [
         0x00
     ], 0x48D330)
 
+# Disable intro cutscene
+WriteMemory("unsigned char", [
+        0xEB
+    ], 0x44B35D)
+
 # Crazy Dave stuff
 # I know this is a lot of code, but I'm not sure how to make it better - a lot of it is for umbrella/blover/torchwood.
 # We need a lot of bytes to check whether umbrella/blover/torchwood are unlocked to make it work like in vanilla,
@@ -5127,6 +5227,8 @@ if gamemode.get() == 'minigames':
             random_vars.randomize(-1, do_write=not saved.get())
         if not saved.get() and (randomSound.get() or randomPitch.get()):
             randomiseSounds()
+        if not saved.get() and randomParticles.get():
+            randomiseParticles()
         if saved.get():
             Sleep(1)
         else:
@@ -5243,6 +5345,8 @@ else:
             WriteMemory("bool",True,0x6A9EC0,0x82C,0x218)
         if (i == 0 or not saved.get()) and (randomSound.get() or randomPitch.get()):
             randomiseSounds()
+        if not saved.get() and randomParticles.get():
+            randomiseParticles()
         if(i != 0) and not saved.get(): 
             Sleep(1)
         if gamemode.get() == 'adventure' and (level_plants[newlevel] != -1):
