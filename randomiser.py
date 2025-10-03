@@ -2016,22 +2016,24 @@ def randomiseLevels(seed, ngplus=False):
     return firstLevels
 
 def randomiseLevelsAndPlants(seed):
-    global noRestrictions, challengeMode
+    global first_plant
     random.seed(seed)
-    
+    first_plant = random.choice([0, 5, 7, 18, 26, 28, 29, 32, 34, 39])
     plants = [1]
     levels = [1]
-    unused_plants   = [i for i in range(2,40)]
+    unused_plants   = [i for i in range(0,40)]
+    unused_plants.remove(first_plant)
+    unused_plants.remove(1)
     if challengeMode.get() or noRestrictions.get():
         level_plants    = [(-1,1.0) for i in range(0,51)]
     else:
         level_plants    = [(-1,0.8) for i in range(0,51)]
-    level_plants[0] =  (0, 0.0)
+    level_plants[0] =  (first_plant, 0.0)
     level_plants[1] =  (1, 0.0)
     if not noRestrictions.get():
         while 1: #select key plants for only levels you could have unlocked by that point
             current_available = len(getAvailableStages(plants,levels))
-            plants.append(0)
+            plants.append(first_plant)
             key_plants   = []
             key_weights  = []
             key_weights2 = []
@@ -3549,6 +3551,8 @@ def randomiseConveyors(in_seed):
 #showAverage()
 #nightAverage()
 
+first_plant = 0 # peashooter; can be modified in randomiseLevelsAndPlants
+
 reset_zombie_spawn() # resets from random zombies mode
 reset_from_random_worlds() # writes default code for selecting world/graves/etc
 if randomWorld.get() and gamemode.get() != "minigames":
@@ -3574,7 +3578,7 @@ else:
     else:
         levels = randomiseLevels(seed)
         level_plants = LEVEL_PLANTS
-plants_array  = [-1,0]
+plants_array  = [-1,first_plant]
 plants_array2 = []
 for i in levels:
     if level_plants[i] != -1:
@@ -5055,7 +5059,6 @@ if randomVarsSystemEnabled:
 
 if randomCooldowns.get():
     WriteMemory("unsigned char",[255,255],0x6512C2) # make peashooter/sunflower not red on first level
-WriteMemory("int",[150],0x69F2CC) # reset peashooter fire rate
 plants_unlocked = 1
 WriteMemory("int", plants_array, 0x651094)
 WriteMemory("int", plants_array2, 0x651194) #ends at 0x65125c
@@ -5244,18 +5247,19 @@ if gamemode.get() == 'minigames':
         wait_level_end_or_game_close() # if game is closed, tha function exits the program after waiting for an input
              
 else:
-    #WriteMemory("int", [2], 0x409326) # make 2-5 short
+    WriteMemory("int", 600, 0x40B08F)
     for i in range(50):
         global_level_index = i
         current_level_container[0] = levels[i]
         if gamemode.get() == 'adventure':
             difficulty = calculate_difficulty(i)
             if i == 0:
-                WriteMemory("int", 50, 0x69F2CC) # quicken level 1-1
+                WriteMemory("int", 50, 0x5227BB) # quicken level 1-1
                 WriteMemory("int", 10, 0x41523D) # quicken level 1-1
                 WriteMemory("int", 10, 0x413F4B) # quicken level 1-1
                 WriteMemory("int", 2, 0x6A34E8) # quicken level 1-1
             elif i == 1:
+                WriteMemory("int", 270, 0x5227BB) # quicken level 1-1
                 WriteMemory("int", 150, 0x69F2CC) # reset from level 1-1
                 WriteMemory("int", 200, 0x413F4B) # reset from level 1-1
                 WriteMemory("int", 4, 0x6A34E8) # reset from level 1-1
