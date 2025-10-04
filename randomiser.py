@@ -2018,7 +2018,7 @@ def randomiseLevels(seed, ngplus=False):
 def randomiseLevelsAndPlants(seed):
     global first_plant
     random.seed(seed)
-    first_plant = random.choice([0, 5, 7, 18, 26, 28, 29, 32, 34, 39])
+    first_plant = random.choice([0, 5, 7, 26, 28, 29, 32, 34])
     plants = [1]
     levels = [1]
     unused_plants   = [i for i in range(0,40)]
