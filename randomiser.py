@@ -257,6 +257,7 @@ easierStart      = BooleanVar(value=False)
 harderEnd        = BooleanVar(value=False)
 randomParticles  = BooleanVar(value=False)
 randomParticlesChance = IntVar(value=25)
+randomFirstPlant = BooleanVar(value=False)
 
 seed=str(random.randint(1,999999999999))
 
@@ -301,6 +302,8 @@ if hasSave:
         fileInfo.append("False") #randomParticles
     if len(fileInfo)<40:
         fileInfo.append("25") #randomParticlesChance
+    if len(fileInfo)<41:
+        fileInfo.append("False") #randomFirstPlant
     challengeMode.set(  eval(fileInfo[4].strip()))
     shopless.set(       eval(fileInfo[5].strip()))
     noRestrictions.set( eval(fileInfo[6].strip()))
@@ -338,6 +341,7 @@ if hasSave:
     harderEnd.set(str(fileInfo[37].strip()) == "True")
     randomParticles.set(str(fileInfo[38].strip()) == "True")
     randomParticlesChance.set(int(fileInfo[39].strip()))
+    randomFirstPlant.set(fileInfo[40].strip() == "True")
     if fileInfo[1]=="finished\n":
         hasSave=False
 
@@ -416,9 +420,6 @@ def noRestrictionsButtonClick():
 def shoplessButtonClick():
     if shopless.get():
         noAutoSlots.set(False)
-        manualMoneyButton.config(state=DISABLED)
-    else:
-        manualMoneyButton.config(state=NORMAL)
 
 def continueButtonClick():
     global seed, savePoint, jumpLevel
@@ -463,6 +464,7 @@ def continueButtonClick():
     harderEnd.set(str(fileInfo[37].strip()) == "True")
     randomParticles.set(str(fileInfo[38].strip()) == "True")
     randomParticlesChance.set(int(fileInfo[39].strip()))
+    randomFirstPlant.set(fileInfo[40].strip() == "True")
     saved.set(True)
     jumpLevel=""
     window.destroy()
@@ -542,9 +544,9 @@ noRestrictionsButton.grid(row=2, column=0, sticky=W)
 Hovertip(noRestrictionsButton, "Removes all restrictions from level ordering, as well as some other modes.\n"\
     "You might require A LOT of attempts to beat the game with this setting", 10)
 
-manualMoneyButton=Checkbutton(window, text="MANUAL MONEY", width=16, variable=noAutoSlots, anchor="w")#command=autoSlotsButtonClick)
-manualMoneyButton.grid(row=3, column=3, sticky=W)
-Hovertip(manualMoneyButton, "RECOMMENDED - you will buy items from shop yourself, including seed slots.\nWithout this, your money will disappear after every level", 10)
+# manualMoneyButton=Checkbutton(window, text="MANUAL MONEY", width=16, variable=noAutoSlots, anchor="w")#command=autoSlotsButtonClick)
+# manualMoneyButton.grid(row=3, column=3, sticky=W)
+# Hovertip(manualMoneyButton, "RECOMMENDED - you will buy items from shop yourself, including seed slots.\nWithout this, your money will disappear after every level", 10)
 
 imitaterButton=Checkbutton(window, text="INSTANT IMITATER", width=16, variable=imitater, anchor="w")#command=imitaterButtonClick)
 imitaterButton.grid(row=2, column=4, sticky=W)
@@ -578,6 +580,10 @@ Hovertip(pitchButton, "Randomizes pitch of sounds. Can be combined with random s
 particlesButton=Checkbutton(window, text="RANDOM PARTICLES", width=16, variable=randomParticles, anchor="w")#command=upgradeButtonClick)
 particlesButton.grid(row=5, column=4, sticky=W)
 Hovertip(particlesButton, "Changes particles, like explosions and others", 10)
+
+firstPlantButton=Checkbutton(window, text="RANDOM FIRST PLANT", width=16, variable=randomFirstPlant, anchor="w")#command=upgradeButtonClick)
+firstPlantButton.grid(row=3, column=3, sticky=W)
+Hovertip(firstPlantButton, "Randomzies first plant to other shooter than peashooter", 10)
 
 randomParticlesSlider = Scale(window, from_=0, to=100, orient=HORIZONTAL, length=115, label="Particles Chance", variable=randomParticlesChance)
 randomParticlesSlider.config(font=('Arial', 8))
@@ -779,8 +785,6 @@ if randomCost.get():
     costTextButton.config(state=NORMAL)
 if noRestrictions.get():
     challengeButton.config(state=DISABLED)
-if shopless.get():
-    manualMoneyButton.config(state=DISABLED)
     
 
 window.mainloop() #Run the event loop
@@ -821,6 +825,7 @@ print("Easier Start:",       str(easierStart.get()))
 print("Harder End:",         str(harderEnd.get()))
 print("Random Particles:",   str(randomParticles.get()))
 print("Random Particles Chance:", str(randomParticlesChance.get()))
+print("Random First Plant:", str(randomFirstPlant.get()))
 
 
 def settings_lines_to_save():
@@ -831,7 +836,7 @@ def settings_lines_to_save():
         enableDave.get(), davePlantsCount.get(), randomVarsCatZombieHealth.get(), randomVarsCatFireRate.get(),
         renderWeights.get(), renderWavePoints.get(), limitPreviews.get(), gamemode.get(), randomWaveCount.get(), randomWorld.get(),
         randomWorldChance.get(), randomShit.get(), randomSound.get(), randomSoundChance.get(), randomPitch.get(),
-        easierStart.get(), harderEnd.get(), randomParticles.get(), randomParticlesChance.get()]
+        easierStart.get(), harderEnd.get(), randomParticles.get(), randomParticlesChance.get(), randomFirstPlant.get()]
 
 linesToWrite=[seed, 2, str(ReadMemory("int", 0x6A9EC0,0x82C,0x214)), str(ReadMemory("int",0x6A9EC0,0x82C, 0x28)), *settings_lines_to_save()]
 with open('saveFile.txt', 'w') as saveFile:
@@ -2018,7 +2023,10 @@ def randomiseLevels(seed, ngplus=False):
 def randomiseLevelsAndPlants(seed):
     global first_plant
     random.seed(seed)
-    first_plant = random.choice([0, 5, 7, 26, 28, 29, 32, 34])
+    if randomFirstPlant.get():
+        first_plant = random.choice([0, 5, 7, 26, 28, 29, 32, 34])
+    else:
+        first_plant = 0
     plants = [1]
     levels = [1]
     unused_plants   = [i for i in range(0,40)]
@@ -5259,7 +5267,7 @@ else:
                 WriteMemory("int", 10, 0x413F4B) # quicken level 1-1
                 WriteMemory("int", 2, 0x6A34E8) # quicken level 1-1
             elif i == 1:
-                WriteMemory("int", 270, 0x5227BB) # quicken level 1-1
+                WriteMemory("int", 270, 0x5227BB) # reset from level 1-1
                 WriteMemory("int", 150, 0x69F2CC) # reset from level 1-1
                 WriteMemory("int", 200, 0x413F4B) # reset from level 1-1
                 WriteMemory("int", 4, 0x6A34E8) # reset from level 1-1
