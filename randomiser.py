@@ -307,7 +307,7 @@ if hasSave:
     challengeMode.set(  eval(fileInfo[4].strip()))
     shopless.set(       eval(fileInfo[5].strip()))
     noRestrictions.set( eval(fileInfo[6].strip()))
-    noAutoSlots.set(    eval(fileInfo[7].strip()))
+    noAutoSlots.set(False) # default false
     imitater.set(       eval(fileInfo[8].strip()))
     randomisePlants.set(eval(fileInfo[9].strip()))
     seeded.set(False) # crashes game
