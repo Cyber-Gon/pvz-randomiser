@@ -307,7 +307,7 @@ if hasSave:
     challengeMode.set(  eval(fileInfo[4].strip()))
     shopless.set(       eval(fileInfo[5].strip()))
     noRestrictions.set( eval(fileInfo[6].strip()))
-    noAutoSlots.set(False) # default false
+    noAutoSlots.set(True) # always enabled
     imitater.set(       eval(fileInfo[8].strip()))
     randomisePlants.set(eval(fileInfo[9].strip()))
     seeded.set(False) # crashes game
@@ -416,10 +416,6 @@ def noRestrictionsButtonClick():
         challengeButton.config(state=DISABLED)
     else:
         challengeButton.config(state=NORMAL)
-
-def shoplessButtonClick():
-    if shopless.get():
-        noAutoSlots.set(False)
 
 def continueButtonClick():
     global seed, savePoint, jumpLevel
@@ -535,7 +531,7 @@ challengeButton=Checkbutton(window, text="CHALLENGE", width=16, variable=challen
 challengeButton.grid(row=1, column=0, sticky=W)
 Hovertip(challengeButton, "Makes level ordering harder - some default limitations are not enabled with this setting", 10)
 
-shoplessButton=Checkbutton(window, text="SHOPLESS", width=16, variable=shopless, anchor="w", command=shoplessButtonClick)
+shoplessButton=Checkbutton(window, text="SHOPLESS", width=16, variable=shopless, anchor="w")
 shoplessButton.grid(row=3, column=0, sticky=W)
 Hovertip(shoplessButton, "Not recommended. Disables shop - you won't get seed slots or upgrade plants", 10)
 
@@ -829,9 +825,9 @@ print("Random First Plant:", str(randomFirstPlant.get()))
 
 
 def settings_lines_to_save():
-    return [(challengeMode.get()), (shopless.get()), (noRestrictions.get()), (noAutoSlots.get()), (imitater.get()),
-        (randomisePlants.get()), (seeded.get()), (upgradeRewards.get()), (randomWeights.get()),
-        (randomWavePoints.get()), startingWave.get(), randomCost.get(), randomCooldowns.get(),
+    return [challengeMode.get(), shopless.get(), noRestrictions.get(), noAutoSlots.get(), imitater.get(),
+        randomisePlants.get(), seeded.get(), upgradeRewards.get(), randomWeights.get(),
+        randomWavePoints.get(), startingWave.get(), randomCost.get(), randomCooldowns.get(),
         costTextToggle.get(), randomZombies.get(), randomConveyors.get(), cooldownColoring.get(),
         enableDave.get(), davePlantsCount.get(), randomVarsCatZombieHealth.get(), randomVarsCatFireRate.get(),
         renderWeights.get(), renderWavePoints.get(), limitPreviews.get(), gamemode.get(), randomWaveCount.get(), randomWorld.get(),
