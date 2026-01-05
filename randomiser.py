@@ -112,20 +112,26 @@ try:
                     processes.append(i)
             
             pvz_proc = None
+            pvz_proc_name = None
             for i in processes:
                 with open("/proc/"+i+"/comm", "rb") as namefile:
                     name = namefile.read()
                 if name == b"popcapgame1.exe\n":
+                    pvz_proc_name = "popcapgame1.exe"
                     pvz_proc = i
                 elif name == b"PlantsVsZombies\n":
                     if not pvz_proc:
+                        pvz_proc_name = "PlantsVsZombies"
                         pvz_proc = i
             
             if not pvz_proc:
                 raise ImportError("pvz not found!")
             
-            print(pvz_proc)
+            print(''.join(["Found process ", str(pvz_proc), " with name ", pvz_proc_name]))
             pvz_memfd = c_open(b'/proc/'+bytes(pvz_proc,'utf-8')+b'/mem',0x1B6,0)
+            
+            if pvz_memfd == -1:
+                raise AttributeError(''.join(["openPVZ Error opening pvz_memfd: ", str(-ctypes.get_errno())]))
             
             return pvz_memfd
         
@@ -142,7 +148,7 @@ try:
                     size = ctypes.sizeof(buffer)
                     bytes_read.value = pread(pvz_memfd,ctypes.byref(buffer),size,offset)
                     if bytes_read.value != size:
-                        raise AttributeError("ReadMemory Error " + str(-ctypes.get_errno()))
+                        raise AttributeError(''.join(["ReadMemory Error ", str(-ctypes.get_errno()), " @ addr 0x" + hex(offset.value)]))
 
                 else:
                     fmt_str = "<" + str(array) + cpp_typename[data_type]
@@ -150,7 +156,7 @@ try:
                     buff = ctypes.create_string_buffer(size)
                     bytes_read.value = pread(pvz_memfd,ctypes.byref(buff),size,offset)
                     if bytes_read.value != size:
-                        raise AttributeError("ReadMemory Error " + str(-ctypes.get_errno()))
+                        raise AttributeError(''.join(["ReadMemory Error ", str(-ctypes.get_errno()), " @ addr 0x" + hex(offset.value)]))
 
                     result = struct.unpack(fmt_str, buff.raw)
             if array == 1:
@@ -175,7 +181,7 @@ try:
                     size = ctypes.sizeof(buffer)
                     bytes_read.value = pread(pvz_memfd,ctypes.byref(buffer),size,offset)
                     if bytes_read.value != size:
-                        raise AttributeError("WriteMemory Error " + str(-ctypes.get_errno()))
+                        raise AttributeError(''.join(["WriteMemory Error ", str(-ctypes.get_errno()), " @ addr 0x" + hex(offset.value)]))
 
                 else:
                     array = len(values)
@@ -185,7 +191,7 @@ try:
                     buff.value = struct.pack(fmt_str, *values)
                     bytes_written.value = pwrite(pvz_memfd,ctypes.byref(buff),size,offset)
                     if bytes_written.value != size:
-                        raise AttributeError("WriteMemory Error " + str(-ctypes.get_errno()))
+                        raise AttributeError(''.join(["WriteMemory Error ", str(-ctypes.get_errno()), " @ addr 0x" + hex(offset.value)]))
         
         def Sleep(time_cs): #this is stolen too, idk why its part of pvztools but it is
             if time_cs > 0.0:
@@ -198,8 +204,13 @@ try:
         def game_ui():
             return ReadMemory("int", 0x6A9EC0, 0x7FC)
         
+        pvz_memfd = None
         pvz_memfd = openPVZ()
-except Exception as err:
+        correct_hash = 0x47a52a36dd337278
+        pvz_hash = hash(ReadMemory("char", 0x401000, array=4096))
+        if correct_hash != pvz_hash:
+            raise AttributeError(''.join(["Pvz hash incorrect: ", hex(pvz_hash), " != ", hex(correct_hash)]))
+except ImportError:
     print("pvz not found!")
     print("windows: " + str(WINDOWS))
     print(traceback.format_exc())
