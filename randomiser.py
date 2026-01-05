@@ -104,6 +104,13 @@ try:
             "double": "d",
         }
         
+        with open("/proc/sys/kernel/yama/ptrace_scope", "rb") as ptrace_scope_file:
+            ptrace_scope = ptrace_scope_file.read()
+            if int(ptrace_scope) != 0:
+                raise AssertionError("""Ptrace on external processes has been disabled.
+Please run `echo 0 > /proc/sys/kernel/yama/ptrace_scope` as root to allow the randomiser
+to read and write to the memory of PvZ.""")
+        
         def openPVZ():
             procfiles = listdir("/proc/")
             processes = []
@@ -181,7 +188,7 @@ try:
                     size = ctypes.sizeof(buffer)
                     bytes_read.value = pread(pvz_memfd,ctypes.byref(buffer),size,offset)
                     if bytes_read.value != size:
-                        raise AttributeError(''.join(["WriteMemory Error ", str(-ctypes.get_errno()), " @ addr 0x" + hex(offset.value)]))
+                        raise AttributeError(''.join(["ReadMemory Error ", str(-ctypes.get_errno()), " inside WriteMemory @ addr 0x" + hex(offset.value)]))
 
                 else:
                     array = len(values)
@@ -209,7 +216,7 @@ try:
         correct_hash = 0x47a52a36dd337278
         pvz_hash = hash(ReadMemory("char", 0x401000, array=4096))
         if correct_hash != pvz_hash:
-            raise AttributeError(''.join(["Pvz hash incorrect: ", hex(pvz_hash), " != ", hex(correct_hash)]))
+            raise AssertionError(''.join(["Pvz hash incorrect: ", hex(pvz_hash), " != ", hex(correct_hash), ". This likely means you are not running the original version of PvZ, which is required for this randomiser to work."]))
 except ImportError:
     print("pvz not found!")
     print("windows: " + str(WINDOWS))
