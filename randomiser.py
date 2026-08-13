@@ -1678,8 +1678,8 @@ class ShitContainer(VarContainer):
         more_wavepoints = VarWithStrIndices(
             VarStr(var=OnOffVar("more_wavepoints", address=0x00409748, chance=lambda l:10+20*difficulty,
                                 datatype="unsigned char",
-                                default=[0xB8, 0x56, 0x55, 0x55, 0x55, 0xF7, 0xEB, 0x8B, 0xC2],
-                                onValue=[0x8B, 0xCB, 0xD1, 0xE9, 0x8D, 0x49, 0x01, 0xEB, 0x07],
+                                default=[0xB8, 0x56, 0x55, 0x55, 0x55, 0xF7, 0xEB],
+                                onValue=[0xB8, 0x00, 0x00, 0x00, 0x80, 0xF7, 0xE3],
                                 enabled_on_levels=lambda l:gamemode.get() != 'ng+' and (l == -1 or l not in [15,35,50]),
                                 needs_reset=True
                                 ),
@@ -1780,7 +1780,7 @@ class ShitContainer(VarContainer):
                                 onValue=[0xE9, *(lose_sun_on_plant_death_address-0x416063).to_bytes(4,"little",signed=True), 0x90],
                                 enabled_on_levels=lambda l:l==-1 or (l%5!=0 and level_worlds[l] in [0,2,4]),
                                 multivar_functions=[lambda main:0xC0, lambda main:0,
-                                                    lambda main,level:int(self.rng.randint(10,25) * (0.5 if level_worlds[level] == 4 else 1))]
+                                                    lambda main,level:int(self.rng.randint(10,25) * (0.5 if level_worlds.get(level) == 4 else 1))]
                                 ),
                     format_str="Lose {value} sun when plant dies/shoveled",
                     value_index=3 # sun lost per plant
@@ -1789,7 +1789,7 @@ class ShitContainer(VarContainer):
         )
         click_on_sun_plant = VarWithStrIndices(
             VarStr(var=OnOffVar("click_on_sun_plant", address=0x00466390,
-                                chance=lambda l:25-difficulty*12+(10 if level_worlds[l] in [1, 3, 5] else 0),
+                                chance=lambda l:25-difficulty*12+(10 if level_worlds.get(l) in [1, 3, 5] else 0),
                                 datatype="unsigned char",
                                 default=[0x83, 0x7E, 0x3C, 0x25, 0x57],
                                 onValue=[0xE9, *(click_on_sun_plant_address-0x466395).to_bytes(4,"little",signed=True)],
@@ -1821,7 +1821,8 @@ class ShitContainer(VarContainer):
         self.vars.append(fifty_percent_rule)
         self.vars.append(random_zombie_sizes_var)
         self.vars.append(extra_plant_hp)
-        self.vars.append(lose_sun_on_plant_death)
+        if gamemode.get() != 'minigames': # bugged in survivals
+            self.vars.append(lose_sun_on_plant_death)
         self.vars.append(click_on_sun_plant)
         self.vars.append(advance_cd_on_zombie_death)
         self.vars.append(starting_sun)
