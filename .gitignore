@@ -3,3 +3,5 @@ leftoverZombies.txt
 .vscode/launch.json
 cheat_engine_export_bytes.py
 .vscode/
+__pycache__/
+*.py[cod]
