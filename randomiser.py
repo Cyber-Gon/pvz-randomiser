@@ -12,6 +12,7 @@ import atexit
 import os
 import traceback
 import sys
+from pathlib import Path
 
 def excepthook(type, value, traceback):
     print('Unhandled error:', type, value)
@@ -218,150 +219,177 @@ to read and write to the memory of PvZ.""")
         if correct_hash != pvz_hash:
             raise AssertionError(''.join(["Pvz hash incorrect: ", hex(pvz_hash), " != ", hex(correct_hash), ". This likely means you are not running the original version of PvZ, which is required for this randomiser to work."]))
 except ImportError:
-    print("pvz not found!")
+    print("pvz python package not found!")
     print("windows: " + str(WINDOWS))
     print(traceback.format_exc())
 import random
-    
-try:
-    saveFile=open('saveFile.txt', 'r')
-except:
-    saveFile=open('saveFile.txt', 'w')
-    saveFile.close()
-    saveFile=open('saveFile.txt', 'r')
-hasSave=False
-fileInfo=saveFile.readlines()
-if len(fileInfo)>0:
-    hasSave=True
-saveFile.close()
+
+def get_save_path():
+    if WINDOWS:
+        base = Path(os.environ.get(
+            "LOCALAPPDATA",
+            Path.home() / "AppData" / "Local",
+        ))
+    else:
+        base = Path(os.environ.get(
+            "XDG_STATE_HOME",
+            Path.home() / ".local" / "state",
+        ))
+    save_dir = base / "pvz_randomiser"
+    save_dir.mkdir(parents=True, exist_ok=True)
+    return save_dir / "saveFile.txt"
+
+SAVE_PATH = get_save_path()
+
+def read_save():
+    try:
+        return SAVE_PATH.read_text(encoding="utf-8").splitlines()
+    except FileNotFoundError:
+        return []
+    except OSError as error:
+        print(f"Previous progress could not be loaded: {error}")
+        return []
+
+def write_save(lines):
+    try:
+        temporary_path = SAVE_PATH.with_suffix(".tmp")
+        temporary_path.write_text(
+            "".join(f"{line}\n" for line in lines),
+            encoding="utf-8",
+        )
+        os.replace(temporary_path, SAVE_PATH)
+        return True
+    except OSError as error:
+        print(f"Progress could not be saved: {error}")
+        return False
+
+fileInfo = read_save()
+
+def has_resumable_save():
+    if len(fileInfo) < 4 or fileInfo[1] == "finished":
+        return False
+    try:
+        int(fileInfo[1])
+        int(fileInfo[2])
+        int(fileInfo[3])
+    except ValueError:
+        return False
+    return True
+
+hasSave = has_resumable_save()
 savePoint=-5
 
 window=Tk() #Creates a window object from the Tk class
 window.title("Randomiser settings")
-challengeMode    = BooleanVar(value=False)
-shopless         = BooleanVar(value=False)
-noRestrictions   = BooleanVar(value=False)
-noAutoSlots      = BooleanVar(value=True) # enabled by default
-imitater         = BooleanVar(value=False)
-randomisePlants  = BooleanVar(value=True) # enabled by default
-seeded           = BooleanVar(value=False)
-upgradeRewards   = BooleanVar(value=True) # enabled by default
-randomWeights    = BooleanVar(value=False)
-renderWeights    = BooleanVar(value=False)
-randomWavePoints = StringVar(value="False")
-renderWavePoints = BooleanVar(value=False)
+challengeMode    = BooleanVar()
+shopless         = BooleanVar()
+noRestrictions   = BooleanVar()
+noAutoSlots      = BooleanVar()
+imitater         = BooleanVar()
+randomisePlants  = BooleanVar()
+seeded           = BooleanVar()
+upgradeRewards   = BooleanVar()
+randomWeights    = BooleanVar()
+renderWeights    = BooleanVar()
+randomWavePoints = StringVar()
+renderWavePoints = BooleanVar()
 saved            = BooleanVar(value=False)
-startingWave     = StringVar(value="False")
-randomCost       = BooleanVar(value=False)
-randomCooldowns  = BooleanVar(value=False)
-costTextToggle   = BooleanVar(value=False)
-cooldownColoring = StringVar(value="False")
-randomZombies    = BooleanVar(value=False)
-randomConveyors  = StringVar(value="False")
-enableDave       = StringVar(value="False")
-davePlantsCount  = StringVar(value="3")
-randomVarsCatZombieHealth = StringVar(value="Off")
-randomVarsCatFireRate = StringVar(value="Off")
-limitPreviews    = BooleanVar(value=False)
-gamemode         = StringVar(value="adventure")
-randomWaveCount  = StringVar(value="False")
-randomWorld      = BooleanVar(value=False)
-randomWorldChance= IntVar(value=33)
-randomShit       = BooleanVar(value=False)
-randomSound      = BooleanVar(value=False)
-randomSoundChance= IntVar(value=3)
-randomPitch      = BooleanVar(value=False)
-easierStart      = BooleanVar(value=False)
-harderEnd        = BooleanVar(value=False)
-randomParticles  = BooleanVar(value=False)
-randomParticlesChance = IntVar(value=25)
-randomFirstPlant = BooleanVar(value=False)
+startingWave     = StringVar()
+randomCost       = BooleanVar()
+randomCooldowns  = BooleanVar()
+costTextToggle   = BooleanVar()
+cooldownColoring = StringVar()
+randomZombies    = BooleanVar()
+randomConveyors  = StringVar()
+enableDave       = StringVar()
+davePlantsCount  = StringVar()
+randomVarsCatZombieHealth = StringVar()
+randomVarsCatFireRate = StringVar()
+limitPreviews    = BooleanVar()
+gamemode         = StringVar(value="no")
+randomWaveCount  = StringVar()
+randomWorld      = BooleanVar()
+randomWorldChance= IntVar()
+randomEffects       = BooleanVar()
+randomSound      = BooleanVar()
+randomSoundChance= IntVar()
+randomPitch      = BooleanVar()
+easierStart      = BooleanVar()
+harderEnd        = BooleanVar()
+randomParticles  = BooleanVar()
+randomParticlesChance = IntVar()
+randomFirstPlant = BooleanVar()
+
+def parse_saved_bool(value):
+    value = value.casefold()
+    if value in ("true", "1"):
+        return True
+    if value in ("false", "0"):
+        return False
+    raise ValueError(f"Invalid saved boolean: {value}")
+
+def force_true(_value):
+    return True
+
+def force_false(_value):
+    return False
+
+# Keep this in the same order as the settings stored after the first four
+# save-file fields (seed, level, slots, and money).
+SETTING_SPECS = (
+    (challengeMode, False, parse_saved_bool),
+    (shopless, False, parse_saved_bool),
+    (noRestrictions, False, parse_saved_bool),
+    (noAutoSlots, True, force_true),       # always enabled
+    (imitater, False, parse_saved_bool),
+    (randomisePlants, True, parse_saved_bool),
+    (seeded, False, force_false),           # disabled because it crashes the game
+    (upgradeRewards, True, parse_saved_bool),
+    (randomWeights, False, parse_saved_bool),
+    (randomWavePoints, "False", str),
+    (startingWave, "False", str),
+    (randomCost, False, parse_saved_bool),
+    (randomCooldowns, False, parse_saved_bool),
+    (costTextToggle, False, parse_saved_bool),
+    (randomZombies, False, parse_saved_bool),
+    (randomConveyors, "False", str),
+    (cooldownColoring, "False", str),
+    (enableDave, "False", str),
+    (davePlantsCount, "3", str),
+    (randomVarsCatZombieHealth, "Off", str),
+    (randomVarsCatFireRate, "Off", str),
+    (renderWeights, False, parse_saved_bool),
+    (renderWavePoints, False, parse_saved_bool),
+    (limitPreviews, False, parse_saved_bool),
+    (gamemode, "no", str),
+    (randomWaveCount, "False", str),
+    (randomWorld, False, parse_saved_bool),
+    (randomWorldChance, 33, int),
+    (randomEffects, False, parse_saved_bool),
+    (randomSound, False, parse_saved_bool),
+    (randomSoundChance, 3, int),
+    (randomPitch, False, parse_saved_bool),
+    (easierStart, False, parse_saved_bool),
+    (harderEnd, False, parse_saved_bool),
+    (randomParticles, False, parse_saved_bool),
+    (randomParticlesChance, 25, int),
+    (randomFirstPlant, False, parse_saved_bool),
+)
+
+def saved_setting_value(index, default, converter):
+    try:
+        return converter(fileInfo[index].strip())
+    except (IndexError, TypeError, ValueError):
+        return default
+
+def load_settings_from_save():
+    for index, (variable, default, converter) in enumerate(SETTING_SPECS, start=4):
+        variable.set(saved_setting_value(index, default, converter))
+
+load_settings_from_save()
+gamemode.set("no") # to make rando stop if settings window is closed instead of applying last saved gamemode
 
 seed=str(random.randint(1,999999999999))
-
-if hasSave:
-    if len(fileInfo)<21:
-        fileInfo.append("False") # cooldownColoring
-    if len(fileInfo)<22:
-        fileInfo.append("False") # enableDave
-    if len(fileInfo)<23:
-        fileInfo.append("3") #davePlantsCount
-    if len(fileInfo)<24:
-        fileInfo.append("Off") #randomVarsCatZombieHealth
-    if len(fileInfo)<25:
-        fileInfo.append("Off") #randomVarsCatFireRate
-    if len(fileInfo)<26:
-        fileInfo.append("False") #renderWeights
-    if len(fileInfo)<27:
-        fileInfo.append("False") #renderWavePoints
-    if len(fileInfo)<28:
-        fileInfo.append("False") #limitPreviews
-    if len(fileInfo)<29:
-        fileInfo.append("adventure") #gamemode
-    if len(fileInfo)<30:
-        fileInfo.append("False") #randomWavecount
-    if len(fileInfo)<31:
-        fileInfo.append("False") #randomWorld
-    if len(fileInfo)<32:
-        fileInfo.append("33") #randomWorldChance
-    if len(fileInfo)<33:
-        fileInfo.append("False") #randomShit
-    if len(fileInfo)<34:
-        fileInfo.append("False") #randomSound
-    if len(fileInfo)<35:
-        fileInfo.append("3") #randomSoundChance
-    if len(fileInfo)<36:
-        fileInfo.append("False") #randomPitch
-    if len(fileInfo)<37:
-        fileInfo.append("False") #easierStart
-    if len(fileInfo)<38:
-        fileInfo.append("False") #harderEnd
-    if len(fileInfo)<39:
-        fileInfo.append("False") #randomParticles
-    if len(fileInfo)<40:
-        fileInfo.append("25") #randomParticlesChance
-    if len(fileInfo)<41:
-        fileInfo.append("False") #randomFirstPlant
-    challengeMode.set(  eval(fileInfo[4].strip()))
-    shopless.set(       eval(fileInfo[5].strip()))
-    noRestrictions.set( eval(fileInfo[6].strip()))
-    noAutoSlots.set(True) # always enabled
-    imitater.set(       eval(fileInfo[8].strip()))
-    randomisePlants.set(eval(fileInfo[9].strip()))
-    seeded.set(False) # crashes game
-    # seeded.set(         eval(fileInfo[10].strip()))
-    upgradeRewards.set( eval(fileInfo[11].strip()))
-    randomWeights.set(  eval(fileInfo[12].strip()))
-    randomWavePoints.set(    fileInfo[13].strip())
-    startingWave.set(        fileInfo[14].strip())
-    randomCost.set(     eval(fileInfo[15].strip()))
-    randomCooldowns.set(eval(fileInfo[16].strip()))
-    costTextToggle.set(eval(fileInfo[17].strip()))
-    randomZombies.set(eval(fileInfo[18].strip()))
-    randomConveyors.set(str(fileInfo[19].strip()))
-    cooldownColoring.set(str(fileInfo[20].strip()))
-    enableDave.set(str(fileInfo[21].strip()))
-    davePlantsCount.set(str(fileInfo[22].strip()))
-    randomVarsCatZombieHealth.set(str(fileInfo[23].strip()))
-    randomVarsCatFireRate.set(str(fileInfo[24].strip()))
-    renderWeights.set(str(fileInfo[25].strip()))
-    renderWavePoints.set(str(fileInfo[26].strip()))
-    limitPreviews.set(str(fileInfo[27].strip()) == "True")
-    gamemode.set(str(fileInfo[28].strip()))
-    randomWaveCount.set(str(fileInfo[29].strip()))
-    randomWorld.set(str(fileInfo[30].strip()))
-    randomWorldChance.set(int(fileInfo[31].strip()))
-    randomShit.set(str(fileInfo[32].strip()) == "True")
-    randomSound.set(str(fileInfo[33].strip()) == "True")
-    randomSoundChance.set(int(fileInfo[34].strip()))
-    randomPitch.set(str(fileInfo[35].strip()) == "True")
-    easierStart.set(str(fileInfo[36].strip()) == "True")
-    harderEnd.set(str(fileInfo[37].strip()) == "True")
-    randomParticles.set(str(fileInfo[38].strip()) == "True")
-    randomParticlesChance.set(int(fileInfo[39].strip()))
-    randomFirstPlant.set(fileInfo[40].strip() == "True")
-    if fileInfo[1]=="finished\n":
-        hasSave=False
 
 def clamp(n, smallest, largest): return max(smallest, min(n, largest))
 
@@ -441,44 +469,7 @@ def continueButtonClick():
     savePoint=int(fileInfo[1].strip())
     WriteMemory("int", int(fileInfo[2].strip()), 0x6A9EC0,0x82C,0x214) #slots
     WriteMemory("int", int(fileInfo[3].strip()), 0x6A9EC0,0x82C,0x28) #money
-    challengeMode.set(  eval(fileInfo[4].strip()))
-    shopless.set(       eval(fileInfo[5].strip()))
-    noRestrictions.set( eval(fileInfo[6].strip()))
-    noAutoSlots.set(    eval(fileInfo[7].strip()))
-    imitater.set(       eval(fileInfo[8].strip()))
-    randomisePlants.set(eval(fileInfo[9].strip()))
-    #seeded.set(         eval(fileInfo[10].strip()))
-    seeded.set(False)
-    upgradeRewards.set( eval(fileInfo[11].strip()))
-    randomWeights.set(  eval(fileInfo[12].strip()))
-    randomWavePoints.set(    fileInfo[13].strip())
-    startingWave.set(        fileInfo[14].strip())
-    randomCost.set(     eval(fileInfo[15].strip()))
-    randomCooldowns.set(eval(fileInfo[16].strip()))
-    costTextToggle.set(eval(fileInfo[17].strip()))
-    randomZombies.set(eval(fileInfo[18].strip()))
-    randomConveyors.set(str(fileInfo[19].strip()))
-    cooldownColoring.set(str(fileInfo[20].strip()))
-    enableDave.set(str(fileInfo[21].strip()))
-    davePlantsCount.set(str(fileInfo[22].strip()))
-    randomVarsCatZombieHealth.set(str(fileInfo[23].strip()))
-    randomVarsCatFireRate.set(str(fileInfo[24].strip()))
-    renderWeights.set(str(fileInfo[25].strip()))
-    renderWavePoints.set(str(fileInfo[26].strip()))
-    limitPreviews.set(str(fileInfo[27].strip()) == "True")
-    gamemode.set(str(fileInfo[28].strip()))
-    randomWaveCount.set(str(fileInfo[29].strip()))
-    randomWorld.set(str(fileInfo[30].strip()))
-    randomWorldChance.set(int(fileInfo[31].strip()))
-    randomShit.set(str(fileInfo[32].strip()) == "True")
-    randomSound.set(str(fileInfo[33].strip()) == "True")
-    randomSoundChance.set(int(fileInfo[34].strip()))
-    randomPitch.set(str(fileInfo[35].strip()) == "True")
-    easierStart.set(str(fileInfo[36].strip()) == "True")
-    harderEnd.set(str(fileInfo[37].strip()) == "True")
-    randomParticles.set(str(fileInfo[38].strip()) == "True")
-    randomParticlesChance.set(int(fileInfo[39].strip()))
-    randomFirstPlant.set(fileInfo[40].strip() == "True")
+    load_settings_from_save()
     saved.set(True)
     jumpLevel=""
     window.destroy()
@@ -505,7 +496,13 @@ def NgPlusClick():
 
 def informationButtonClick():
     outputText.delete(0.0, END)
-    manipulatedText="Aaronthewinner made the original version that randomised the levels. BulbasaurRepresent created most of the logic, modifiers, and GUI. Vsoup.vx did most of the complex stuff, including making the seed select update to show the right plants. LunarBlessing added the tooltip for the random cooldowns, and made the starting cooldowns scale with their actual cooldowns. REALLY IMPORTANT: If you use either RANDOM WEIGHTS or RAND WAVE POINTS, and then you want to do another run WITHOUT those modifiers, close and reopen the game, otherwise things will be funky. Additionally, if you are continuing a saved run / jumping to a specific level, be aware that SEEDED mode does not work with it, and so is automatically disabled." + " "*spaces + "The jump level box allows you to jump to a specific level in the seed! This is great for recovering from a crash if you know your seed but for some reason the save file got corrupted. Just play 1-1 and then you should be at the same level (although with nothing bought from the shop)." + " "*spaces + "The Continue Last Run button only appears if you have an incomplete run in your save data. If you do, pressing this will close the settings menu and give you the same settings as before. After you play 1-1, you should be at the level you were previously at! You will also have the same plants, same money, and the same amount of slot upgrades. You will NOT save any other things bought from the shop (such as rakes or pre-unlocked upgrade plants)." + " "*spaces + "Challenge Mode gets rid of the tough level restriction. With this disabled, you will not be able to play certain levels (like 5-2) without having 3 good plants. Other levels (like 5-9) will need 5 good plants to play. With this enabled, as soon as you unlock flower pot, you can play both 5-2 and 5-9 (for instance)." + (" " * spaces) + "Shopless mode forces you to play with 6 slots and no automatic pool cleaners / roof cleaners." + (" " * spaces) + "No restrictions mode means that there is no logic as to what levels can be played next - the majority of no restrictions runs are impossible." + (" " * spaces) + "With manual money enabled, you do not get automatic slot upgrades, but your money does not reset to 0 after every level, and so you can purchase the slots yourself - this also means you can buy rakes and upgrade plants!" + (" " * spaces) + "Instant imitater mode gives you access to an imitater immediately, which allows you to choose one of any plant to bring to the stage, even if you haven't unlocked it! This works especially well with no restrictions." + (" " * spaces) + "Random plants means that the plant you get at the end of each level is RANDOMISED, in a similar way to the levels! Instead of unlocking the plant you usually unlock for beating that stage, you get a random one!" + (" " * spaces) + "Seeded means that the seed you enter will not only affect the random plants and levels you get, but also the zombie spawns and other types of RNG, which makes it perfect for races!" + (" " * spaces) + "Random upgrades means that most levels that would usually give you no reward instead gives you an upgrade plant! It is important to note that if you have 4 plants total and one upgrade plant, you will not have 4 seed slots - sorry about that." + (" " * spaces) + "Random Weights means that the likelihood for a zombie to spawn is a random number, and this changes from level to level. Cones might be extremely unlikely one level, and then extremely likely the next one!" + (" " * spaces) + "Random Wave Points has two modes: Normal and EXTREME. Normal mode means that a zombie's wave points can either stay the same, or increase/decrease by 1 wave point if they originally cost less than 5 wave points, 2 wave points if they originally cost 5-7 wave points, and 3 wave points if they originally cost 10 wave points. EXTREME mode means that a zombie's wave point value is a random number from 2 to 7 (or, in rare cases, 10). This changes from level to level, and the basic zombie always costs 1 wave point while the cone zombie always costs either 2 or 3 wave points. There is no guarantee that EXTREME mode is always possible. If you're using either randomised weights or randomised wave points, you can look at the program during the run to see a rundown of what weights and wave points each zombie type had!" + "" * spaces + "The starting wave refers to what wave the zombies can start spawning at. Usually, the day/night zombies can spawn in the first 10 waves while the other zombies cannot. Random mode means that each zombie (except for basics, cones, and newspapers) has a random starting wave from 4 to 10. Vaulters, buckets, and screen-doors have a random starting wave from 1 to 10. Instant mode means that every zombie can immediately spawn from wave 1 (provided there is enough wave points)." +" " * spaces + "Random costs will set the cost of almost every plant to 50-200% of the original price! The only exception is the sunflower (and the peashooter in 1-1)." + " "*spaces + "Coloured cost means that plants that cost less than they usually do will be green, and plants that cost more than usual will be blue!"+" "*spaces +"Random cooldowns will set the cooldown of almost every plant to 50-200% of the original cooldown! The only exceptions are sunflower, puff shroom, and flower pot. The redder the seed during seed select, the worse the cooldown!" + " "*spaces + "Random zombies means that each level can have random zombie show up! Each zombie (including zombotany zombies) has a 1/15 chance to either no longer appear / now appear on a level! Introduction stages will still always have their intro zombies." + " "*spaces + "Random conveyors has two modes - balanced and It's Raining Seeds mode. Balanced mode replaced high dps plants with other high dps plants, instas with other instas, etc. It's Raining Seeds mode creates a random list of 20 plants, and then each of them have the same chance of appearing on the conveyor (except for stuff like lilypads)." 
+    manipulatedText="""Aaronthewinner made the original version that randomised the levels. BulbasaurRepresent created most of the logic, modifiers, and GUI. Vsoup.vx did most of the complex stuff, including making the seed select update to show the right plants. LunarBlessing added some settings.
+REALLY IMPORTANT: If you want to start a new playthrough with different settings, close and reopen the game, game might not work properly.
+The jump level box allows you to jump to a specific level in the seed! This is great for recovering from a crash if you know your seed but for some reason the save file got corrupted. Just play 1-1 and then you should be at the same level.
+The Continue Last Run button only appears if you have an incomplete run in your save data. If you do, pressing this will close the settings menu and give you the same settings as before. After you play 1-1, you should be at the level you were previously at! You will also have the same plants, same money, and the same amount of slot upgrades. You will NOT save any other things bought from the shop (such as rakes or pre-unlocked upgrade plants).
+Challenge Mode gets rid of the tough level restriction. With it disabled, you will not be able to play certain levels (like 5-2) without having some amount of good plants. With this enabled, as soon as you unlock flower pot, you can play 5-2 (for instance).
+No restrictions mode means that there is no logic as to what levels can be played next - the majority of no restrictions runs are impossible.
+Instant imitater mode gives you access to an imitater immediately, which allows you to choose one of any plant to bring to the stage, even if you haven't unlocked it! This works especially well with no restrictions."""
     outputText.insert(END, manipulatedText)
 
 def getLevel():
@@ -520,7 +517,7 @@ def getLevel():
 
 def getSeed():
     global seed
-    seed=entry.get()
+    seed=seed_entry.get()
     if seed=="":
         seed=str(random.randint(1,999999999999))
 
@@ -540,9 +537,7 @@ if hasSave:
     continueButton=Button(window, text="CONTINUE LAST RUN", width=16, command=continueButtonClick)
     continueButton.grid(row=0, column=4, sticky=W)
     Hovertip(continueButton, "Continue last game - all your settings and run seed will be restored,\nYou don't need to input same settings.\n"\
-        "You should create a new save file, beat 1-1, and you will be moved to the level you stopped at", 10)
-
-spaces=150
+        "You should create a new save file, beat 1-1, and you will be moved to the level you stopped at. Note that you will lose upgrade plants you bought", 10)
 
 #create a button widget (dear god this is unwieldy)
 challengeButton=Checkbutton(window, text="CHALLENGE", width=16, variable=challengeMode, anchor="w")#command=challengeButtonClick)
@@ -719,9 +714,9 @@ randomWorldSlider = Scale(window, from_=0, to=100, orient=HORIZONTAL, length=115
 randomWorldSlider.config(font=('Arial', 8))
 randomWorldSlider.grid(row=4, column=6, sticky=W)
 
-randomShitButton=Checkbutton(window, text="RANDOM STUFF", width=16, variable=randomShit, anchor="w")
-randomShitButton.grid(row=6, column=6, sticky=W)
-Hovertip(randomShitButton, "Enables some random effects, like Mushrooms wake up, Can plant on graves, Extra slots, and others", 10)
+randomEffectsButton=Checkbutton(window, text="RANDOM EFFECTS", width=16, variable=randomEffects, anchor="w")
+randomEffectsButton.grid(row=6, column=6, sticky=W)
+Hovertip(randomEffectsButton, "Enables some random effects, like Mushrooms wake up during day, Can plant on graves, Extra slots, and others", 10)
 
 daveAmountLabel=Label(window, text="DAVE PLANTS COUNT:")
 daveAmountLabel.grid(row=5, column=5, sticky=W)
@@ -743,7 +738,7 @@ def enableDaveChanged(button):
         daveAmountButton.config(state=DISABLED)
     button.selection_clear()
 
-randomVarsCatZombieHealthLabel=Label(window, text="ZOMBIE HEALTH RANDO:")
+randomVarsCatZombieHealthLabel=Label(window, text="ZOMBIE HEALTH:")
 randomVarsCatZombieHealthLabel.grid(row=5, column=0, sticky=W)
 randomVarsCatZombieHealthButton=ttk.Combobox(window, text="ZOMBIE HEALTH", width=16, textvariable=randomVarsCatZombieHealth )#command=randomConveyorButtonClick)
 randomVarsCatZombieHealthButton["values"] = ["Off", "Very weak", "Weak", "Average", "Strong", "Very Strong"] # how strong randomness is
@@ -752,7 +747,7 @@ randomVarsCatZombieHealthButton.bind('<<ComboboxSelected>>', lambda e: randomVar
 randomVarsCatZombieHealthButton.grid(row=6, column=0, sticky=W)
 Hovertip(randomVarsCatZombieHealthButton, "Random Zombie health - options change how strong and often healths are randomized.", 10)
 
-randomVarsCatFireRateLabel=Label(window, text="FIRE RATE RANDO:")
+randomVarsCatFireRateLabel=Label(window, text="PLANT FIRE RATE:")
 randomVarsCatFireRateLabel.grid(row=5, column=1, sticky=W)
 randomVarsCatFireRateButton=ttk.Combobox(window, text="FIRE RATE RANDO", width=16, textvariable=randomVarsCatFireRate )#command=randomConveyorButtonClick)
 randomVarsCatFireRateButton["values"] = ["Off", "Very weak", "Weak", "Average", "Strong", "Very Strong"] # how strong randomness is
@@ -781,9 +776,9 @@ informationButton=Button(window, text="INFORMATION", width=16, command=informati
 informationButton.grid(row=0, column=7, sticky=W)
 
 #creates an entry widget, assigning it to a variable
-entry=Entry(window, width=20, bg="light green")
-entry.grid(row=0, column=1, sticky=W) #positioning this widget on the screen
-Hovertip(entry, "Seed to use for randomiser and, if enabled, seeded mode.\nEvery playthrough on the same Randomiser version "\
+seed_entry=Entry(window, width=20, bg="light green")
+seed_entry.grid(row=0, column=1, sticky=W) #positioning this widget on the screen
+Hovertip(seed_entry, "Seed to use for randomiser.\nEvery playthrough on the same Randomiser version "\
     "with the same settings and\nwith the same seed will produce same randomisation", 10)
 
 #create a text box widget
@@ -802,7 +797,13 @@ if noRestrictions.get():
     
 
 window.mainloop() #Run the event loop
-print(seed)
+
+### SETTINGS WINDOW CLOSED
+
+if gamemode.get() == 'no':
+    exit(0)
+
+print("Seed:",               str(seed))
 print("Game mode:",          str(gamemode.get()))
 print("Challenge Mode:",     str(challengeMode.get()))
 print("Shopless:",           str(shopless.get()))
@@ -831,7 +832,7 @@ print("Fire Rate Random:",   str(randomVarsCatFireRate.get()))
 print("Random Level Length:",str(randomWaveCount.get()))
 print("Random Worlds:",      str(randomWorld.get()))
 print("Random World Chance:",str(randomWorldChance.get()))
-print("Random Stuff:",       str(randomShit.get()))
+print("Random Effects:",     str(randomEffects.get()))
 print("Random Sound:",       str(randomSound.get()))
 print("Random Sound Chance:",str(randomSoundChance.get()))
 print("Random Pitch:",       str(randomPitch.get()))
@@ -843,20 +844,10 @@ print("Random First Plant:", str(randomFirstPlant.get()))
 
 
 def settings_lines_to_save():
-    return [challengeMode.get(), shopless.get(), noRestrictions.get(), noAutoSlots.get(), imitater.get(),
-        randomisePlants.get(), seeded.get(), upgradeRewards.get(), randomWeights.get(),
-        randomWavePoints.get(), startingWave.get(), randomCost.get(), randomCooldowns.get(),
-        costTextToggle.get(), randomZombies.get(), randomConveyors.get(), cooldownColoring.get(),
-        enableDave.get(), davePlantsCount.get(), randomVarsCatZombieHealth.get(), randomVarsCatFireRate.get(),
-        renderWeights.get(), renderWavePoints.get(), limitPreviews.get(), gamemode.get(), randomWaveCount.get(), randomWorld.get(),
-        randomWorldChance.get(), randomShit.get(), randomSound.get(), randomSoundChance.get(), randomPitch.get(),
-        easierStart.get(), harderEnd.get(), randomParticles.get(), randomParticlesChance.get(), randomFirstPlant.get()]
+    return [variable.get() for variable, _default, _converter in SETTING_SPECS]
 
 linesToWrite=[seed, 2, str(ReadMemory("int", 0x6A9EC0,0x82C,0x214)), str(ReadMemory("int",0x6A9EC0,0x82C, 0x28)), *settings_lines_to_save()]
-with open('saveFile.txt', 'w') as saveFile:
-    for k in range(len(linesToWrite)):
-        linesToWrite[k]=str(linesToWrite[k])+"\n"
-    saveFile.writelines(linesToWrite)
+write_save(linesToWrite)
 
 difficulty = 0.5
 
@@ -985,7 +976,7 @@ class RandomVariable(abc.ABC):
             print(f"Unknown format_type, {self.name} get_value_str")
             return "unknown"
 
-    def tooltip_values(self, format_type, more_less_words, modify_value_func = None, value_index = 0) -> dict:
+    def tooltip_values(self, format_type, more_less_words=['more', 'less'], modify_value_func = None, value_index = 0) -> dict:
         try:
             val = self.value[value_index] if self.multivar else self.value
             default = self.default[value_index] if self.multivar else self.default
@@ -1337,9 +1328,10 @@ class VarWithStrIndices:
 
 
 class VarContainer(abc.ABC):
-    def __init__(self, seed, write_memory_func, do_activate_strings, plants_container: IndexedStrContainer, 
+    def __init__(self, key, seed, write_memory_func, do_activate_strings, plants_container: IndexedStrContainer, 
                  zombies_container: IndexedStrContainer, game_container: NonIndexedStrContainer):
         assert (do_activate_strings and plants_container and zombies_container and game_container) or not do_activate_strings
+        self.key = key
         self.WriteMemory = write_memory_func
         self.rng = random.Random(seed)
         self.do_activate_strings = do_activate_strings
@@ -1354,6 +1346,10 @@ class VarContainer(abc.ABC):
 
     @abc.abstractmethod
     def reset(self):
+        pass
+
+    @abc.abstractmethod
+    def find_var(self, name) -> VarStr:
         pass
 
     def chance(self, base: float, modifier: float) -> float:
@@ -1377,8 +1373,8 @@ class VarContainer(abc.ABC):
 
 
 class FireRateContainer(VarContainer):
-    def __init__(self, seed, write_memory_func, do_activate_strings, plants_container, zombies_container, game_container, category):
-        super().__init__(seed, write_memory_func, do_activate_strings, plants_container, zombies_container, game_container)
+    def __init__(self, key, seed, write_memory_func, do_activate_strings, plants_container, zombies_container, game_container, category):
+        super().__init__(key, seed, write_memory_func, do_activate_strings, plants_container, zombies_container, game_container)
         self.category = category
         self.vars: list[VarWithStrIndices] = []
         self.potentially_unstable_vars: list[VarWithStrIndices] = []
@@ -1499,10 +1495,19 @@ class FireRateContainer(VarContainer):
             if v.var_str.var.needs_reset:
                 v.var_str.var.reset_memory(self.WriteMemory)
 
+    def find_var(self, name) -> VarStr:
+        for v in self.vars:
+            if v.var_str.var.name == name:
+                return v.var_str
+        for v in self.potentially_unstable_vars:
+            if v.var_str.var.name == name:
+                return v.var_str
+        return None
+
 
 class HealthContainer(VarContainer):
-    def __init__(self, seed, write_memory_func, do_activate_strings, plants_container, zombies_container, game_container, category):
-        super().__init__(seed, write_memory_func, do_activate_strings, plants_container, zombies_container, game_container)
+    def __init__(self, key, seed, write_memory_func, do_activate_strings, plants_container, zombies_container, game_container, category):
+        super().__init__(key, seed, write_memory_func, do_activate_strings, plants_container, zombies_container, game_container)
         self.category = category
         self.vars: list[VarWithStrIndices] = []
         # special cases are balloon, zomboss. Doesn't change default body health (270),
@@ -1604,10 +1609,16 @@ class HealthContainer(VarContainer):
             if v.var_str.var.needs_reset:
                 v.var_str.var.reset_memory(self.WriteMemory)
 
+    def find_var(self, name) -> VarStr:
+        for v in self.vars:
+            if v.var_str.var.name == name:
+                return v.var_str
+        return None
 
-class ShitContainer(VarContainer):
-    def __init__(self, seed, write_memory_func, do_activate_strings, plants_container, zombies_container, game_container):
-        super().__init__(seed, write_memory_func, do_activate_strings, plants_container, zombies_container, game_container)
+
+class EffectsContainer(VarContainer):
+    def __init__(self, key, seed, write_memory_func, do_activate_strings, plants_container, zombies_container, game_container):
+        super().__init__(key, seed, write_memory_func, do_activate_strings, plants_container, zombies_container, game_container)
         self.vars: list[VarWithStrIndices] = []
         plant_on_graves = VarWithStrIndices(
             VarStr(var=OnOffVar("plant_on_graves", address=0x0040E162, chance=lambda l:30-difficulty*10,
@@ -1839,31 +1850,37 @@ class ShitContainer(VarContainer):
             if v.var_str.var.needs_reset:
                 v.var_str.var.reset_memory(self.WriteMemory)
 
+    def find_var(self, name) -> VarStr:
+        for v in self.vars:
+            if v.var_str.var.name == name:
+                return v.var_str
+        return None
+
 
 class RandomVars(VarContainer):
-    def __init__(self, seed, write_memory_func, do_activate_strings, plants_container: IndexedStrContainer, 
+    def __init__(self, key, seed, write_memory_func, do_activate_strings, plants_container: IndexedStrContainer, 
                  zombies_container: IndexedStrContainer, game_container: NonIndexedStrContainer, code_address,
-                 catZombieHealth: int, catFireRate: int, randomShit:bool):
-        super().__init__(seed, write_memory_func, do_activate_strings, plants_container, zombies_container, game_container)
+                 catZombieHealth: int, catFireRate: int, randomEffects:bool):
+        super().__init__(key, seed, write_memory_func, do_activate_strings, plants_container, zombies_container, game_container)
         self.seed = seed
         catFireRate = max(catFireRate, 0)
         catZombieHealth = max(catZombieHealth, 0)
-        randomShit = int(randomShit) * 5
+        randomEffects = int(randomEffects) * 5
         self.code_address = code_address
         self.catZombieHealth = catZombieHealth
         self.catFireRate = catFireRate
         self.vars: list[VarWithStrIndices] = []
         self.unprintable_vars: list[RandomVariable] = []
         self.var_containers: list[VarContainer] = []
-        self.any_category_enabled = catZombieHealth or catFireRate or randomShit # use to make sure that system is enabled for randomization and not just for string rendering
+        self.any_category_enabled = catZombieHealth or catFireRate or randomEffects # use to make sure that system is enabled for randomization and not just for string rendering
         if catZombieHealth:
-            self.var_containers.append(HealthContainer(self.seed+"health", write_memory_func, do_activate_strings, plants_container,
+            self.var_containers.append(HealthContainer("health", self.seed+"health", write_memory_func, do_activate_strings, plants_container,
                                         zombies_container, game_container, catZombieHealth))
         if catFireRate:
-            self.var_containers.append(FireRateContainer(self.seed+"firerate", write_memory_func, do_activate_strings, plants_container,
+            self.var_containers.append(FireRateContainer("firerate", self.seed+"firerate", write_memory_func, do_activate_strings, plants_container,
                                         zombies_container, game_container, catFireRate))
-        if randomShit:
-            self.var_containers.append(ShitContainer(self.seed+"shit", write_memory_func, do_activate_strings, plants_container,
+        if randomEffects:
+            self.var_containers.append(EffectsContainer("effects", self.seed+"shit", write_memory_func, do_activate_strings, plants_container,
                                         zombies_container, game_container))
         self.add_vars_to_string_containers(self.vars)
             
@@ -1891,6 +1908,21 @@ class RandomVars(VarContainer):
                 v.reset_memory(self.WriteMemory)
         for c in self.var_containers:
             c.reset()
+
+    def find_container(self, name):
+        for cont in self.var_containers:
+            if cont.key == name:
+                return cont
+        return None
+
+    def find_var(self, name) -> VarStr:
+        for v in self.vars:
+            if v.var_str.var.name == name:
+                return v.var_str
+        for v in self.unprintable_vars:
+            if v.var_str.var.name == name:
+                return v.var_str
+        return None
 
 
 float_rebase_current_offset = 0
@@ -5075,9 +5107,9 @@ if randomVarsSystemEnabled:
     ],
     0x45DCCA)
 
-    random_vars = RandomVars(seed, WriteMemory, True, plants_string_container, zombies_string_container, game_string_container,
+    random_vars = RandomVars("main", seed, WriteMemory, True, plants_string_container, zombies_string_container, game_string_container,
                              code_address=string_stuff_address, catZombieHealth=actualRandomVarsZombieHealth, catFireRate=actualRandomVarsFireRate,
-                             randomShit=randomShit.get())
+                             randomEffects=randomEffects.get())
     random_vars.reset()
 
 if randomCooldowns.get():
@@ -5226,12 +5258,7 @@ if gamemode.get() == 'minigames':
                 saved.set(False)
         if not saved.get():
             linesToWrite=[seed, str(i+1), "0", "0", *settings_lines_to_save()]
-            saveFile=open('saveFile.txt', 'w')
-            for k in range(len(linesToWrite)):
-                linesToWrite[k]=str(linesToWrite[k])
-                linesToWrite[k]=linesToWrite[k]+"\n"
-            saveFile.writelines(linesToWrite)
-            saveFile.close()
+            write_save(linesToWrite)
         print(str(i+1))
         if randomZombies.get():
             randomiseZombiesMinigames()
@@ -5291,19 +5318,17 @@ else:
                 saved.set(False)
         if not saved.get() and i!=0:
             linesToWrite=[seed, (i+1), str(ReadMemory("int", 0x6A9EC0,0x82C,0x214)), str(ReadMemory("int",0x6A9EC0,0x82C, 0x28)), *settings_lines_to_save()]
-            saveFile=open('saveFile.txt', 'w')
-            for k in range(len(linesToWrite)):
-                linesToWrite[k]=str(linesToWrite[k])+"\n"
-            saveFile.writelines(linesToWrite)
-            saveFile.close()
+            write_save(linesToWrite)
             if i!=0 and (randomWavePoints.get()!="False" or randomWeights.get()):
-                print(" "*100)
+                print()
                 print("Level:", convertToLevel(levels[i-1]))
                 zombies_type_offset = ReadMemory("unsigned int", 0x6A9EC0, 0x768) + 0x54D4
                 zombies_type = ReadMemory("bool",zombies_type_offset,array=33)
                 for j in range(0, 33):
                     if(zombies_type[j]):
-                        print(zombies[j][0], str(ReadMemory("int", 0x69DA88 + 0x1C*j)), ReadMemory("int", 0x69DA94 + 0x1C*j),ReadMemory("int", 0x69DA90 + 0x1C*j))
+                        var = randomVarsSystemEnabled and random_vars.find_container("health") and random_vars.find_container("health").find_var("zombie health "+str(j))
+                        hp = str(var) if var else ''
+                        print(zombies[j][0], str(ReadMemory("int", 0x69DA88 + 0x1C*j)), ReadMemory("int", 0x69DA94 + 0x1C*j),ReadMemory("int", 0x69DA90 + 0x1C*j),hp)
         print(str(i+1))
         if gamemode.get() == 'adventure':
             WriteMemory("int",plants_unlocked,0x651090)
@@ -5402,13 +5427,10 @@ else:
 
 WriteMemory("int",0,0x651190)
 
+# game mode finished:
+
 linesToWrite=[seed, "finished", str(ReadMemory("int", 0x6A9EC0,0x82C,0x214)), str(ReadMemory("int",0x6A9EC0,0x82C, 0x28)), *settings_lines_to_save()]
-saveFile=open('saveFile.txt', 'w')
-for k in range(len(linesToWrite)):
-    linesToWrite[k]=str(linesToWrite[k])
-    linesToWrite[k]=linesToWrite[k]+"\n"
-saveFile.writelines(linesToWrite)
-saveFile.close()
+write_save(linesToWrite)
 
 if randomZombies.get():
     randomiseZombies(zombiesToRandomise, 49, levels)
